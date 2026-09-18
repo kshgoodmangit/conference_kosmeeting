@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.security.ClientIpResolver;
 import com.bjworld21.congress.service.MemberPasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/members/password-reset")
+@RequestMapping("/api/public/{conferenceSeq}/members/password-reset")
 public class PublicMemberPasswordResetController {
     private static final Logger log = LoggerFactory.getLogger(PublicMemberPasswordResetController.class);
     private final MemberPasswordResetService service;

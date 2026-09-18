@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.service.ConferenceSettingsService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.core.io.ClassPathResource;
@@ -18,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/members")
+@RequestMapping("/api/public/{conferenceSeq}/members")
 public class PublicCertificateController {
     private final ConferenceSettingsService conferenceSettingsService;
 
@@ -30,7 +31,7 @@ public class PublicCertificateController {
     public ResponseEntity<?> download(HttpSession session) {
         PublicMemberSession member = PublicMemberSession.resolve(
                 session,
-                () -> conferenceSettingsService.getLatestConferenceSeq()
+                () -> PublicApiRequest.context().conferenceSeq()
         );
         if (member == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login is required.");

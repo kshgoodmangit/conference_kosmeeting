@@ -1,23 +1,23 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <div class="member-page" th:fragment="content">
     <div class="container">
-        <h2 class="bbtitle fnb mb-5">My Page</h2>
+        <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
 
-        <nav class="member-tabs" aria-label="My Page">
-            <a href="/mypage">My Page Home</a>
-            <a class="is-active" href="/mypage/abstract" aria-current="page">Abstract Submission</a>
-            <a href="/mypage/registration">Registration</a>
+        <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+            <a href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+            <a class="is-active" href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}" aria-current="page"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+            <a href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
         </nav>
 
         <section class="member-section member-section--spaced" aria-labelledby="member-abstract-list-title">
-            <h3 id="member-abstract-list-title" class="mb-5">My Abstracts</h3>
+            <h3 id="member-abstract-list-title" class="mb-5"><th:block th:text="#{public.ui.my.abstracts.7c87ad}">My Abstracts</th:block></h3>
             <div class="table-scroll">
                 <table class="type-03 w-100">
-                    <caption class="position-absolute invisible">Your abstract submissions</caption>
+                    <caption class="position-absolute invisible"><th:block th:text="#{public.ui.your.abstract.submissions.dadb0c}">Your abstract submissions</th:block></caption>
                     <colgroup><col style="width: 8%;"><col style="width: 18%;"><col><col style="width: 16%;"><col style="width: 22%;"></colgroup>
-                    <thead><tr><th scope="col" class="text-center">No.</th><th scope="col" class="px-4">Abstract No.</th><th scope="col" class="px-4">Title</th><th scope="col" class="text-center">Status</th><th scope="col" class="text-center">Review / Modify</th></tr></thead>
+                    <thead><tr><th scope="col" class="text-center"><th:block th:text="#{public.ui.no.b8b9f1}">No.</th:block></th><th scope="col" class="px-4"><th:block th:text="#{public.ui.abstract.no.c47534}">Abstract No.</th:block></th><th scope="col" class="px-4"><th:block th:text="#{public.ui.title.768e0c}">Title</th:block></th><th scope="col" class="text-center"><th:block th:text="#{public.ui.status.bae7d5}">Status</th:block></th><th scope="col" class="text-center"><th:block th:text="#{public.ui.review.modify.95c112}">Review / Modify</th:block></th></tr></thead>
                     <tbody>
                     <tr th:each="abstract, row : ${mypageAbstracts}" th:with="status=${abstract.status == null ? '' : #strings.toLowerCase(abstract.status)}">
                         <td class="text-center" th:text="${row.count}">1</td>
@@ -25,28 +25,28 @@
                         <td class="px-4" th:text="${abstract.title}">Abstract title</td>
                         <td class="text-center">
                             <span class="member-status" th:classappend="${status == 'approved'} ? ' is-accepted'">
-                                <th:block th:if="${status == 'approved'}">Accepted</th:block>
-                                <th:block th:if="${status == 'submitted'}">Submission Completed</th:block>
-                                <th:block th:if="${status == 'under_review'}">Under Review</th:block>
-                                <th:block th:if="${status == 'rejected'}">Rejected</th:block>
-                                <th:block th:if="${status == 'draft'}">Draft</th:block>
+                                <th:block th:if="${status == 'approved'}"><th:block th:text="#{public.ui.accepted.61a057}">Accepted</th:block></th:block>
+                                <th:block th:if="${status == 'submitted'}"><th:block th:text="#{public.ui.submission.completed.9d0b2d}">Submission Completed</th:block></th:block>
+                                <th:block th:if="${status == 'under_review'}"><th:block th:text="#{public.ui.under.review.18afed}">Under Review</th:block></th:block>
+                                <th:block th:if="${status == 'rejected'}"><th:block th:text="#{public.ui.rejected.27eeb7}">Rejected</th:block></th:block>
+                                <th:block th:if="${status == 'draft'}"><th:block th:text="#{public.ui.draft.23d33e}">Draft</th:block></th:block>
                             </span>
                         </td>
                         <td class="text-center">
                             <div class="member-row-actions">
-                                <a class="member-button member-button--outline member-button--compact" th:href="|/mypage/abstract/review?seq=${abstract.seq}|">Review</a>
-                                <a class="member-button member-button--soft member-button--compact" th:if="${status == 'draft' or status == 'submitted'}" th:href="|/mypage/abstract/write?seq=${abstract.seq}|">Modify</a>
+                                <a class="member-button member-button--outline member-button--compact" th:href="${siteContext.pageUrl('/abstract-review?seq=' + abstract.seq)}"><th:block th:text="#{public.ui.review.e29a79}">Review</th:block></a>
+                                <a class="member-button member-button--soft member-button--compact" th:if="${status == 'draft' or status == 'submitted'}" th:href="${siteContext.pageUrl('/abstract-write?seq=' + abstract.seq)}"><th:block th:text="#{public.ui.modify.9fe408}">Modify</th:block></a>
                             </div>
                         </td>
                     </tr>
-                    <tr th:if="${mypageAbstracts == null or mypageAbstracts.isEmpty()}"><td class="member-table-empty" colspan="5">No abstract has been submitted.</td></tr>
+                    <tr th:if="${mypageAbstracts == null or mypageAbstracts.isEmpty()}"><td class="member-table-empty" colspan="5"><th:block th:text="#{public.ui.no.abstract.has.been.submitted.b4d30d}">No abstract has been submitted.</th:block></td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <p class="member-note"><span>*</span> Draft deletion is available from Review. Completed submissions can only be modified until review starts.</p>
+            <p class="member-note"><span>*</span> <th:block th:text="#{public.ui.draft.deletion.is.available.from.review.6bb26e}">Draft deletion is available from Review. Completed submissions can only be modified until review starts.</th:block></p>
             <div class="member-actions member-actions--end member-actions--overlap">
-                <a class="member-button member-button--accent" href="/mypage/abstract/write"><img src="/public/img/member/mypage-plus-circle.svg" alt=""><span>Submit Abstract</span></a>
+                <a class="member-button member-button--accent" href="/abstract-write" th:href="${siteContext != null ? siteContext.pageUrl('/abstract-write') : '/abstract-write'}"><img src="/public/img/member/mypage-plus-circle.svg" alt=""><span><th:block th:text="#{public.ui.submit.abstract.e57fac}">Submit Abstract</th:block></span></a>
             </div>
         </section>
 

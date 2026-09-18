@@ -1,24 +1,24 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="member-page" th:fragment="content">
         <div class="container">
-            <h2 class="bbtitle fnb mb-5">My Page</h2>
+            <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
 
-            <nav class="member-tabs" aria-label="My Page">
-                <a class="is-active" href="/mypage" aria-current="page">My Page Home</a>
-                <a href="/mypage/abstract">Abstract Submission</a>
-                <a href="/mypage/registration">Registration</a>
+            <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+                <a class="is-active" href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}" aria-current="page"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+                <a href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+                <a href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
             </nav>
 
             <section class="member-section">
                 <div class="text-center mb5">
-                    <h5 class="fnsb cl-title mb-2">Personal Information</h5>
-                    <p class="pp-content mb-0">Update the information you provided at sign-up.</p>
+                    <h5 class="fnsb cl-title mb-2"><th:block th:text="#{public.ui.personal.information.ad12e4}">Personal Information</th:block></h5>
+                    <p class="pp-content mb-0"><th:block th:text="#{public.ui.update.the.information.you.provided.at.0cb89e}">Update the information you provided at sign-up.</th:block></p>
                 </div>
 
                 <div class="public-form">
-                    <form id="mypage-profile-form" action="/api/public/members/profile" method="post">
+                    <form id="mypage-profile-form" action="/api/public/members/profile" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/members/profile') : '/api/public/members/profile'}" method="post">
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <table class="w-100 type-02 abstract-form-table mb6">
                             <colgroup>
@@ -27,37 +27,37 @@
                             </colgroup>
                             <tbody>
                                 <tr th:if="${mypageMember.memberType == 'international'}">
-                                    <th><label for="profile-country">Country <span class="co-danger">*</span></label></th>
+                                    <th><label for="profile-country"><th:block th:text="#{public.ui.country.d523eb}">Country</th:block> <span class="co-danger">*</span></label></th>
                                     <td>
                                         <select id="profile-country" name="country" autocomplete="country-name" required
                                                 data-country-select data-country-code-target="#profile-mobile-country-code"
                                                 data-country-code-display="#profile-mobile-country-code-display"
                                                 th:attr="data-selected-country=${mypageMember.country}">
-                                            <option value="">Select a country.</option>
+                                            <option value=""><th:block th:text="#{public.ui.select.a.country.b9ec07}">Select a country.</th:block></option>
                                         </select>
                                     </td>
                                 </tr>
                                 <tr th:if="${mypageMember.memberType != 'international'}">
-                                    <th scope="row">Country</th>
-                                    <td>Republic of Korea</td>
+                                    <th scope="row"><th:block th:text="#{public.ui.country.d523eb}">Country</th:block></th>
+                                    <td><th:block th:text="#{public.ui.republic.of.korea.4430b2}">Republic of Korea</th:block></td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">ID (E-mail)</th>
+                                    <th scope="row"><th:block th:text="#{public.ui.id.e.mail.a2609e}">ID (E-mail)</th:block></th>
                                     <td>
                                         <span id="profile-email" th:text="${mypageMember.email}"></span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">Name <span class="co-danger">*</span></th>
+                                    <th scope="row"><th:block th:text="#{public.ui.name.709a23}">Name</th:block> <span class="co-danger">*</span></th>
                                     <td>
                                         <div class="abstract-name-fields">
                                             <div>
-                                                <label class="d-block mb-2" for="profile-first-name">First Name <span class="co-danger">*</span></label>
+                                                <label class="d-block mb-2" for="profile-first-name"><th:block th:text="#{public.ui.first.name.b6ea99}">First Name</th:block> <span class="co-danger">*</span></label>
                                                 <input id="profile-first-name" type="text" name="firstName" autocomplete="given-name"
                                                        th:value="${mypageMember.firstName}" required>
                                             </div>
                                             <div>
-                                                <label class="d-block mb-2" for="profile-last-name">Last Name <span class="co-danger">*</span></label>
+                                                <label class="d-block mb-2" for="profile-last-name"><th:block th:text="#{public.ui.last.name.863cb3}">Last Name</th:block> <span class="co-danger">*</span></label>
                                                 <input id="profile-last-name" type="text" name="lastName" autocomplete="family-name"
                                                        th:value="${mypageMember.lastName}" required>
                                             </div>
@@ -65,43 +65,43 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row"><label for="profile-institution">Institution <span class="co-danger">*</span></label></th>
+                                    <th scope="row"><label for="profile-institution"><th:block th:text="#{public.ui.institution.429f94}">Institution</th:block> <span class="co-danger">*</span></label></th>
                                     <td>
                                         <input id="profile-institution" type="text" name="institution" autocomplete="organization"
-                                               placeholder="Institution" th:value="${mypageMember.institution}" required>
+                                               placeholder="Institution" th:placeholder="#{public.ui.institution.429f94}" th:value="${mypageMember.institution}" required>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row"><label for="profile-department">Department</label></th>
-                                    <td><input id="profile-department" type="text" name="department" placeholder="Department" th:value="${mypageMember.department}"></td>
+                                    <th scope="row"><label for="profile-department"><th:block th:text="#{public.ui.department.db4010}">Department</th:block></label></th>
+                                    <td><input id="profile-department" type="text" name="department" placeholder="Department" th:placeholder="#{public.ui.department.db4010}" th:value="${mypageMember.department}"></td>
                                 </tr>
                                 <tr>
-                                    <th scope="row"><label for="profile-position">Position</label></th>
-                                    <td><input id="profile-position" type="text" name="positionTitle" autocomplete="organization-title" placeholder="Position" th:value="${mypageMember.positionTitle}"></td>
+                                    <th scope="row"><label for="profile-position"><th:block th:text="#{public.ui.position.cf1c85}">Position</th:block></label></th>
+                                    <td><input id="profile-position" type="text" name="positionTitle" autocomplete="organization-title" placeholder="Position" th:placeholder="#{public.ui.position.cf1c85}" th:value="${mypageMember.positionTitle}"></td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">Password</th>
-                                    <td><a class="member-login-recovery" href="/mypage/password">Change Password</a></td>
+                                    <th scope="row"><th:block th:text="#{public.ui.password.8be3c9}">Password</th:block></th>
+                                    <td><a class="member-login-recovery" href="/mypage-password" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-password') : '/mypage-password'}"><th:block th:text="#{public.ui.change.password.49289d}">Change Password</th:block></a></td>
                                 </tr>
                                 <tr>
-                                    <th scope="row"><label for="profile-mobile-phone-number">Mobile Number <span class="co-danger">*</span></label></th>
+                                    <th scope="row"><label for="profile-mobile-phone-number"><th:block th:text="#{public.ui.mobile.number.5968ac}">Mobile Number</th:block> <span class="co-danger">*</span></label></th>
                                     <td th:with="mobile=${mypageMember.mobile ?: ''}, hasPrefix=${#strings.startsWith(mobile, '+') and #strings.contains(mobile, ' ')}, dialCode=${mypageMember.memberType == 'domestic' ? '+82' : (hasPrefix ? #strings.substringBefore(mobile, ' ') : '')}">
                                         <div class="member-profile-phone">
-                                            <span id="profile-mobile-country-code-display" aria-label="Country calling code" th:text="${#strings.isEmpty(dialCode) ? '-' : dialCode}"></span>
+                                            <span id="profile-mobile-country-code-display" aria-label="Country calling code" th:aria-label="#{public.ui.country.calling.code.5905d1}" th:text="${#strings.isEmpty(dialCode) ? '-' : dialCode}"></span>
                                             <input id="profile-mobile-country-code" type="hidden" name="mobileCountryCode" th:value="${dialCode}">
                                             <input id="profile-mobile-phone-number" type="tel" name="mobilePhoneNumber" maxlength="24"
-                                                   autocomplete="tel-national" pattern="[0-9() -]+" placeholder="Mobile number" required
+                                                   autocomplete="tel-national" pattern="[0-9() -]+" placeholder="Mobile number" th:placeholder="#{public.ui.mobile.number.8e5c12}" required
                                                    th:value="${hasPrefix ? #strings.substringAfter(mobile, ' ') : mobile}">
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th>Newsletter</th>
+                                    <th><th:block th:text="#{public.ui.newsletter.6ed05e}">Newsletter</th:block></th>
                                     <td>
                                         <label for="profile-newsletter">
                                             <input id="profile-newsletter" type="checkbox" name="newsletter" value="true"
                                                    th:checked="${mypageMember.newsletter}">
-                                            Receive conference news and updates.
+                                            <th:block th:text="#{public.ui.receive.conference.news.and.updates.b1b814}">Receive conference news and updates.</th:block>
                                         </label>
                                     </td>
                                 </tr>
@@ -109,8 +109,8 @@
                         </table>
                         <p class="member-recovery-status" data-profile-status role="status" aria-live="polite" tabindex="-1" hidden></p>
                         <div class="public-form-actions">
-                            <button class="public-save-button" type="submit"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt="">Save</button>
-                            <a class="public-submit-button" href="/mypage">Cancel</a>
+                            <button class="public-save-button" type="submit"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt=""><th:block th:text="#{public.ui.save.efc007}">Save</th:block></button>
+                            <a class="public-submit-button" href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}"><th:block th:text="#{public.ui.cancel.77dfd2}">Cancel</th:block></a>
                         </div>
                     </form>
                 </div>

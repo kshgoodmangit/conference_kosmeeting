@@ -1,7 +1,11 @@
 package com.bjworld21.congress.controller;
 
+import com.bjworld21.congress.publicsite.PublicApiRequest;
+
 import com.bjworld21.congress.service.BoardPostService;
-import com.bjworld21.congress.service.ConferenceSettingsService;
+import com.bjworld21.congress.service.MenuSettingsService;
+import com.bjworld21.congress.dto.MenuSettingsResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -14,29 +18,39 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/boards")
+@com.bjworld21.congress.config.IpAccessExempt
+@RequestMapping("/api/public/{conferenceSeq}/boards")
 public class PublicBoardAttachmentController {
     private final BoardPostService service;
-    private final ConferenceSettingsService conferenceSettingsService;
+    private final MenuSettingsService menus;
 
     public PublicBoardAttachmentController(BoardPostService service,
-                                           ConferenceSettingsService conferenceSettingsService) {
+                                           MenuSettingsService menus) {
         this.service = service;
-        this.conferenceSettingsService = conferenceSettingsService;
+        this.menus = menus;
     }
 
     @GetMapping("/{boardSeq}/posts/{postSeq}/attachments/{attachmentSeq}")
     public ResponseEntity<Resource> download(
             @PathVariable Long boardSeq,
             @PathVariable Long postSeq,
-            @PathVariable Long attachmentSeq
+            @PathVariable Long attachmentSeq,
+            HttpServletRequest request
     ) {
+        var site = PublicApiRequest.context();
+        Boolean authRequired = boardAuth(menus.getActiveUserMenuTree(site.conferenceSeq(), site.language()), boardSeq, false);
+        if (authRequired == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (authRequired && PublicMemberSession.resolve(request.getSession(false), site.conferenceSeq()) == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
         BoardPostService.AttachmentDownload download = service.downloadPublicAttachment(
-                conferenceSettingsService.getLatestConferenceSeq(),
+                site.conferenceSeq(),
                 boardSeq,
                 postSeq,
                 attachmentSeq
@@ -50,6 +64,27 @@ public class PublicBoardAttachmentController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(download.fileSize())
                 .body(download.resource());
+    }
+
+    /** A direct attachment URL must honor the same active menu and ancestor protection as its page. */
+    private Boolean boardAuth(List<MenuSettingsResponse> nodes, Long boardSeq, boolean protectedParent) {
+        Boolean result = null;
+        if (nodes == null) return null;
+        for (var menu : nodes) {
+            if (Boolean.FALSE.equals(menu.getEnabled())) continue;
+            boolean protectedMenu = protectedParent || Boolean.TRUE.equals(menu.getAuthRequired());
+            Long targetBoard = menu.getBoardSeq();
+            if (targetBoard == null) {
+                if ("notice".equals(menu.getMenuKey())) targetBoard = BoardPostService.NOTICE_BOARD_SEQ;
+                else if ("faq".equals(menu.getMenuKey())) targetBoard = BoardPostService.FAQ_BOARD_SEQ;
+            }
+            if (boardSeq.equals(targetBoard)) {
+                result = Boolean.TRUE.equals(result) || protectedMenu;
+            }
+            Boolean child = boardAuth(menu.getChildren(), boardSeq, protectedMenu);
+            if (child != null) result = Boolean.TRUE.equals(result) || child;
+        }
+        return result;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

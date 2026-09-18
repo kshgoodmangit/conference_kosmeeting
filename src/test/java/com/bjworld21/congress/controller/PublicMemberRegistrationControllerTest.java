@@ -59,13 +59,13 @@ class PublicMemberRegistrationControllerTest {
                 new PublicMemberRegistrationController(memberService, conferenceSettingsService,
                         new MemberEmailVerificationService(null, new PersonalDataProperties(), null,
                                 conferenceSettingsService, null, mock(PlatformTransactionManager.class), Clock.systemUTC(), null))
-        ).build();
+        ).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
     }
 
     @Test
     void registersInternationalMemberThroughPublicEndpoint() throws Exception {
-        mockMvc.perform(post("/api/public/members/register")
-                        .sessionAttr(MemberEmailVerificationService.VERIFIED_KEY,
+        mockMvc.perform(post("/api/public/7/members/register")
+                        .sessionAttr(MemberEmailVerificationService.VERIFIED_KEY + 7,
                                 new MemberEmailVerificationService.VerifiedEmail(7L, "member@example.com", Instant.now().plusSeconds(1800)))
                         .param("memberType", "international")
                         .param("country", "South Korea")
@@ -92,7 +92,7 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void rejectsMissingPrivacyConsentBeforeRegistration() throws Exception {
-        mockMvc.perform(post("/api/public/members/register")
+        mockMvc.perform(post("/api/public/7/members/register")
                         .param("memberType", "international")
                         .param("country", "United States")
                         .param("email", "member@example.com")
@@ -111,8 +111,8 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void registersDomesticMemberWithoutCountry() throws Exception {
-        mockMvc.perform(post("/api/public/members/register")
-                        .sessionAttr(MemberEmailVerificationService.VERIFIED_KEY,
+        mockMvc.perform(post("/api/public/7/members/register")
+                        .sessionAttr(MemberEmailVerificationService.VERIFIED_KEY + 7,
                                 new MemberEmailVerificationService.VerifiedEmail(7L, "member@example.com", Instant.now().plusSeconds(1800)))
                         .param("memberType", "domestic")
                         .param("email", "member@example.com")
@@ -134,7 +134,7 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void rejectsDirectSignupWithoutEmailVerification() throws Exception {
-        mockMvc.perform(post("/api/public/members/register")
+        mockMvc.perform(post("/api/public/7/members/register")
                         .param("memberType", "domestic").param("email", "member@example.com")
                         .param("firstName", "Gildong").param("lastName", "Hong")
                         .param("institution", "Example University").param("privacyConsent", "true")
@@ -147,7 +147,7 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void rejectsInvalidMobilePartsBeforeRegistration() throws Exception {
-        mockMvc.perform(post("/api/public/members/register")
+        mockMvc.perform(post("/api/public/7/members/register")
                         .param("memberType", "domestic")
                         .param("email", "member@example.com")
                         .param("firstName", "Gildong")
@@ -166,9 +166,8 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void updatesOnlyTheLoggedInMembersPublicProfile() throws Exception {
-        mockMvc.perform(post("/api/public/members/profile")
-                        .sessionAttr("memberSeq", 11L)
-                        .sessionAttr("memberConferenceSeq", 7L)
+        mockMvc.perform(post("/api/public/7/members/profile")
+                        .sessionAttr("publicMember.7", new PublicMemberSession(11L, 7L))
                         .param("country", "Japan")
                         .param("firstName", " Jane ")
                         .param("lastName", " Doe ")
@@ -196,8 +195,8 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void profileCannotBypassCurrentPasswordVerification() throws Exception {
-        mockMvc.perform(post("/api/public/members/profile")
-                        .sessionAttr("memberSeq", 11L).sessionAttr("memberConferenceSeq", 7L)
+        mockMvc.perform(post("/api/public/7/members/profile")
+                        .sessionAttr("publicMember.7", new PublicMemberSession(11L, 7L))
                         .param("firstName", "Jane").param("lastName", "Doe")
                         .param("institution", "Example University")
                         .param("mobileCountryCode", "+81").param("mobilePhoneNumber", "90-1234-5678")
@@ -209,7 +208,7 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void rejectsProfileUpdateWithoutMemberSession() throws Exception {
-        mockMvc.perform(post("/api/public/members/profile")
+        mockMvc.perform(post("/api/public/7/members/profile")
                         .param("firstName", "Jane")
                         .param("lastName", "Doe")
                         .param("institution", "Example University")
@@ -230,15 +229,24 @@ class PublicMemberRegistrationControllerTest {
 
         SpringTemplateEngine engine = new SpringTemplateEngine();
         engine.setTemplateResolver(resolver);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("public-ui");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+        engine.setTemplateEngineMessageSource(messages);
+        var site = new com.bjworld21.congress.publicsite.PublicSiteContext(7L, "apdrc8", "en", java.util.List.of("en", "ko"), "/apdrc8/en", "/api/public/7");
 
-        assertThat(engine.process("public/member/join-international", new Context()))
-                .contains("/api/public/members/register", "<select id=\"international-country\"", "mobileCountryCode", "mobilePhoneNumber", "privacyConsent")
+        Context context = new Context(java.util.Locale.ENGLISH);
+        context.setVariable("siteContext", site);
+        assertThat(engine.process("public/member/join-international", context))
+                .contains("/api/public/7/members/register", "<select id=\"international-country\"", "mobileCountryCode", "mobilePhoneNumber", "privacyConsent")
                 .doesNotContain("<datalist");
-        assertThat(engine.process("public/member/join-domestic", new Context()))
-                .contains("/api/public/members/register", "value=\"domestic\"", "value=\"+82\"")
+        assertThat(engine.process("public/member/join-domestic", context))
+                .contains("/api/public/7/members/register", "value=\"domestic\"", "value=\"+82\"")
                 .doesNotContain("domestic-country");
 
-        Context profileContext = new Context();
+        Context profileContext = new Context(java.util.Locale.ENGLISH);
+        profileContext.setVariable("siteContext", site);
         profileContext.setVariable("mypageMember", MemberListResponse.builder()
                 .memberType("international")
                 .country("Japan")
@@ -253,7 +261,7 @@ class PublicMemberRegistrationControllerTest {
                 .build());
         String profileHtml = engine.process("public/member/mypage-profile", profileContext);
         assertThat(profileHtml)
-                .contains("/api/public/members/profile", "data-selected-country=\"Japan\"",
+                .contains("/api/public/7/members/profile", "data-selected-country=\"Japan\"",
                         "<span id=\"profile-email\">member@example.com</span>", "value=\"+81\"", "value=\"90-1234-5678\"",
                         "name=\"institution\"", "value=\"Example University\"", "name=\"department\"", "value=\"Biology\"",
                         "name=\"positionTitle\"", "value=\"Researcher\"", "First Name", "Last Name")
@@ -286,8 +294,8 @@ class PublicMemberRegistrationControllerTest {
 
     @Test
     void profileAllowsClearingOptionalAffiliationFields() throws Exception {
-        mockMvc.perform(post("/api/public/members/profile")
-                        .sessionAttr("memberSeq", 11L).sessionAttr("memberConferenceSeq", 7L)
+        mockMvc.perform(post("/api/public/7/members/profile")
+                        .sessionAttr("publicMember.7", new PublicMemberSession(11L, 7L))
                         .param("country", "Japan").param("firstName", "Jane").param("lastName", "Doe")
                         .param("institution", "New University").param("department", "").param("positionTitle", "")
                         .param("mobileCountryCode", "+81").param("mobilePhoneNumber", "90-1234-5678"))

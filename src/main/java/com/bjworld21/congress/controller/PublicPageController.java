@@ -6,6 +6,11 @@ import com.bjworld21.congress.dto.MenuSettingsResponse;
 import com.bjworld21.congress.dto.BoardPostPageResponse;
 import com.bjworld21.congress.dto.BoardPostResponse;
 import com.bjworld21.congress.service.*;
+import com.bjworld21.congress.publicsite.*;
+import com.bjworld21.congress.config.IpAccessExempt;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.Resource;
@@ -25,13 +30,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
- * Renders the public Thymeleaf site from the latest conference and its active menu tree.
+ * Renders the public Thymeleaf site from the request conference, language, and active menu tree.
  *
  * <p>Most routes use the CMS HTML stored on the menu. Menus that need live data are
  * switched to a dedicated template by {@code menuKey} in {@link #page}; keep that key,
  * the template name, and the administrator menu configuration in sync.</p>
  */
 @Controller
+@IpAccessExempt
 public class PublicPageController {
     private static final String DEFAULT_EVENT_NAME = "APDRC8";
     private static final DateTimeFormatter MAIN_DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
@@ -55,6 +61,7 @@ public class PublicPageController {
     private final MemberService memberService;
     private final Clock clock;
     private final PublicPopupService publicPopupService;
+    private final PublicSiteService sites;
 
     public PublicPageController(
             MenuSettingsService menuSettingsService,
@@ -66,7 +73,8 @@ public class PublicPageController {
             SponsorService sponsorService,
             MemberService memberService,
             Clock clock,
-            PublicPopupService publicPopupService
+            PublicPopupService publicPopupService,
+            PublicSiteService sites
     ) {
         this.menuSettingsService = menuSettingsService;
         this.conferenceSettingsService = conferenceSettingsService;
@@ -78,25 +86,62 @@ public class PublicPageController {
         this.memberService = memberService;
         this.clock = clock;
         this.publicPopupService = publicPopupService;
+        this.sites = sites;
     }
 
-    @GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = {"/", "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}",
+            "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}/{*path}"},
+            produces = MediaType.TEXT_HTML_VALUE)
+    public String route(HttpServletRequest request, HttpServletResponse response, Model model,
+                        @RequestParam(defaultValue = "1") int page,
+                        @RequestParam(defaultValue = "") String category,
+                        @RequestParam(required = false) Long seq) {
+        var resolved = request.getAttribute("publicResolvedPage") instanceof PublicSiteService.ResolvedPage value
+                ? value : sites.resolvePage(request.getRequestURI().substring(request.getContextPath().length()));
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store");
+        if (resolved.context() == null) {
+            model.addAttribute("conferences", conferenceSettingsService.getSettingsList());
+            return "public/conferences";
+        }
+        request.setAttribute(PublicSiteContext.ATTRIBUTE, resolved.context());
+        request.setAttribute(PublicSiteContext.PAGE_PATH_ATTRIBUTE, resolved.pagePath());
+        LocaleContextHolder.setLocale(Locale.forLanguageTag(resolved.context().language()));
+        if (resolved.redirectUrl() != null) {
+            String query = request.getQueryString();
+            return "redirect:" + resolved.redirectUrl()
+                    + (query == null || query.isBlank() ? "" : (resolved.redirectUrl().contains("?") ? "&" : "?") + query);
+        }
+        return switch (resolved.pagePath()) {
+            case "/" -> home(request, response, model);
+            case "/forgot-password", "/reset-password" -> forgotPassword(request, response, model);
+            case "/notice-detail" -> {
+                if (seq == null || seq <= 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                yield noticeDetail(seq, request, response, model);
+            }
+            default -> page(request, response, page, category, model);
+        };
+    }
+
     public String home(HttpServletRequest request, HttpServletResponse response, Model model) {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store");
         response.addHeader(HttpHeaders.VARY, HttpHeaders.COOKIE);
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
-        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq);
+        Long conferenceSeq = PublicSiteContext.from(request).conferenceSeq();
+        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq, PublicSiteContext.from(request).language());
         ConferenceSettingsResponse conference = conferenceSettingsService.getSettings(conferenceSeq);
 
         addCommonModel(model, request, menus, conference, null);
         model.addAttribute("pageTitle", eventName(conference));
         model.addAttribute("pageDescription", eventName(conference) + " official conference website");
         model.addAttribute("programData", programService.getManagementData(conferenceSeq));
-        model.addAttribute("programDateFormatter", PROGRAM_DATE_FORMATTER);
+        model.addAttribute("programDateFormatter", programDateFormatter());
         model.addAttribute("speakersData", speakerService.list(conferenceSeq, 1, 100, "", null, true));
-        model.addAttribute("notices", boardPostService.findPublishedNotices(conferenceSeq, 5, false));
+        var noticeMenus = flatten(menus);
+        var noticeMenu = noticeMenus.stream().filter(menu -> "notice".equals(menu.getMenuKey())).findFirst().orElse(null);
+        boolean noticeAllowed = noticeMenu != null && (isMemberLoggedIn(request, conferenceSeq)
+                || findLineage(noticeMenus, noticeMenu).stream().noneMatch(menu -> Boolean.TRUE.equals(menu.getAuthRequired())));
+        model.addAttribute("notices", noticeAllowed ? boardPostService.findPublishedNotices(conferenceSeq, 5, false) : List.of());
         model.addAttribute("sponsors", sponsorService.findVisible(conferenceSeq));
-        model.addAttribute("popupDisplay", publicPopupService.forHome(conferenceSeq, request.getCookies()));
+        model.addAttribute("popupDisplay", publicPopupService.forHome(PublicSiteContext.from(request), request.getCookies()));
 
         LocalDate today = LocalDate.now(clock);
         LocalDate registrationOpenDate = earlier(
@@ -116,27 +161,26 @@ public class PublicPageController {
         LocalDate abstractSubmissionDate = conference.getAbstractEndDate();
 
         model.addAttribute("registrationOpenDateText", registrationOpenDate == null
-                ? "To be announced" : MAIN_DATE_FORMATTER.format(registrationOpenDate));
+                ? text("To be announced", "추후 안내") : mainDateFormatter().format(registrationOpenDate));
         model.addAttribute("registrationDday", registrationDday);
         model.addAttribute("registrationOpened", "OPEN".equals(registrationDday));
         model.addAttribute("abstractSubmissionDateText", abstractSubmissionDate == null
-                ? "To be announced" : MAIN_DATE_FORMATTER.format(abstractSubmissionDate));
+                ? text("To be announced", "추후 안내") : mainDateFormatter().format(abstractSubmissionDate));
         model.addAttribute("abstractSubmissionDday", formatDday(abstractSubmissionDate, "CLOSED"));
         model.addAttribute("abstractOpened",
                 within(today, conference.getAbstractStartDate(), conference.getAbstractEndDate()));
         return "public/home";
     }
 
-    @GetMapping(value = {"/forgot-password", "/forgot-password/", "/reset-password", "/reset-password/"}, produces = MediaType.TEXT_HTML_VALUE)
     public String forgotPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
         boolean reset = "/reset-password".equals(normalizeRoutePath(request));
-        String title = reset ? "Reset Password" : "Forgot Password";
+        String title = reset ? text("Reset Password", "비밀번호 재설정") : text("Forgot Password", "비밀번호 찾기");
         String key = reset ? "reset-password" : "forgot-password";
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("Referrer-Policy", "no-referrer");
         response.setHeader("X-Robots-Tag", "noindex, nofollow");
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
-        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq);
+        Long conferenceSeq = PublicSiteContext.from(request).conferenceSeq();
+        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq, PublicSiteContext.from(request).language());
         ConferenceSettingsResponse conference = conferenceSettingsService.getSettings(conferenceSeq);
         // Account recovery is a public utility page, without a separate CMS menu row.
         MenuSettingsResponse recoveryMenu = MenuSettingsResponse.builder()
@@ -150,42 +194,46 @@ public class PublicPageController {
         model.addAttribute("breadcrumbs", List.of(recoveryMenu));
         model.addAttribute("memberPage", true);
         model.addAttribute("memberPageTitle", title);
-        model.addAttribute("memberPageDescription", "Recover access to your " + eventName(conference) + " account.");
+        model.addAttribute("memberPageDescription", text("Recover access to your " + eventName(conference) + " account.", eventName(conference) + " 계정의 비밀번호를 재설정합니다."));
         model.addAttribute("contentTemplate", "public/member/" + key);
         model.addAttribute("pageTitle", title + " | " + eventName(conference));
         model.addAttribute("secureAccountPage", true);
-        model.addAttribute("pageDescription", "Recover access to your " + eventName(conference) + " account.");
+        model.addAttribute("resetTokenPage", reset);
+        model.addAttribute("pageDescription", text("Recover access to your " + eventName(conference) + " account.", eventName(conference) + " 계정의 비밀번호를 재설정합니다."));
         model.addAttribute("noBottomPadding", false);
         return "public/page";
     }
 
-    @GetMapping(value = "/information/noticedetail/{seq}", produces = MediaType.TEXT_HTML_VALUE)
     public String noticeDetail(
             @PathVariable Long seq,
             HttpServletRequest request,
             HttpServletResponse response,
             Model model
     ) {
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
-        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq);
+        Long conferenceSeq = PublicSiteContext.from(request).conferenceSeq();
+        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq, PublicSiteContext.from(request).language());
         ConferenceSettingsResponse conference = conferenceSettingsService.getSettings(conferenceSeq);
         List<MenuSettingsResponse> flattenedMenus = flatten(menus);
         MenuSettingsResponse currentMenu = flattenedMenus.stream()
                 .filter(menu -> "notice".equals(menu.getMenuKey()))
                 .findFirst()
                 .orElse(null);
-        BoardPostResponse notice = boardPostService.getPublishedNotice(conferenceSeq, seq);
+        List<MenuSettingsResponse> lineage = currentMenu == null ? List.of() : findLineage(flattenedMenus, currentMenu);
+        if (lineage.stream().anyMatch(menu -> Boolean.TRUE.equals(menu.getAuthRequired()))
+                && !isMemberLoggedIn(request, conferenceSeq)) {
+            return "redirect:" + PublicSiteContext.from(request).pageUrl("/login");
+        }
+        BoardPostResponse notice = currentMenu == null ? null : boardPostService.getPublishedNotice(conferenceSeq, seq);
 
         if (currentMenu == null || notice == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             addCommonModel(model, request, menus, conference, null);
-            model.addAttribute("pageTitle", "Page not found | " + eventName(conference));
+            model.addAttribute("pageTitle", text("Page not found", "페이지를 찾을 수 없습니다") + " | " + eventName(conference));
             model.addAttribute("pageDescription", "The requested notice could not be found.");
             return "public/not-found";
         }
 
-        notice.setContent(cmsHtmlSanitizer.sanitize(notice.getContent()));
-        List<MenuSettingsResponse> lineage = findLineage(flattenedMenus, currentMenu);
+        notice.setContent(PublicContentLinks.render(cmsHtmlSanitizer.sanitize(notice.getContent()), PublicSiteContext.from(request)));
         MenuSettingsResponse topMenu = lineage.isEmpty() ? currentMenu : lineage.get(0);
         addCommonModel(model, request, menus, conference, currentMenu);
         model.addAttribute("currentTopMenuKey", topMenu.getMenuKey());
@@ -199,13 +247,6 @@ public class PublicPageController {
         return "public/page";
     }
 
-    @GetMapping(
-            value = {
-                    "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$)[^.]+}",
-                    "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$)[^.]+}/{*path}"
-            },
-            produces = MediaType.TEXT_HTML_VALUE
-    )
     public String page(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -213,16 +254,16 @@ public class PublicPageController {
             @RequestParam(defaultValue = "") String category,
             Model model
     ) {
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
+        Long conferenceSeq = PublicSiteContext.from(request).conferenceSeq();
         String routePath = normalizeRoutePath(request);
-        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq);
+        List<MenuSettingsResponse> menus = menuSettingsService.getActiveUserMenuTree(conferenceSeq, PublicSiteContext.from(request).language());
         ConferenceSettingsResponse conference = conferenceSettingsService.getSettings(conferenceSeq);
         List<MenuSettingsResponse> flattenedMenus = flatten(menus);
         // These child routes intentionally reuse the mypage-abstract menu entry instead of
         // requiring separate administrator-managed menu rows.
         String memberAbstractTemplate = switch (routePath) {
-            case "/mypage/abstract/write" -> "public/member/mypage-abstract-write";
-            case "/mypage/abstract/review" -> "public/member/mypage-abstract-review";
+            case "/abstract-write" -> "public/member/mypage-abstract-write";
+            case "/abstract-review" -> "public/member/mypage-abstract-review";
             default -> null;
         };
         MenuSettingsResponse currentMenu = flattenedMenus.stream()
@@ -236,7 +277,7 @@ public class PublicPageController {
                     .orElse(null);
         }
 
-        boolean passwordChangePage = "/mypage/password".equals(routePath);
+        boolean passwordChangePage = "/mypage-password".equals(routePath);
         if (passwordChangePage) {
             currentMenu = flattenedMenus.stream().filter(menu -> "mypage".equals(menu.getMenuKey()))
                     .findFirst().orElse(null);
@@ -247,7 +288,7 @@ public class PublicPageController {
         if (currentMenu == null || isExternal(currentMenu)) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             addCommonModel(model, request, menus, conference, null);
-            model.addAttribute("pageTitle", "Page not found | " + eventName(conference));
+            model.addAttribute("pageTitle", text("Page not found", "페이지를 찾을 수 없습니다") + " | " + eventName(conference));
             model.addAttribute("pageDescription", "The requested conference page could not be found.");
             model.addAttribute("requestedPath", routePath);
             return "public/not-found";
@@ -255,9 +296,9 @@ public class PublicPageController {
 
         List<MenuSettingsResponse> lineage = findLineage(flattenedMenus, currentMenu);
         MenuSettingsResponse topMenu = lineage.isEmpty() ? currentMenu : lineage.get(0);
-        String contentHtml = cmsHtmlSanitizer.sanitize(currentMenu.getMenuHtml());
+        String contentHtml = PublicContentLinks.render(cmsHtmlSanitizer.sanitize(currentMenu.getMenuHtml()), PublicSiteContext.from(request));
         if ("program-at-a-glance".equals(currentMenu.getMenuKey())) {
-            contentHtml = ProgramOverviewStats.render(contentHtml, programService.getManagementData(conferenceSeq));
+            contentHtml = ProgramOverviewStats.render(contentHtml, programService.getManagementData(conferenceSeq), PublicSiteContext.from(request).language());
         }
         boolean memberPage = "member".equals(topMenu.getMenuKey()) && !"member".equals(currentMenu.getMenuKey());
         boolean myPage = lineage.stream().anyMatch(menu -> "mypage".equals(menu.getMenuKey()));
@@ -265,9 +306,9 @@ public class PublicPageController {
                 ? lineage.get(Math.min(1, lineage.size() - 1))
                 : currentMenu;
         // A protected parent protects all descendants even when the child row itself is not flagged.
-        if ((passwordChangePage || myPage || Boolean.TRUE.equals(currentMenu.getAuthRequired()))
+        if ((passwordChangePage || myPage || lineage.stream().anyMatch(menu -> Boolean.TRUE.equals(menu.getAuthRequired())))
                 && !isMemberLoggedIn(request, conferenceSeq)) {
-            return "redirect:/login";
+            return "redirect:" + PublicSiteContext.from(request).pageUrl("/login");
         }
 
         // 접수 페이지는 화면 진입부터 API와 같은 기간 규칙을 적용한다.
@@ -288,7 +329,7 @@ public class PublicPageController {
         model.addAttribute("memberPage", memberPage);
 
         // page.html renders contentTemplate when present; otherwise it safely renders CMS HTML.
-        if (memberPage && currentMenu.getMenuKey().matches("[a-z0-9-]+")) {
+        if (memberPage && Set.of("login", "join", "join-domestic", "join-international", "mypage", "mypage-profile", "mypage-abstract", "mypage-registration", "mypage-certificate").contains(currentMenu.getMenuKey())) {
             model.addAttribute("memberPageTitle", memberSectionMenu.getMenuName());
             model.addAttribute("memberPageDescription", cmsHtmlSanitizer.summarize(
                     currentMenu.getMenuHtml(),
@@ -308,7 +349,7 @@ public class PublicPageController {
         if ("scientific-program".equals(currentMenu.getMenuKey())) {
             model.addAttribute("contentTemplate", "public/pages/scientific-program");
             model.addAttribute("programData", programService.getManagementData(conferenceSeq));
-            model.addAttribute("programDateFormatter", PROGRAM_DATE_FORMATTER);
+            model.addAttribute("programDateFormatter", programDateFormatter());
         }
 
         if ("invited-speakers".equals(currentMenu.getMenuKey())) {
@@ -337,7 +378,7 @@ public class PublicPageController {
         if("faq".equals(currentMenu.getMenuKey())) {
             model.addAttribute("contentTemplate", "public/pages/faq");
             BoardPostPageResponse faqPage = boardPostService.findPublishedFaqPage(conferenceSeq, page, 10, category);
-            faqPage.getItems().forEach(faq -> faq.setContent(cmsHtmlSanitizer.sanitize(faq.getContent())));
+            faqPage.getItems().forEach(faq -> faq.setContent(PublicContentLinks.render(cmsHtmlSanitizer.sanitize(faq.getContent()), PublicSiteContext.from(request))));
             model.addAttribute("faqCategories", boardPostService.findFaqCategories());
             model.addAttribute("faqPage", faqPage);
             model.addAttribute("selectedFaqCategory", category == null ? "" : category.trim());
@@ -355,7 +396,7 @@ public class PublicPageController {
         }
 
         if (myPage) {
-            Long memberSeq = ((Number) request.getSession(false).getAttribute("memberSeq")).longValue();
+            Long memberSeq = PublicMemberSession.resolve(request.getSession(false), () -> conferenceSeq).memberSeq();
             MemberDetailResponse detail = memberService.findDetail(conferenceSeq, memberSeq);
             model.addAttribute("mypageMember", detail.getMember());
             model.addAttribute("mypageAbstracts", detail.getAbstractSubmissions());
@@ -364,17 +405,17 @@ public class PublicPageController {
             String registrationLabel;
             String registrationDday;
             if (within(today, conference.getRegularStartDate(), conference.getRegularEndDate())) {
-                registrationLabel = "Regular";
+                registrationLabel = text("Regular", "정규 등록");
                 registrationDday = formatDday(conference.getRegularEndDate(), "CLOSED");
             } else if (within(today, conference.getEarlyBirdStartDate(), conference.getEarlyBirdEndDate())) {
-                registrationLabel = "Early-bird";
+                registrationLabel = text("Early-bird", "조기 등록");
                 registrationDday = formatDday(conference.getEarlyBirdEndDate(), "CLOSED");
             } else {
                 LocalDate nextStart = earlier(
                         future(today, conference.getEarlyBirdStartDate()),
                         future(today, conference.getRegularStartDate()));
-                registrationLabel = nextStart == null ? "Registration"
-                        : nextStart.equals(conference.getEarlyBirdStartDate()) ? "Early-bird opens" : "Regular opens";
+                registrationLabel = nextStart == null ? text("Registration", "등록")
+                        : nextStart.equals(conference.getEarlyBirdStartDate()) ? text("Early-bird opens", "조기 등록 시작") : text("Regular opens", "정규 등록 시작");
                 registrationDday = formatRegistrationDday(conference);
             }
             model.addAttribute("mypageRegistrationLabel", registrationLabel);
@@ -397,10 +438,10 @@ public class PublicPageController {
                 + "Sitemap: " + siteOrigin(request) + "/sitemap.xml\n";
     }
 
-    @GetMapping("/public/speakers/{seq}/image")
+    @GetMapping("/api/public/{conferenceSeq}/speakers/{seq}/image")
     @ResponseBody
-    public ResponseEntity<Resource> speakerImage(@PathVariable Long seq) {
-        Resource resource = speakerService.publicImage(conferenceSettingsService.getLatestConferenceSeq(), seq);
+    public ResponseEntity<Resource> speakerImage(@PathVariable Long seq, HttpServletRequest request) {
+        Resource resource = speakerService.publicImage(PublicSiteContext.from(request).conferenceSeq(), seq);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .header("X-Content-Type-Options", "nosniff")
                 .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
@@ -410,25 +451,33 @@ public class PublicPageController {
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     @ResponseBody
     public String sitemap(HttpServletRequest request) {
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
         String origin = siteOrigin(request);
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
-                .append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">")
-                .append("<url><loc>").append(HtmlUtils.htmlEscape(origin + "/")).append("</loc></url>");
-
-        flatten(menuSettingsService.getActiveUserMenuTree(conferenceSeq)).stream()
-                .filter(menu -> !isExternal(menu))
-                .map(MenuSettingsResponse::getRoutePath)
-                .map(PublicPageController::normalizeRoutePath)
-                .filter(path -> path != null && !path.equals("/"))
-                .distinct()
-                .forEach(path -> xml.append("<url><loc>")
-                        .append(HtmlUtils.htmlEscape(origin + path))
-                        .append("</loc></url>"));
-
+                .append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+        var conferences = sites.isMulti() ? conferenceSettingsService.getSettingsList()
+                : List.of(conferenceSettingsService.getSettings(sites.resolvePage("/").context().conferenceSeq()));
+        for (var conference : conferences) {
+            for (String language : conference.getSupportedLanguages()) {
+                var site = sites.resolveApi(conference.getSeq(), language);
+                Set<String> urls = new LinkedHashSet<>();
+                urls.add(site.pageUrl("/"));
+                collectPublicUrls(menuSettingsService.getActiveUserMenuTree(conference.getSeq(), language), site, false, urls);
+                urls.forEach(url -> xml.append("<url><loc>").append(HtmlUtils.htmlEscape(origin + url)).append("</loc></url>"));
+            }
+        }
         return xml.append("</urlset>").toString();
     }
 
+    private void collectPublicUrls(List<MenuSettingsResponse> menus, PublicSiteContext site, boolean protectedParent, Set<String> urls) {
+        for (var menu : menus) {
+            boolean protectedMenu = protectedParent || Boolean.TRUE.equals(menu.getAuthRequired())
+                    || "member".equals(menu.getMenuKey()) || "mypage".equals(menu.getMenuKey());
+            if (!protectedMenu && !isExternal(menu) && !"folder".equals(menu.getMenuType()) && menu.getRoutePath() != null) {
+                urls.add(site.pageUrl(menu.getRoutePath()));
+            }
+            if (menu.getChildren() != null) collectPublicUrls(menu.getChildren(), site, protectedMenu, urls);
+        }
+    }
     private void addCommonModel(
             Model model,
             HttpServletRequest request,
@@ -436,13 +485,31 @@ public class PublicPageController {
             ConferenceSettingsResponse conference,
             MenuSettingsResponse currentMenu
     ) {
+        PublicSiteContext site = PublicSiteContext.from(request);
+        model.addAttribute("siteContext", site);
+        model.addAttribute("siteBasePath", site.siteBasePath());
+        model.addAttribute("apiBasePath", site.apiBasePath());
+        model.addAttribute("conferenceSeq", site.conferenceSeq());
+        model.addAttribute("language", site.language());
+        model.addAttribute("supportedLanguages", site.supportedLanguages());
+        Map<String, String> languageLinks = new LinkedHashMap<>();
+        for (String language : site.supportedLanguages()) {
+            var translatedSite = sites.resolveApi(site.conferenceSeq(), language);
+            var link = UriComponentsBuilder.fromUriString(translatedSite.pageUrl(normalizeRoutePath(request)));
+            for (String key : List.of("seq", "page", "category")) {
+                String value = request.getParameter(key);
+                if (value != null) link.queryParam(key, value);
+            }
+            languageLinks.put(language, link.build().encode().toUriString());
+        }
+        model.addAttribute("languageLinks", languageLinks);
         // This is the shared model contract consumed by fragments.html on every public page.
         Map<String, MenuSettingsResponse> menuByKey = new LinkedHashMap<>();
         flatten(menus).forEach(menu -> menuByKey.put(menu.getMenuKey(), menu));
 
         model.addAttribute("eventName", eventName(conference));
         model.addAttribute("eventDateText", formatDateRange(conference.getEventStartDate(), conference.getEventEndDate()));
-        model.addAttribute("venueText", defaultText(conference.getVenueAddress(), "Venue to be announced"));
+        model.addAttribute("venueText", defaultText(conference.getVenueAddress(), text("Venue to be announced", "장소 추후 안내")));
         model.addAttribute("navigationMenus", menus);
         model.addAttribute("loginMenu", menuByKey.get("login"));
         model.addAttribute("joinMenu", menuByKey.get("join"));
@@ -461,17 +528,17 @@ public class PublicPageController {
 
     private String closedPeriodNotice(String routePath, ConferenceSettingsResponse conference) {
         LocalDate today = LocalDate.now(clock);
-        if ("/abstract/abstract-submission".equals(routePath)
+        if ("/abstract-submission".equals(routePath)
                 && !within(today, conference.getAbstractStartDate(), conference.getAbstractEndDate())) {
             return "abstract-closed";
         }
 
-        if ("/mypage/abstract/write".equals(routePath)
+        if ("/abstract-write".equals(routePath)
                 && !within(today, conference.getAbstractStartDate(), conference.getAbstractEndDate())) {
             return "abstract-closed";
         }
 
-        if ("/registration/online-registration".equals(routePath)
+        if ("/online-registration".equals(routePath)
                 && !within(today, conference.getEarlyBirdStartDate(), conference.getEarlyBirdEndDate())
                 && !within(today, conference.getRegularStartDate(), conference.getRegularEndDate())) {
             return "registration-closed";
@@ -527,15 +594,15 @@ public class PublicPageController {
 
     private String formatDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null && endDate == null) {
-            return "Schedule to be announced";
+            return text("Schedule to be announced", "일정 추후 안내");
         }
         if (startDate == null) {
-            return MAIN_DATE_FORMATTER.format(endDate);
+            return mainDateFormatter().format(endDate);
         }
         if (endDate == null || startDate.equals(endDate)) {
-            return MAIN_DATE_FORMATTER.format(startDate);
+            return mainDateFormatter().format(startDate);
         }
-        return MAIN_DATE_FORMATTER.format(startDate) + " – " + MAIN_DATE_FORMATTER.format(endDate);
+        return mainDateFormatter().format(startDate) + " – " + mainDateFormatter().format(endDate);
     }
 
     private String formatDday(LocalDate targetDate, String pastText) {
@@ -576,8 +643,24 @@ public class PublicPageController {
         return value == null || value.isBlank() ? fallback : value.trim();
     }
 
+    private String text(String english, String korean) {
+        return "ko".equals(LocaleContextHolder.getLocale().getLanguage()) ? korean : english;
+    }
+
+    private DateTimeFormatter mainDateFormatter() {
+        return "ko".equals(LocaleContextHolder.getLocale().getLanguage())
+                ? DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN) : MAIN_DATE_FORMATTER;
+    }
+
+    private DateTimeFormatter programDateFormatter() {
+        return "ko".equals(LocaleContextHolder.getLocale().getLanguage())
+                ? DateTimeFormatter.ofPattern("yyyy년 M월 d일 EEEE", Locale.KOREAN) : PROGRAM_DATE_FORMATTER;
+    }
+
     private String normalizeRoutePath(HttpServletRequest request) {
-        String requestPath = request.getRequestURI().substring(request.getContextPath().length());
+        Object resolvedPath = request.getAttribute(PublicSiteContext.PAGE_PATH_ATTRIBUTE);
+        String requestPath = resolvedPath instanceof String path ? path
+                : request.getRequestURI().substring(request.getContextPath().length());
         return normalizeRoutePath(requestPath);
     }
 
@@ -590,7 +673,12 @@ public class PublicPageController {
     }
 
     private String canonicalUrl(HttpServletRequest request) {
-        return siteOrigin(request) + normalizeRoutePath(request);
+        String page = normalizeRoutePath(request);
+        String canonical = siteOrigin(request) + PublicSiteContext.from(request).pageUrl(page);
+        // Notice identities moved from path segments to a query parameter in the flat URL scheme.
+        String seq = request.getParameter("seq");
+        if ("/notice-detail".equals(page) && seq != null && seq.matches("[0-9]+")) canonical += "?seq=" + seq;
+        return canonical;
     }
 
     private String siteOrigin(HttpServletRequest request) {

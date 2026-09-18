@@ -2,6 +2,7 @@ package com.bjworld21.congress.service;
 
 import com.bjworld21.congress.config.MemberPasswordResetProperties;
 import com.bjworld21.congress.config.PersonalDataProperties;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.entity.MemberPasswordResetToken;
 import com.bjworld21.congress.repository.MemberPasswordResetRepository;
 import com.bjworld21.congress.repository.MemberRepository;
@@ -63,7 +64,7 @@ public class MemberPasswordResetService {
         checkEnabled();
         String baseUrl = properties.validatedBaseUrl();
         mail.checkAvailable();
-        long conferenceSeq = conferences.getLatestConferenceSeq();
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         LocalDateTime now = now();
         // Apply the same limits to every submitted address, including unknown accounts.
@@ -73,10 +74,12 @@ public class MemberPasswordResetService {
                 && takeLimit("request-minute:" + conferenceSeq + ":" + normalizedEmail, now.truncatedTo(ChronoUnit.MINUTES), 1)));
         if (!allowed) return;
         // Membership lookup and SMTP happen off the request thread, preventing account enumeration by timing.
-        executor.execute(() -> issueAndSend(conferenceSeq, normalizedEmail, baseUrl));
+        String resetPath = PublicApiRequest.context().pageUrl("/reset-password");
+        String language = PublicApiRequest.context().language();
+        executor.execute(() -> issueAndSend(conferenceSeq, normalizedEmail, baseUrl, resetPath, language));
     }
 
-    private void issueAndSend(long conferenceSeq, String email, String baseUrl) {
+    private void issueAndSend(long conferenceSeq, String email, String baseUrl, String resetPath, String language) {
         String hash = null;
         try {
             byte[] random = new byte[32];
@@ -98,9 +101,9 @@ public class MemberPasswordResetService {
             if (!created) return;
             hash = tokenHash;
             // Fragments are not sent in HTTP requests or Referer headers.
-            String link = baseUrl + "/reset-password#token=" + rawToken;
+            String link = baseUrl + resetPath + "#token=" + rawToken;
             mail.sendResetLink(email, conferences.getSettings(conferenceSeq).getEventName(), link,
-                    properties.getTokenTtl().toMinutes());
+                    properties.getTokenTtl().toMinutes(), language);
         } catch (Exception exception) {
             if (hash != null) {
                 try {
@@ -118,7 +121,7 @@ public class MemberPasswordResetService {
     public void validateToken(String rawToken, String ip) {
         checkEnabled();
         limitAttempt(ip);
-        long conferenceSeq = conferences.getLatestConferenceSeq();
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         var token = tokens.find(conferenceSeq, MemberCredentialFingerprint.hash(rawToken));
         if (!usable(token, now())) throw new InvalidTokenException();
         String password = members.findCredential(conferenceSeq, token.getMemberSeq());
@@ -134,7 +137,7 @@ public class MemberPasswordResetService {
                 || !password.equals(password.trim()) || !password.equals(confirmation)) {
             throw new IllegalArgumentException("Use matching passwords of 8-16 characters, without leading or trailing spaces.");
         }
-        long conferenceSeq = conferences.getLatestConferenceSeq();
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         String hash = MemberCredentialFingerprint.hash(rawToken);
         var candidate = tokens.find(conferenceSeq, hash);
         if (!usable(candidate, now())) throw new InvalidTokenException();

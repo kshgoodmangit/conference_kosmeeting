@@ -1,27 +1,27 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <section class="access-notice-section" th:fragment="content">
         <div class="container">
             <div class="access-notice" aria-labelledby="access-notice-title">
                 <img class="access-notice-icon" th:src="${accessNotice == 'registration-closed' ? '/public/img/access-notice-icon2.svg' : '/public/img/access-notice-icon.svg'}" alt="">
                 <p class="access-notice-label"
-                   th:text="${accessNotice == 'registration-closed' ? 'ONLINE REGISTRATION' : 'ABSTRACT SUBMISSION'}">
+                   th:text="${accessNotice == 'registration-closed' ? #messages.msg('public.ui.online.registration.204b54') : #messages.msg('public.ui.abstract.submission.d74f70')}">
                     ABSTRACT SUBMISSION
                 </p>
                 <h2 id="access-notice-title"
-                    th:text="${accessNotice == 'registration-closed' ? 'Online registration is not currently open.' : 'Abstract submission is not currently open.'}">
+                    th:text="${accessNotice == 'registration-closed' ? #messages.msg('public.ui.online.registration.is.not.currently.open.97b7cd') : #messages.msg('public.ui.abstract.submission.is.not.currently.open.3778be')}">
                     Abstract submission is not currently open.
                 </h2>
                 <p class="access-notice-description">
-                    <span th:text="${accessNotice == 'registration-closed' ? 'The registration period has not started or has already ended.' : 'The submission period has not started or has already ended.'}">
+                    <span th:text="${accessNotice == 'registration-closed' ? #messages.msg('public.ui.the.registration.period.has.not.started.1cdde3') : #messages.msg('public.ui.the.submission.period.has.not.started.9d176c')}">
                         The submission period has not started or has already ended.
                     </span>
-                    <span th:text="${accessNotice == 'registration-closed' ? 'Please check Registration Guideline and Notice for the latest schedule and updates.' : 'Please check Important Dates and Notice for the latest schedule and updates.'}">
+                    <span th:text="${accessNotice == 'registration-closed' ? #messages.msg('public.ui.please.check.registration.guideline.and.notice.2661b6') : #messages.msg('public.ui.please.check.important.dates.and.notice.e30a03')}">
                         Please check Important Dates and Notice for the latest schedule and updates.
                     </span>
                 </p>
-                <a class="access-notice-home" href="/">Return to Home</a>
+                <a class="access-notice-home" href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}"><th:block th:text="#{public.ui.return.to.home.7d7083}">Return to Home</th:block></a>
             </div>
         </div>
     </section>

@@ -28,13 +28,13 @@ class PublicMemberEmailVerificationControllerTest {
     @Autowired private FilterChainProxy filters;
     private MemberEmailVerificationService service;
     private MockMvc mvc;
-    private static final String URL = "/api/public/members/email-verification/send";
+    private static final String URL = "/api/public/7/members/email-verification/send";
 
     @BeforeEach
     void setup() {
         service = mock(MemberEmailVerificationService.class);
         var controller = new PublicMemberEmailVerificationController(service, new ClientIpResolver(new AdminIpAccessProperties()));
-        mvc = MockMvcBuilders.standaloneSetup(controller).apply(springSecurity(filters)).build();
+        mvc = MockMvcBuilders.standaloneSetup(controller).apply(springSecurity(filters)).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
     }
 
     @Test

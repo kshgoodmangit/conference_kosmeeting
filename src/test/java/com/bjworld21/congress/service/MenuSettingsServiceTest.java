@@ -21,6 +21,102 @@ import static org.mockito.Mockito.when;
 class MenuSettingsServiceTest {
 
     @Test
+    void publicMenusUseStoredPageNamesForLegacyRoutesWithoutChangingAdminData() {
+        var repository = mock(MenuSettingsRepository.class);
+        var service = new MenuSettingsService(repository, mock(MenuHtmlHistoryService.class));
+        var welcome = menu(2L, "welcome-message", null, 1);
+        welcome.setMenuPath("welcome-message");
+        welcome.setRoutePath("/arbitrary-old-folder/welcome-message");
+        var abstracts = menu(3L, "mypage-abstract", null, 2);
+        abstracts.setMenuPath("mypage-abstract");
+        abstracts.setRoutePath("/mypage/abstract");
+        var canonical = menu(4L, "custom-key", null, 3);
+        canonical.setMenuPath("stale-page-name");
+        canonical.setRoutePath("/custom-page");
+        var external = menu(5L, "external", null, 4);
+        external.setMenuType("link");
+        external.setMenuPath("external");
+        external.setRoutePath("https://example.org/folder/page");
+        var rows = List.of(welcome, abstracts, canonical, external);
+        when(repository.findActiveByScope(eq(1L), eq("user"), isA(LocalDate.class))).thenReturn(rows);
+        when(repository.findAll(1L)).thenReturn(rows);
+        var translations = mock(MenuTranslationService.class);
+        when(translations.localize(1L, rows, "en")).thenReturn(rows);
+        service.setTranslationService(translations);
+
+        for (var tree : List.of(service.getActiveUserMenuTree(1L), service.getActiveUserMenuTree(1L, "en"))) {
+            assertThat(tree).extracting(MenuSettingsResponse::getRoutePath).containsExactly(
+                    "/welcome-message", "/mypage-abstract", "/custom-page", "https://example.org/folder/page");
+        }
+        assertThat(service.getMenuTree(1L)).extracting(MenuSettingsResponse::getRoutePath).containsExactly(
+                "/arbitrary-old-folder/welcome-message", "/mypage/abstract", "/custom-page", "https://example.org/folder/page");
+        verify(repository, never()).update(any());
+    }
+
+    @Test
+    void refusesAmbiguousCanonicalMenuRoutesInsteadOfSelectingTheWrongMenu() {
+        var repository = mock(MenuSettingsRepository.class);
+        var service = new MenuSettingsService(repository, mock(MenuHtmlHistoryService.class));
+        var first = menu(1L, "first", null, 1);
+        first.setMenuPath("same-page");
+        first.setRoutePath("/old-folder/first");
+        var second = menu(2L, "second", null, 2);
+        second.setRoutePath("/same-page");
+        when(repository.findActiveByScope(eq(1L), eq("user"), isA(LocalDate.class))).thenReturn(List.of(first, second));
+        assertThatThrownBy(() -> service.getActiveUserMenuTree(1L))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("503");
+    }
+
+    @Test
+    void activeTreeDoesNotPromoteDescendantsOfDisabledOrExpiredAncestor() {
+        var repository=mock(MenuSettingsRepository.class);
+        var service=new MenuSettingsService(repository,mock(MenuHtmlHistoryService.class));
+        // The SQL date/enabled filter removed protected-folder; its still-active
+        // child and grandchild must not become accessible standalone roots.
+        when(repository.findActiveByScope(eq(1L),eq("user"),isA(LocalDate.class))).thenReturn(List.of(
+                menu(1L,"root",null,0),
+                menu(3L,"private-board","protected-folder",10),
+                menu(4L,"private-detail","private-board",10)));
+        assertThat(service.getActiveUserMenuTree(1L)).isEmpty();
+    }
+
+    @Test
+    void unwrappedRootAuthenticationRemainsOnEveryVisibleBranch() {
+        var repository=mock(MenuSettingsRepository.class);
+        var service=new MenuSettingsService(repository,mock(MenuHtmlHistoryService.class));
+        var root=menu(1L,"root",null,0);
+        root.setAuthRequired(true);
+        when(repository.findActiveByScope(eq(1L),eq("user"),isA(LocalDate.class))).thenReturn(List.of(
+                root,menu(2L,"program","root",10),menu(3L,"speakers","program",10),menu(4L,"notice","root",20)));
+        var tree=service.getActiveUserMenuTree(1L);
+        assertThat(tree).extracting(MenuSettingsResponse::getAuthRequired).containsExactly(true,true);
+        assertThat(tree.get(0).getChildren()).extracting(MenuSettingsResponse::getMenuKey).containsExactly("speakers");
+        assertThat(tree).extracting(MenuSettingsResponse::getMenuKey).doesNotContain("root");
+    }
+
+    @Test
+    void administrativeTreeRetainsOrphansForRepair() {
+        var repository=mock(MenuSettingsRepository.class);
+        var service=new MenuSettingsService(repository,mock(MenuHtmlHistoryService.class));
+        when(repository.findAll(1L)).thenReturn(List.of(menu(3L,"orphan","missing-parent",10)));
+        assertThat(service.getMenuTree(1L)).extracting(MenuSettingsResponse::getMenuKey).containsExactly("orphan");
+    }
+
+    @Test
+    void userPagesRejectLanguageSlugsAndReservedSystemRoutes() {
+        var repository=mock(MenuSettingsRepository.class);
+        var service=new MenuSettingsService(repository,mock(MenuHtmlHistoryService.class));
+        when(repository.findBySeqForUpdate(1L,2L)).thenReturn(menu(2L,"welcome",null,0));
+        for (String path : List.of("/ja", "/fr", "/zh-hans", "/vendor", "/commoncode", "/program/welcome")) {
+            assertThatThrownBy(() -> service.update(1L,2L,"Welcome","welcome","page","full",path,
+                    null,null,"self",false,true,null,null,null,true,9L,null,false))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        verify(repository,never()).update(any());
+    }
+
+    @Test
     void buildsActiveUserTreeAndUnwrapsConfiguredRoot() {
         MenuSettingsRepository repository = mock(MenuSettingsRepository.class);
         MenuSettingsService service = new MenuSettingsService(repository, mock(MenuHtmlHistoryService.class));

@@ -20,39 +20,7 @@ public class ConferenceSettingsManagementService {
 
     @Transactional
     public ConferenceSettingsResponse saveAll(Long seq, ConferenceSettingsSaveAllRequest request) {
-        ConferenceSettingsResponse savedSettings = seq == null
-                ? conferenceSettingsService.saveSettings(
-                        request.getEventName(),
-                        request.getEventStartDate(),
-                        request.getEventEndDate(),
-                        request.getEarlyBirdStartDate(),
-                        request.getEarlyBirdEndDate(),
-                        request.getRegularStartDate(),
-                        request.getRegularEndDate(),
-                        request.getRegistrationCurrency(),
-                        request.getAbstractStartDate(),
-                        request.getAbstractEndDate(),
-                        request.getPresentationMaterialStartDate(),
-                        request.getPresentationMaterialEndDate(),
-                        request.getVenueAddress()
-                )
-                : conferenceSettingsService.updateSettings(
-                        seq,
-                        request.getEventName(),
-                        request.getEventStartDate(),
-                        request.getEventEndDate(),
-                        request.getEarlyBirdStartDate(),
-                        request.getEarlyBirdEndDate(),
-                        request.getRegularStartDate(),
-                        request.getRegularEndDate(),
-                        request.getRegistrationCurrency(),
-                        request.getAbstractStartDate(),
-                        request.getAbstractEndDate(),
-                        request.getPresentationMaterialStartDate(),
-                        request.getPresentationMaterialEndDate(),
-                        request.getVenueAddress()
-                );
-
+        ConferenceSettingsResponse savedSettings = conferenceSettingsService.saveConfigured(seq, request);
         registrationFeeService.saveAll(savedSettings.getSeq(), request.getCategories(), request.getDeletedCategorySeqs());
         return savedSettings;
     }

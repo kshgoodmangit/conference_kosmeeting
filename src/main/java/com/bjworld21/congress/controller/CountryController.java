@@ -33,6 +33,7 @@ public class CountryController {
     }
 
     @GetMapping("/countries/used")
+    @com.bjworld21.congress.config.IpAccessExempt
     public ResponseEntity<List<CountryResponse>> listUsed() {
         return ResponseEntity.ok(countryService.findUsed());
     }

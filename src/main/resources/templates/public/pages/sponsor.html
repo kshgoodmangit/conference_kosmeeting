@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <div class="sponsorship-section" th:fragment="content">
     <div class="container">
         <div class="sponsor-groups">
@@ -13,7 +13,7 @@
                        th:attr="aria-label=${sponsor.sponsorName}"
                        target="_blank"
                        rel="noopener noreferrer">
-                        <img th:src="${sponsor.logoUrl}" th:alt="${sponsor.sponsorName}">
+                        <img th:src="${siteContext.apiUrl(sponsor.logoUrl)}" th:alt="${sponsor.sponsorName}">
                     </a>
                 </div>
             </div>

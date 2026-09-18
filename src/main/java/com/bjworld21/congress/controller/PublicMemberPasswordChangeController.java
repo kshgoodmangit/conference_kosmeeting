@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.security.MemberCredentialFingerprint;
 import com.bjworld21.congress.service.ConferenceSettingsService;
 import com.bjworld21.congress.service.MemberPasswordChangeService;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/members/password")
+@RequestMapping("/api/public/{conferenceSeq}/members/password")
 public class PublicMemberPasswordChangeController {
     private static final Logger log = LoggerFactory.getLogger(PublicMemberPasswordChangeController.class);
     private final MemberPasswordChangeService service;
@@ -33,30 +34,22 @@ public class PublicMemberPasswordChangeController {
     @PostMapping("/change")
     public ResponseEntity<?> change(@RequestBody ChangeRequest body, HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        // Keep administrator authentication intact, including for expired conference membership.
-        if (session == null || !(session.getAttribute("memberSeq") instanceof Number member)
-                || !(session.getAttribute("memberConferenceSeq") instanceof Number conference)
-                || conference.longValue() != conferences.getLatestConferenceSeq()
-                || !(session.getAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE) instanceof String fingerprint)) {
-            clearMember(session);
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
+        PublicMemberSession member = PublicMemberSession.resolve(session, conferenceSeq);
+        String fingerprint = PublicMemberSession.fingerprint(session, conferenceSeq);
+        if (member == null || fingerprint == null) {
+            PublicMemberSession.signOut(session, conferenceSeq);
             return error(401, null, "Your session has expired. Please sign in again.");
         }
         try {
-            service.change(conference.longValue(), member.longValue(), fingerprint,
+            service.change(conferenceSeq, member.memberSeq(), fingerprint,
                     body.currentPassword(), body.newPassword(), body.newPasswordConfirm());
         } catch (MemberPasswordChangeService.SessionExpiredException exception) {
-            clearMember(session);
+            PublicMemberSession.signOut(session, conferenceSeq);
             return error(401, null, "Your session has expired. Please sign in again.");
         }
-        clearMember(session);
+        PublicMemberSession.signOut(session, conferenceSeq);
         return ResponseEntity.noContent().header("Cache-Control", "no-store").build();
-    }
-
-    private void clearMember(HttpSession session) {
-        if (session == null) return;
-        session.removeAttribute("memberSeq");
-        session.removeAttribute("memberConferenceSeq");
-        session.removeAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE);
     }
 
     @ExceptionHandler(MemberPasswordChangeService.InvalidPasswordException.class)

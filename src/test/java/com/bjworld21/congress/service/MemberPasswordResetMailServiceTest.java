@@ -43,4 +43,21 @@ class MemberPasswordResetMailServiceTest {
         assertThatThrownBy(service::checkAvailable).isInstanceOf(IllegalStateException.class);
         verifyNoInteractions(sender);
     }
+
+    @Test
+    void koreanRecoveryMailPreservesConferenceLanguageLinkAndEscapesEventName() throws Exception {
+        var sender = mock(JavaMailSender.class);
+        var settings = new MaintenanceMailProperties();
+        settings.setPassword("test-only-secret");
+        settings.setFromAddress("sender@example.com");
+        var message = new MimeMessage(Session.getInstance(new Properties()));
+        when(sender.createMimeMessage()).thenReturn(message);
+        String link = "https://conference.example/apdrc8/ko/reset-password#token=" + "x".repeat(43);
+        new MemberPasswordResetMailService(sender, settings).sendResetLink("member@example.com", "APDRC8 <test>", link, 30, "ko");
+        assertThat(message.getSubject()).isEqualTo("[APDRC8 <test>] 비밀번호 재설정");
+        var alternatives = (MimeMultipart) ((MimeMultipart) message.getContent()).getBodyPart(0).getContent();
+        assertThat(alternatives.getBodyPart(0).getContent().toString()).contains(link, "30분");
+        assertThat(alternatives.getBodyPart(1).getContent().toString()).contains(link, "APDRC8 &lt;test&gt;")
+                .doesNotContain("test-only-secret");
+    }
 }

@@ -1,29 +1,46 @@
 package com.bjworld21.congress.controller;
 
 import jakarta.servlet.http.HttpSession;
-
+import java.io.Serializable;
+import java.util.Collections;
 import java.util.function.LongSupplier;
 
-record PublicMemberSession(long memberSeq, long conferenceSeq) {
-    static PublicMemberSession resolve(HttpSession session, LongSupplier currentConferenceSeq) {
-        if (session == null) {
-            return null;
-        }
+/** Separate authentication per conference in the same browser HTTP session. */
+public record PublicMemberSession(long memberSeq, long conferenceSeq) implements Serializable {
+    private static final String PREFIX = "publicMember.";
 
-        Object memberValue = session.getAttribute("memberSeq");
-        Object conferenceValue = session.getAttribute("memberConferenceSeq");
-        if (!(memberValue instanceof Number member) || !(conferenceValue instanceof Number conference)) {
-            if (memberValue != null || conferenceValue != null) {
-                session.invalidate();
-            }
-            return null;
-        }
+    public static PublicMemberSession resolve(HttpSession session, LongSupplier currentConferenceSeq) {
+        return resolve(session, currentConferenceSeq.getAsLong());
+    }
 
-        long current = currentConferenceSeq.getAsLong();
-        if (conference.longValue() != current) {
-            session.invalidate();
-            return null;
-        }
-        return new PublicMemberSession(member.longValue(), current);
+    public static PublicMemberSession resolve(HttpSession session, long conferenceSeq) {
+        if (session == null) return null;
+        Object value = session.getAttribute(PREFIX + conferenceSeq);
+        return value instanceof PublicMemberSession member && member.conferenceSeq == conferenceSeq ? member : null;
+    }
+
+    public static void signIn(HttpSession session, long conferenceSeq, long memberSeq, String fingerprint) {
+        session.setAttribute(PREFIX + conferenceSeq, new PublicMemberSession(memberSeq, conferenceSeq));
+        session.setAttribute(PREFIX + conferenceSeq + ".credential", fingerprint);
+    }
+
+    public static String fingerprint(HttpSession session, long conferenceSeq) {
+        if (session == null) return null;
+        Object value = session.getAttribute(PREFIX + conferenceSeq + ".credential");
+        return value instanceof String fingerprint ? fingerprint : null;
+    }
+
+    public static void signOut(HttpSession session, long conferenceSeq) {
+        if (session == null) return;
+        session.removeAttribute(PREFIX + conferenceSeq);
+        session.removeAttribute(PREFIX + conferenceSeq + ".credential");
+    }
+
+    public static java.util.List<PublicMemberSession> all(HttpSession session) {
+        if (session == null) return java.util.List.of();
+        return Collections.list(session.getAttributeNames()).stream()
+                .filter(name -> name.startsWith(PREFIX))
+                .map(session::getAttribute).filter(PublicMemberSession.class::isInstance)
+                .map(PublicMemberSession.class::cast).toList();
     }
 }

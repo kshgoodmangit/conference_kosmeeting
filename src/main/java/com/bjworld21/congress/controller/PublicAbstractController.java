@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.dto.AbstractSubmissionRequest;
 import com.bjworld21.congress.entity.AbstractSubmissionAttachment;
 import com.bjworld21.congress.service.AbstractPresentationAttachmentService;
@@ -35,7 +36,7 @@ import java.util.StringTokenizer;
  */
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/abstracts")
+@RequestMapping("/api/public/{conferenceSeq}/abstracts")
 public class PublicAbstractController {
     private static final int MAX_ABSTRACT_WORDS = 300;
 
@@ -264,7 +265,7 @@ public class PublicAbstractController {
     }
 
     private PublicMemberSession memberSession(HttpSession session) {
-        return PublicMemberSession.resolve(session, () -> conferenceSettingsService.getLatestConferenceSeq());
+        return PublicMemberSession.resolve(session, () -> PublicApiRequest.context().conferenceSeq());
     }
 
     private int wordCount(AbstractSubmissionRequest request) {

@@ -3,6 +3,10 @@ package com.bjworld21.congress;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -11,12 +15,15 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.Set;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,6 +33,50 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 class Bjworld21CmsConferenceApplicationTests {
+
+    // Exercise the real MVC/security configuration without connecting to the configured external DB.
+    @MockitoBean
+    private javax.sql.DataSource dataSource;
+
+    @MockitoBean
+    private com.bjworld21.congress.config.PopupSchemaInitializer popupSchemaInitializer;
+
+    @MockitoBean
+    private com.bjworld21.congress.analytics.AnalyticsService analyticsService;
+
+    @MockitoBean
+    private com.bjworld21.congress.service.AdminAccessRequestMailService accessRequestMailService;
+
+    @MockitoBean
+    private com.bjworld21.congress.config.DailyDashboardTestDataScheduler dashboardScheduler;
+
+    @MockitoBean
+    private com.bjworld21.congress.service.ConferenceSettingsService conferences;
+
+    @MockitoBean
+    private com.bjworld21.congress.service.MenuSettingsService menus;
+
+    @MockitoBean
+    private com.bjworld21.congress.service.AdminIpAccessCache adminIpAccessCache;
+
+    @MockitoBean
+    private com.bjworld21.congress.service.AdminCredentialVerifier adminCredentialVerifier;
+
+    @BeforeEach
+    void permitTestNetworkWithoutDatabase() {
+        when(adminIpAccessCache.isAllowed(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        when(adminCredentialVerifier.verifyActiveAdministrator("", ""))
+                .thenThrow(new IllegalArgumentException("Missing credentials"));
+    }
+
+    @Autowired
+    private com.bjworld21.congress.publicsite.PublicSiteProperties publicSiteProperties;
+
+    @AfterEach
+    void restoreSiteMode() {
+        publicSiteProperties.setConferenceMode(com.bjworld21.congress.publicsite.PublicSiteProperties.ConferenceMode.MULTI);
+        publicSiteProperties.setDefaultConferenceSeq(1L);
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,6 +89,61 @@ class Bjworld21CmsConferenceApplicationTests {
 
     @Test
     void contextLoads() {
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "SINGLE,ko,/welcome-message,apdrc8",
+            "SINGLE,both,/ko/welcome-message,apdrc8",
+            "MULTI,ko,/apdrc8/welcome-message,apdrc8",
+            "MULTI,both,/apdrc8/ko/welcome-message,apdrc8",
+            "MULTI,ko,/2026_136/welcome-message,2026_136",
+            "MULTI,both,/2026_136/ko/welcome-message,2026_136"
+    })
+    void rendersLocalizedCmsThroughRealRoutingAndSecurity(String mode, String languages, String path, String sitePath) throws Exception {
+        publicSiteProperties.setConferenceMode(com.bjworld21.congress.publicsite.PublicSiteProperties.ConferenceMode.valueOf(mode));
+        publicSiteProperties.setDefaultConferenceSeq(1L);
+        var conference = com.bjworld21.congress.dto.ConferenceSettingsResponse.builder()
+                .seq(1L).sitePath(sitePath).eventName("Scoped conference").defaultLanguage("ko")
+                .supportedLanguages("both".equals(languages) ? List.of("ko", "en") : List.of("ko")).build();
+        when(conferences.getSettings(1L)).thenReturn(conference);
+        when(conferences.getSettingsBySitePath(sitePath)).thenReturn(conference);
+        var menu = com.bjworld21.congress.entity.MenuSettings.builder()
+                .seq(10L).menuKey("welcome-message").menuName("환영사").menuScope("user").menuType("page")
+                .routePath("/old-folder/welcome-message").menuPath("welcome-message")
+                .menuHtml("<p>학회별 국문 본문</p><a href='/login'>로그인</a>")
+                .translationReady(true).enabled(true).navigationVisible(true).build();
+        var menuRepository = org.mockito.Mockito.mock(com.bjworld21.congress.repository.MenuSettingsRepository.class);
+        when(menuRepository.findActiveByScope(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq("user"),
+                org.mockito.ArgumentMatchers.any())).thenReturn(List.of(menu));
+        var translations = org.mockito.Mockito.mock(com.bjworld21.congress.service.MenuTranslationService.class);
+        when(translations.localize(1L, List.of(menu), "ko")).thenReturn(List.of(menu));
+        var menuService = new com.bjworld21.congress.service.MenuSettingsService(menuRepository,
+                org.mockito.Mockito.mock(com.bjworld21.congress.service.MenuHtmlHistoryService.class));
+        menuService.setTranslationService(translations);
+        when(menus.getActiveUserMenuTree(1L, "ko")).thenAnswer(ignored -> menuService.getActiveUserMenuTree(1L, "ko"));
+        String body = mockMvc.perform(get(path))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "private, no-store"))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        String prefix = path.substring(0, path.lastIndexOf('/'));
+        assertThat(body).contains("학회별 국문 본문", "data-conference-seq=\"1\"", "data-language=\"ko\"",
+                "data-api-base=\"/api/public/1\"", "href=\"" + prefix + "/login\"");
+        assertThat(org.jsoup.Jsoup.parse(body).select(".header-menu a").eachAttr("href"))
+                .contains(prefix + "/welcome-message")
+                .doesNotContain(prefix + "/old-folder/welcome-message");
+        org.mockito.Mockito.verifyNoInteractions(adminIpAccessCache);
+    }
+
+    @Test
+    void underscoreConferenceHomeRedirectsToDefaultLanguageThroughRealRouting() throws Exception {
+        publicSiteProperties.setConferenceMode(com.bjworld21.congress.publicsite.PublicSiteProperties.ConferenceMode.MULTI);
+        when(conferences.getSettingsBySitePath("2026_136")).thenReturn(
+                com.bjworld21.congress.dto.ConferenceSettingsResponse.builder().seq(1L).sitePath("2026_136")
+                        .defaultLanguage("en").supportedLanguages(List.of("ko", "en")).build());
+        mockMvc.perform(get("/2026_136/"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "/2026_136/en/"));
+        org.mockito.Mockito.verifyNoInteractions(adminIpAccessCache);
     }
 
     @Test
@@ -124,13 +230,13 @@ class Bjworld21CmsConferenceApplicationTests {
                 .collect(Collectors.toSet());
 
         assertThat(paths).contains(
-                "/api/conference-settings",
+                "/api/public/{conferenceSeq}/conference-settings",
                 "/api/countries/used",
-                "/api/members/register",
-                "/api/registration-fees",
-                "/api/popups/{seq}/image",
-                "/api/sponsors/{seq}/logo",
-                "/api/sponsorship-applications",
+                "/api/admin/members/register",
+                "/api/public/{conferenceSeq}/registration-fees",
+                "/api/public/{conferenceSeq}/popups/{seq}/image",
+                "/api/public/{conferenceSeq}/sponsors/{seq}/logo",
+                "/api/public/{conferenceSeq}/members/register",
                 "/api/admin/conference-settings",
                 "/api/admin/conference-settings/{seq}",
                 "/api/admin/countries",
@@ -152,6 +258,12 @@ class Bjworld21CmsConferenceApplicationTests {
                 "/api/admin/sponsorship-applications/{seq}/business-license"
         );
         assertThat(paths).doesNotContain(
+                "/api/conference-settings",
+                "/api/members/register",
+                "/api/registration-fees",
+                "/api/sponsorship-applications",
+                "/api/public/members/login",
+                "/api/public/abstracts",
                 "/api/conference-settings/list",
                 "/api/abstracts",
                 "/api/abstract-evaluation-items",

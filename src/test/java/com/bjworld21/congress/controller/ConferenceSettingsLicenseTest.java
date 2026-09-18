@@ -13,6 +13,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class ConferenceSettingsLicenseTest {
+    @Test void singleModeDisablesCreationEvenWithLicense() throws Exception {
+        var properties=new com.bjworld21.congress.publicsite.PublicSiteProperties();
+        properties.setConferenceMode(com.bjworld21.congress.publicsite.PublicSiteProperties.ConferenceMode.SINGLE);
+        properties.setDefaultConferenceSeq(1L);
+        license.setConferenceCreationEnabled(true);
+        var controller=new ConferenceSettingsController(service,license);
+        controller.setPublicSiteProperties(properties);
+        var singleMvc=MockMvcBuilders.standaloneSetup(controller).build();
+        singleMvc.perform(get("/api/admin/conference-settings/capabilities"))
+                .andExpect(jsonPath("$.conferenceCreationEnabled").value(false))
+                .andExpect(jsonPath("$.conferenceCopyEnabled").value(false));
+        singleMvc.perform(post("/api/admin/conference-settings").param("eventName","Example"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
+    }
     private final LicenseProperties license = new LicenseProperties();
     private final ConferenceSettingsService service = mock(ConferenceSettingsService.class);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new ConferenceSettingsController(service, license)).build();
@@ -54,13 +69,13 @@ class ConferenceSettingsLicenseTest {
         license.setConferenceCreationEnabled(true);
         mvc.perform(post("/api/admin/conference-settings").param("eventName", "Example"))
                 .andExpect(status().isOk());
-        verify(service).saveSettings("Example", null, null, null, null, null, null, "USD", null, null, null, null, null);
+        verify(service).saveConfigured(isNull(), argThat(request -> "Example".equals(request.getEventName())));
     }
 
     @Test
     void disabledLicenseStillAllowsExistingConferenceUpdates() throws Exception {
         mvc.perform(put("/api/admin/conference-settings/1").param("eventName", "Example"))
                 .andExpect(status().isOk());
-        verify(service).updateSettings(1L, "Example", null, null, null, null, null, null, "USD", null, null, null, null, null);
+        verify(service).saveConfigured(eq(1L), argThat(request -> "Example".equals(request.getEventName())));
     }
 }

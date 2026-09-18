@@ -18,9 +18,13 @@ import type { NotificationType } from './NotificationToast';
 import { useConfirm } from './confirmDialogContext';
 import { CkEditorRichTextEditor, type CkEditorRichTextEditorHandle } from './CkEditorRichTextEditor';
 import { MenuHtmlHistoryModal, type RestoredMenuHtml } from './MenuHtmlHistoryModal';
+import { getStoredAdminConferenceSeq } from '../adminSession';
+import type { ConferenceSettings } from './ConferenceSettingsModal';
 
 interface MenuNode {
     seq: number;
+    languageCode?: string;
+    translationReady?: boolean;
     menuScope: 'admin' | 'user';
     menuKey: string;
     parentKey?: string | null;
@@ -105,6 +109,8 @@ const SelectField = ({
 export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
     const confirm = useConfirm();
     const menuHtmlEditorRef = useRef<CkEditorRichTextEditorHandle>(null);
+    const [language, setLanguage] = useState('en');
+    const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
     const [menus, setMenus] = useState<MenuNode[]>([]);
     const [selectedMenuSeq, setSelectedMenuSeq] = useState<number | null>(null);
     const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
@@ -145,6 +151,25 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
     }, [onNotify]);
 
     useEffect(() => {
+        const abort = new AbortController();
+        void (async () => {
+            try {
+                const response = await fetch('/api/admin/conference-settings', { signal: abort.signal });
+                if (!response.ok) throw new Error(await response.text());
+                const conferences = await response.json() as ConferenceSettings[];
+                const selected = conferences.find(conference => conference.seq === getStoredAdminConferenceSeq());
+                if (!selected?.supportedLanguages?.length) throw new Error('학회 지원 언어를 먼저 설정해 주세요.');
+                setSupportedLanguages(selected.supportedLanguages);
+                setLanguage(selected.supportedLanguages.includes('en') ? 'en' : selected.defaultLanguage ?? selected.supportedLanguages[0]);
+            } catch (error) {
+                if (!abort.signal.aborted) onNotifyRef.current('error', error instanceof Error ? error.message : '지원 언어를 불러오지 못했습니다.');
+            }
+        })();
+        return () => abort.abort();
+    }, []);
+
+    useEffect(() => {
+        if (!supportedLanguages.length) return;
         const abortController = new AbortController();
 
         const fetchMenus = async () => {
@@ -152,7 +177,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
             setErrorMessage('');
 
             try {
-                const response = await fetch('/api/admin/menu-settings/tree', { signal: abortController.signal });
+                const response = await fetch(`/api/admin/menu-settings/tree?language=${encodeURIComponent(language)}`, { signal: abortController.signal });
 
                 if (!response.ok) {
                     const message = await response.text();
@@ -197,14 +222,17 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
 
         void fetchMenus();
         return () => abortController.abort();
-    }, [isCreateMode, reloadKey]);
+    }, [isCreateMode, reloadKey, language, supportedLanguages]);
 
     const selectedMenu = useMemo(
         () => (selectedMenuSeq != null ? findNodeBySeq(menus, selectedMenuSeq) : null),
         [menus, selectedMenuSeq]
     );
 
-    useEffect(() => {
+    // Reset the editable draft when the selected server snapshot changes. Doing
+    // this during the guarded render keeps the old language out of the editor.
+    const [draftSource, setDraftSource] = useState({ menu: selectedMenu, creating: isCreateMode });
+    const resetDraft = () => {
         if (isCreateMode) {
             return;
         }
@@ -233,7 +261,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
         setMenuScope(selectedMenu.menuScope);
         setMenuKey(selectedMenu.menuKey);
         setParentKey(selectedMenu.parentKey ?? '');
-        setMenuName(selectedMenu.menuName);
+        setMenuName(selectedMenu.translationReady === false ? '' : selectedMenu.menuName);
         setMenuPath(selectedMenu.menuPath ?? '');
         setMenuType(selectedMenu.menuType ?? 'folder');
         setRoutePath(selectedMenu.routePath ?? '');
@@ -247,7 +275,12 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
         setUseStartDate(selectedMenu.useStartDate ?? '');
         setUseEndDate(selectedMenu.useEndDate ?? '');
         setEnabled(Boolean(selectedMenu.enabled));
-    }, [isCreateMode, selectedMenu]);
+    };
+    if (draftSource.menu !== selectedMenu || draftSource.creating !== isCreateMode) {
+        setDraftSource({ menu: selectedMenu, creating: isCreateMode });
+        resetDraft();
+    }
+
 
     const flatMenus = useMemo(() => flattenMenus(menus), [menus]);
 
@@ -277,7 +310,15 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
         }));
     };
 
-    const handleSelect = (node: MenuNode) => {
+    const handleLanguageChange = async (next: string) => {
+        if (next === language || isSaving || isDeleting || isLoading) return;
+        if (hasUnsavedChanges() && !await confirm({ title: '편집 언어 변경', message: '저장하지 않은 변경사항을 버리고 다른 언어로 이동하시겠습니까?', confirmText: '이동' })) return;
+        setChangeMemo(''); setHistoryOpen(false); setIsCreateMode(false); setMenus([]);
+        setEditorGeneration(value => value + 1); setLanguage(next);
+    };
+
+    const handleSelect = async (node: MenuNode) => {
+        if (node.seq !== selectedMenuSeq && hasUnsavedChanges() && !await confirm({ title: '메뉴 변경', message: '저장하지 않은 변경사항을 버리고 이동하시겠습니까?', confirmText: '이동' })) return;
         setChangeMemo('');
         setIsCreateMode(false);
         setSelectedMenuSeq(node.seq);
@@ -332,6 +373,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                 ? menuHtmlEditorRef.current.hasChanges()
                 : menuHtml.trim() !== (selectedMenu?.menuHtml ?? '').trim());
             setMenuHtml(currentMenuHtml);
+            if (isUserMenu) formData.append('language', language);
             formData.append('menuHtmlChanged', String(htmlChanged));
             formData.append('changeMemo', changeMemo);
             formData.append('menuName', menuName.trim());
@@ -405,12 +447,13 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
         }
     };
 
-    const canRestoreHtml = () => {
-        if (!selectedMenu || isSaving || isDeleting || isOrderSaving) return false;
+    const hasUnsavedChanges = () => {
+        if (isCreateMode) return true;
+        if (!selectedMenu) return false;
         const htmlDirty = menuHtmlEditorRef.current
             ? menuHtmlEditorRef.current.hasChanges()
             : menuHtml.trim() !== (selectedMenu.menuHtml ?? '').trim();
-        const settingsDirty = menuName !== selectedMenu.menuName
+        const settingsDirty = menuName !== (selectedMenu.translationReady === false ? '' : selectedMenu.menuName)
             || menuPath !== (selectedMenu.menuPath ?? '')
             || menuType !== (selectedMenu.menuType ?? 'folder')
             || routePath !== (selectedMenu.routePath ?? '')
@@ -422,7 +465,12 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
             || useStartDate !== (selectedMenu.useStartDate ?? '')
             || useEndDate !== (selectedMenu.useEndDate ?? '')
             || enabled !== Boolean(selectedMenu.enabled);
-        if (htmlDirty || settingsDirty || hasOrderChanges || changeMemo.trim()) {
+        return Boolean(htmlDirty || settingsDirty || hasOrderChanges || changeMemo.trim());
+    };
+
+    const canRestoreHtml = () => {
+        if (!selectedMenu || isSaving || isDeleting || isOrderSaving) return false;
+        if (hasUnsavedChanges()) {
             onNotify('info', '저장하지 않은 변경사항이 있습니다. 이력 창을 닫고 먼저 저장한 뒤 복원해 주세요.');
             return false;
         }
@@ -487,7 +535,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
         setErrorMessage('');
 
         try {
-            const response = await fetch('/api/admin/menu-settings/reorder', {
+            const response = await fetch(`/api/admin/menu-settings/reorder?language=${encodeURIComponent(language)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -682,6 +730,15 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                         </div>
                     ) : (
                         <>
+                            {isUserMenu && <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                                <label className="block space-y-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200"><span>편집 언어</span>
+                                    <SelectField value={language} disabled={isSaving || isDeleting || isLoading} onChange={event => void handleLanguageChange(event.target.value)}>
+                                        {supportedLanguages.map(code => <option key={code} value={code}>{code === 'ko' ? '국문 (ko)' : code === 'en' ? '영문 (en)' : code}</option>)}
+                                    </SelectField>
+                                </label>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">메뉴명과 HTML은 선택한 언어에만 저장됩니다. 경로·순서·노출 설정은 모든 언어에 공통으로 적용됩니다.</p>
+                                {!isCreateMode && selectedMenu?.translationReady === false && <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">이 언어의 메뉴가 아직 작성되지 않았습니다. 사용자 화면에는 준비 중으로 표시됩니다.</p>}
+                            </div>}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
                                 <div>
                                     <p className="text-xs text-slate-400 font-medium">{isCreateMode ? '신규 메뉴' : '선택 메뉴'}</p>
@@ -796,8 +853,8 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                             <div className="space-y-4 rounded-lg border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/70 dark:bg-slate-900/40">
                                 <div className="flex items-center justify-between gap-3">
                                     <div>
-                                        <h5 className="font-semibold text-sm">메뉴 메타데이터</h5>
-                                        <p className="text-xs text-slate-400 mt-1">현재 테이블 컬럼 기준으로 경로, 타입, 타겟, 인증 정보를 관리합니다.</p>
+                                        <h5 className="font-semibold text-sm">메뉴 경로와 동작</h5>
+                                        <p className="text-xs text-slate-400 mt-1 dark:text-slate-400">메뉴 주소, 유형과 열기 방식을 설정합니다.</p>
                                     </div>
                                     <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-300">
                                         depth {displayDepth}
@@ -815,13 +872,14 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">최종 URL</label>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5 dark:text-slate-400">{isUserMenu ? '페이지 경로' : '최종 URL'}</label>
                                         <input
                                             value={routePath}
                                             onChange={(event) => setRoutePath(event.target.value)}
-                                            placeholder={isUserMenu ? '예: /community/board' : '관리자 메뉴는 비워둘 수 있음'}
+                                            placeholder={isUserMenu ? '예: /welcome-message' : '관리자 메뉴는 비워둘 수 있음'}
                                             className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-50 border-slate-200 dark:border-slate-800 focus:outline-none focus:border-blue-500"
                                         />
+                                        {isUserMenu && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">학회·언어 경로는 자동으로 붙습니다. 상위 메뉴 폴더는 입력하지 않습니다.</p>}
                                     </div>
                                 </div>
 
@@ -926,7 +984,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                                         </div>
                                         <CkEditorRichTextEditor
                                             ref={menuHtmlEditorRef}
-                                            key={`${isCreateMode ? 'new' : selectedMenuSeq}:${selectedMenu?.htmlRevisionNo ?? 0}:${editorGeneration}`}
+                                            key={`${language}:${isCreateMode ? 'new' : selectedMenuSeq}:${selectedMenu?.htmlRevisionNo ?? 0}:${editorGeneration}`}
                                             initialContent={menuHtml}
                                             onChange={setMenuHtml}
                                             uploadUrl="/api/admin/boards/images"
@@ -1003,7 +1061,7 @@ export const MenuPage = ({ onNotify, onSaved }: MenuPageProps) => {
                     )}
                 </form>
             </div>
-            {historyOpen && selectedMenu && !isCreateMode && <MenuHtmlHistoryModal key={selectedMenu.seq} menuSeq={selectedMenu.seq} menuName={selectedMenu.menuName} canRestore={canRestoreHtml} onClose={() => setHistoryOpen(false)} onRestored={handleHtmlRestored} onNotify={onNotify} />}
+            {historyOpen && selectedMenu && !isCreateMode && <MenuHtmlHistoryModal key={`${selectedMenu.seq}-${language}`} language={language} menuSeq={selectedMenu.seq} menuName={selectedMenu.menuName} canRestore={canRestoreHtml} onClose={() => setHistoryOpen(false)} onRestored={handleHtmlRestored} onNotify={onNotify} />}
         </section>
     );
 };
@@ -1092,7 +1150,7 @@ const MenuTreeNode = ({
                     ) : (
                         <span className="w-4 h-4" />
                     )}
-                    <span className="flex-1 truncate font-medium">{node.menuName}</span>
+                    <span className="flex-1 truncate font-medium">{node.menuName}{node.translationReady === false && <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">· 미작성</span>}</span>
                     {node.menuType && (
                         <span className="rounded bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-500 dark:text-slate-300">
                             {node.menuType}

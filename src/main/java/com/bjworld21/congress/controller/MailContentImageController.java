@@ -53,6 +53,7 @@ public class MailContentImageController {
     }
 
     @GetMapping("/mail/images/{yearMonth}/{savedFilename:.+}")
+    @com.bjworld21.congress.config.IpAccessExempt
     public ResponseEntity<Resource> image(
             @PathVariable String yearMonth,
             @PathVariable String savedFilename

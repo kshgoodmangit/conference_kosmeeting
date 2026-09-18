@@ -1,21 +1,21 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="member-page" th:fragment="content">
         <div class="container">
-            <h2 class="bbtitle fnb mb-5">My Page</h2>
+            <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
 
-            <nav class="member-tabs" aria-label="My Page">
-                <a href="/mypage" aria-current="page">My Page Home</a>
-                <a href="/mypage/abstract">Abstract Submission</a>
-                <a href="/mypage/registration">Registration</a>
-                <a class="is-active" href="/mypage/certificate">Certificate</a>
+            <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+                <a href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}" aria-current="page"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+                <a href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+                <a href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
+                <a class="is-active" href="/mypage-certificate" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-certificate') : '/mypage-certificate'}"><th:block th:text="#{public.ui.certificate.10de46}">Certificate</th:block></a>
             </nav>
 
             <section class="member-section--spaced">
                 <div class="text-center mb5">
-                    <h5 class="fnsb cl-title mb-2">Certificate of Attendance</h5>
-                    <p class="mb-0 pp-content">Preview and download your official certificate of attendance.</p>
+                    <h5 class="fnsb cl-title mb-2"><th:block th:text="#{public.ui.certificate.of.attendance.296a81}">Certificate of Attendance</th:block></h5>
+                    <p class="mb-0 pp-content"><th:block th:text="#{public.ui.preview.and.download.your.official.certificate.c034d8}">Preview and download your official certificate of attendance.</th:block></p>
                 </div>
 
                 <div class="bk-soft-zone p-5 d-table mx-auto mb5 text-center">
@@ -23,7 +23,7 @@
                 </div>
 
                 <div class="text-center">
-                    <a class="member-button member-button--outline fnsb w-auto px-4" href="/api/public/members/certificate"><img class="mr-3" src="/public/img/pdf-icon.png">DOWNLOAD CERTIFICATE <img class="ml-3" src="/public/img/pdf-down.png"></a>
+                    <a class="member-button member-button--outline fnsb w-auto px-4" href="/api/public/members/certificate" th:href="${siteContext != null ? siteContext.apiUrl('/api/public/members/certificate') : '/api/public/members/certificate'}"><img class="mr-3" src="/public/img/pdf-icon.png"><th:block th:text="#{public.ui.download.certificate.898198}">DOWNLOAD CERTIFICATE</th:block> <img class="ml-3" src="/public/img/pdf-down.png"></a>
                 </div>
             </section>
         </div>

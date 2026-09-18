@@ -3,6 +3,8 @@ package com.bjworld21.congress.service;
 import com.bjworld21.congress.dto.PublicPopupDisplay;
 import com.bjworld21.congress.entity.Popup;
 import com.bjworld21.congress.repository.PopupRepository;
+import com.bjworld21.congress.publicsite.PublicSiteContext;
+import com.bjworld21.congress.publicsite.PublicContentLinks;
 import jakarta.servlet.http.Cookie;
 import org.jsoup.Jsoup;
 import org.slf4j.Logger;
@@ -38,6 +40,22 @@ public class PublicPopupService {
         return forManualOpen(conferenceSeq);
     }
 
+    public PublicPopupDisplay forHome(PublicSiteContext site, Cookie[] cookies) {
+        return withSiteLinks(forHome(site.conferenceSeq(), cookies), site);
+    }
+
+    public PublicPopupDisplay forManualOpen(PublicSiteContext site) {
+        return withSiteLinks(forManualOpen(site.conferenceSeq()), site);
+    }
+
+    private PublicPopupDisplay withSiteLinks(PublicPopupDisplay display, PublicSiteContext site) {
+        if (display == null) return null;
+        return new PublicPopupDisplay(display.layoutNo(), display.items().stream().map(item ->
+                new PublicPopupDisplay.Item(item.seq(), item.title(), PublicContentLinks.render(item.contentHtml(), site),
+                        item.imageUrl() == null ? null : site.apiUrl(item.imageUrl()),
+                        item.linkUrl() == null ? null : site.pageUrl(item.linkUrl()))).toList());
+    }
+
     public PublicPopupDisplay forManualOpen(Long conferenceSeq) {
         try {
             var items = repository.findVisible(conferenceSeq,
@@ -63,7 +81,7 @@ public class PublicPopupService {
         boolean hasContent = !document.text().replace('\u00a0', ' ').isBlank()
                 || !document.select("img[src], iframe[src]").isEmpty();
         String imageUrl = popup.getPopupImageSaveFilename() == null || popup.getPopupImageSaveFilename().isBlank()
-                ? null : "/api/popups/" + popup.getSeq() + "/image";
+                ? null : "/api/public/" + popup.getConferenceSeq() + "/popups/" + popup.getSeq() + "/image";
         if (!hasContent && imageUrl == null) return null;
 
         // Apply the same URL policy to legacy standalone links as to editor links.

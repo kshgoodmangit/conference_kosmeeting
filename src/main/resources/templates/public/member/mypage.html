@@ -1,76 +1,76 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="member-page" th:fragment="content">
         <div class="container">
-            <h2 class="bbtitle fnb mb-5">My Page</h2>
+            <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
 
-            <nav class="member-tabs" aria-label="My Page">
-                <a class="is-active" href="/mypage" aria-current="page">My Page Home</a>
-                <a href="/mypage/abstract">Abstract Submission</a>
-                <a href="/mypage/registration">Registration</a>
+            <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+                <a class="is-active" href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}" aria-current="page"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+                <a href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+                <a href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
             </nav>
 
-            <section class="member-summary" aria-label="Member summary">
-                <p th:text="|Welcome, ${mypageMember.firstName} ${mypageMember.lastName}|">Welcome, Name</p>
+            <section class="member-summary" aria-label="Member summary" th:aria-label="#{public.ui.member.summary.00b4bd}">
+                <p th:text="${language == 'ko' ? mypageMember.firstName + ' ' + mypageMember.lastName + '님, 환영합니다.' : 'Welcome, ' + mypageMember.firstName + ' ' + mypageMember.lastName}">Welcome, Name</p>
                 <div class="member-summary-items">
-                    <span>Abstract Deadline <strong th:text="${mypageAbstractDday ?: '-'}">D-30</strong></span>
-                    <span><label class="mb-0" th:text="${mypageRegistrationLabel ?: 'Registration'}">Early-bird</label>
+                    <span><th:block th:text="#{public.ui.abstract.deadline.cce363}">Abstract Deadline</th:block> <strong th:text="${mypageAbstractDday ?: '-'}">D-30</strong></span>
+                    <span><label class="mb-0" th:text="${mypageRegistrationLabel ?: #messages.msg('public.ui.registration.b233e7')}">Early-bird</label>
                         <strong th:text="${mypageRegistrationDday ?: '-'}">D-15</strong></span>
                 </div>
             </section>
 
             <section class="member-section" aria-labelledby="mypage-personal-title">
-                <h3 id="mypage-personal-title" class="mb-5">Personal Information</h3>
+                <h3 id="mypage-personal-title" class="mb-5"><th:block th:text="#{public.ui.personal.information.ad12e4}">Personal Information</th:block></h3>
                 <dl class="member-info-list">
                     <div>
-                        <dt>Country</dt>
-                        <dd th:text="${mypageMember.memberType == 'domestic' ? 'Republic of Korea' : (#strings.isEmpty(mypageMember.country) ? '-' : mypageMember.country)}">Republic of Korea</dd>
+                        <dt><th:block th:text="#{public.ui.country.d523eb}">Country</th:block></dt>
+                        <dd th:text="${mypageMember.memberType == 'domestic' ? #messages.msg('public.ui.republic.of.korea.4430b2') : (#strings.isEmpty(mypageMember.country) ? '-' : mypageMember.country)}">Republic of Korea</dd>
                     </div>
                     <div>
-                        <dt>ID (E-mail)</dt>
+                        <dt><th:block th:text="#{public.ui.id.e.mail.a2609e}">ID (E-mail)</th:block></dt>
                         <dd th:text="${mypageMember.email}">user@email.com</dd>
                     </div>
                     <div>
-                        <dt>First Name</dt>
+                        <dt><th:block th:text="#{public.ui.first.name.b6ea99}">First Name</th:block></dt>
                         <dd th:text="${mypageMember.firstName}">First name</dd>
                     </div>
                     <div>
-                        <dt>Last Name</dt>
+                        <dt><th:block th:text="#{public.ui.last.name.863cb3}">Last Name</th:block></dt>
                         <dd th:text="${mypageMember.lastName}">Last name</dd>
                     </div>
                     <div>
-                        <dt>Institution</dt>
+                        <dt><th:block th:text="#{public.ui.institution.429f94}">Institution</th:block></dt>
                         <dd th:text="${#strings.isEmpty(mypageMember.institution) ? '-' : mypageMember.institution}">Institution</dd>
                     </div>
                     <div>
-                        <dt>Department</dt>
+                        <dt><th:block th:text="#{public.ui.department.db4010}">Department</th:block></dt>
                         <dd th:text="${#strings.isEmpty(mypageMember.department) ? '-' : mypageMember.department}">Department</dd>
                     </div>
                     <div>
-                        <dt>Position</dt>
+                        <dt><th:block th:text="#{public.ui.position.cf1c85}">Position</th:block></dt>
                         <dd th:text="${#strings.isEmpty(mypageMember.positionTitle) ? '-' : mypageMember.positionTitle}">Position</dd>
                     </div>
                     <div>
-                        <dt>Mobile Number</dt>
+                        <dt><th:block th:text="#{public.ui.mobile.number.5968ac}">Mobile Number</th:block></dt>
                         <dd th:text="${#strings.isEmpty(mypageMember.mobile) ? '-' : mypageMember.mobile}">Mobile number</dd>
                     </div>
                     <div>
-                        <dt>Newsletter</dt>
-                        <dd th:text="${mypageMember.newsletter == true ? 'Subscribed' : 'Not subscribed'}">Not subscribed</dd>
+                        <dt><th:block th:text="#{public.ui.newsletter.6ed05e}">Newsletter</th:block></dt>
+                        <dd th:text="${mypageMember.newsletter == true ? #messages.msg('public.ui.subscribed.dd1242') : #messages.msg('public.ui.not.subscribed.bbf5d7')}">Not subscribed</dd>
                     </div>
                 </dl>
                 <div class="public-form-actions member-account-actions member-profile-actions">
-                    <a class="public-submit-button member-button--primary" href="/mypage/profile">Review &amp; Modify</a>
-                    <a class="public-save-button" href="/mypage/password">Change Password</a>
+                    <a class="public-submit-button member-button--primary" href="/mypage-profile" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-profile') : '/mypage-profile'}"><th:block th:text="#{public.ui.review.amp.modify.97006e}">Review &amp; Modify</th:block></a>
+                    <a class="public-save-button" href="/mypage-password" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-password') : '/mypage-password'}"><th:block th:text="#{public.ui.change.password.49289d}">Change Password</th:block></a>
                 </div>
             </section>
 
             <section class="member-section member-section--spaced" aria-labelledby="mypage-abstract-title">
-                <h3 id="mypage-abstract-title" class="mb-5">Abstract Submission</h3>
+                <h3 id="mypage-abstract-title" class="mb-5"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></h3>
                 <div class="table-scroll">
                     <table class="type-03 w-100">
-                        <caption class="position-absolute invisible">Your abstract submissions</caption>
+                        <caption class="position-absolute invisible"><th:block th:text="#{public.ui.your.abstract.submissions.dadb0c}">Your abstract submissions</th:block></caption>
                         <colgroup>
                             <col style="width: 9%;">
                             <col style="width: 19%;">
@@ -80,11 +80,11 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th scope="col" class="text-center">No.</th>
-                                <th scope="col" class="px-4">Abstract No.</th>
-                                <th scope="col" class="px-4">Title</th>
-                                <th scope="col" class="text-center">Status</th>
-                                <th scope="col" class="text-center">Review / Modify</th>
+                                <th scope="col" class="text-center"><th:block th:text="#{public.ui.no.b8b9f1}">No.</th:block></th>
+                                <th scope="col" class="px-4"><th:block th:text="#{public.ui.abstract.no.c47534}">Abstract No.</th:block></th>
+                                <th scope="col" class="px-4"><th:block th:text="#{public.ui.title.768e0c}">Title</th:block></th>
+                                <th scope="col" class="text-center"><th:block th:text="#{public.ui.status.bae7d5}">Status</th:block></th>
+                                <th scope="col" class="text-center"><th:block th:text="#{public.ui.review.modify.95c112}">Review / Modify</th:block></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -95,32 +95,32 @@
                                 <td class="px-4" th:text="${abstract.title}">Abstract title</td>
                                 <td class="text-center">
                                     <span class="member-status" th:classappend="${status == 'approved'} ? ' is-accepted'">
-                                        <th:block th:if="${status == 'approved'}">Accepted</th:block>
-                                        <th:block th:if="${status == 'submitted' or status == 'under_review'}">Submission Completed</th:block>
-                                        <th:block th:if="${status == 'rejected'}">Rejected</th:block>
-                                        <th:block th:if="${status == 'draft'}">Draft</th:block>
+                                        <th:block th:if="${status == 'approved'}"><th:block th:text="#{public.ui.accepted.61a057}">Accepted</th:block></th:block>
+                                        <th:block th:if="${status == 'submitted' or status == 'under_review'}"><th:block th:text="#{public.ui.submission.completed.9d0b2d}">Submission Completed</th:block></th:block>
+                                        <th:block th:if="${status == 'rejected'}"><th:block th:text="#{public.ui.rejected.27eeb7}">Rejected</th:block></th:block>
+                                        <th:block th:if="${status == 'draft'}"><th:block th:text="#{public.ui.draft.23d33e}">Draft</th:block></th:block>
                                         <th:block th:if="${status != 'approved' and status != 'submitted' and status != 'under_review' and status != 'rejected' and status != 'draft'}" th:text="${abstract.status ?: '-'}">-</th:block>
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <div class="member-row-actions">
-                                        <a class="member-button member-button--outline member-button--compact" th:href="|/mypage/abstract/review?seq=${abstract.seq}|">Review</a>
-                                        <a class="member-button member-button--soft member-button--compact" th:if="${status == 'draft' or status == 'submitted'}" th:href="|/mypage/abstract/write?seq=${abstract.seq}|">Modify</a>
+                                        <a class="member-button member-button--outline member-button--compact" th:href="${siteContext.pageUrl('/abstract-review?seq=' + abstract.seq)}"><th:block th:text="#{public.ui.review.e29a79}">Review</th:block></a>
+                                        <a class="member-button member-button--soft member-button--compact" th:if="${status == 'draft' or status == 'submitted'}" th:href="${siteContext.pageUrl('/abstract-write?seq=' + abstract.seq)}"><th:block th:text="#{public.ui.modify.9fe408}">Modify</th:block></a>
                                     </div>
                                 </td>
                             </tr>
                             <tr th:if="${mypageAbstracts == null or mypageAbstracts.isEmpty()}">
-                                <td class="member-table-empty" colspan="5">No abstract has been submitted.</td>
+                                <td class="member-table-empty" colspan="5"><th:block th:text="#{public.ui.no.abstract.has.been.submitted.b4d30d}">No abstract has been submitted.</th:block></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <p class="member-note"><span>*</span> Editable until the submission deadline (KST). Status changes to &quot;Accepted&quot; after review.</p>
+                <p class="member-note"><span>*</span> <th:block th:text="#{public.ui.editable.until.the.submission.deadline.kst.626743}">Editable until the submission deadline (KST). Status changes to &quot;Accepted&quot; after review.</th:block></p>
                 <div class="member-actions member-actions--end member-actions--overlap">
-                    <a class="member-button member-button--accent" href="/mypage/abstract/write">
+                    <a class="member-button member-button--accent" href="/abstract-write" th:href="${siteContext != null ? siteContext.pageUrl('/abstract-write') : '/abstract-write'}">
                         <img src="/public/img/member/mypage-plus-circle.svg" alt="">
-                        <span>Submit Abstract</span>
+                        <span><th:block th:text="#{public.ui.submit.abstract.e57fac}">Submit Abstract</th:block></span>
                     </a>
                 </div>
             </section>

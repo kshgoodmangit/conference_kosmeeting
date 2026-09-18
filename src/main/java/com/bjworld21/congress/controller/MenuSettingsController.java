@@ -28,6 +28,17 @@ import java.util.List;
 public class MenuSettingsController {
     private final MenuSettingsService menuSettingsService;
     private final MenuHtmlHistoryService historyService;
+    private com.bjworld21.congress.service.MenuTranslationService translationService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTranslationService(com.bjworld21.congress.service.MenuTranslationService service) {
+        this.translationService = service;
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> invalidLanguageRequest(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest().body(exception.getMessage());
+    }
 
     public MenuSettingsController(MenuSettingsService menuSettingsService, MenuHtmlHistoryService historyService) {
         this.menuSettingsService = menuSettingsService;
@@ -35,8 +46,8 @@ public class MenuSettingsController {
     }
 
     @GetMapping("/tree")
-    public ResponseEntity<List<MenuSettingsResponse>> getMenuTree(@RequestHeader("X-Conference-Seq") Long conferenceSeq) {
-        return ResponseEntity.ok(menuSettingsService.getMenuTree(conferenceSeq));
+    public ResponseEntity<List<MenuSettingsResponse>> getMenuTree(@RequestHeader("X-Conference-Seq") Long conferenceSeq, @RequestParam(required=false) String language) {
+        return ResponseEntity.ok(language == null ? menuSettingsService.getMenuTree(conferenceSeq) : menuSettingsService.getMenuTree(conferenceSeq, language));
     }
 
     @PostMapping
@@ -61,6 +72,7 @@ public class MenuSettingsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate useEndDate,
             @RequestParam(defaultValue = "true") Boolean enabled,
             @RequestParam(required = false) String changeMemo,
+            @RequestParam(required=false) String language,
             HttpSession session
     ) {
         try {
@@ -85,7 +97,8 @@ public class MenuSettingsController {
                     useEndDate,
                     enabled,
                     currentAdminSeq(session),
-                    changeMemo
+                    changeMemo,
+                    language
             ));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
@@ -116,6 +129,7 @@ public class MenuSettingsController {
             @RequestParam(defaultValue = "false") Boolean enabled,
             @RequestParam(required = false) String changeMemo,
             @RequestParam(defaultValue = "true") boolean menuHtmlChanged,
+            @RequestParam(required=false) String language,
             HttpSession session
     ) {
         try {
@@ -138,7 +152,8 @@ public class MenuSettingsController {
                     enabled,
                     currentAdminSeq(session),
                     changeMemo,
-                    menuHtmlChanged
+                    menuHtmlChanged,
+                    language
             ));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
@@ -153,14 +168,16 @@ public class MenuSettingsController {
     public ResponseEntity<?> getHistories(@RequestHeader("X-Conference-Seq") Long conferenceSeq,
                                          @PathVariable Long seq,
                                          @RequestParam(defaultValue = "0") int page,
-                                         @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(historyService.list(conferenceSeq, seq, page, size));
+                                         @RequestParam(defaultValue = "20") int size, @RequestParam(required=false) String language) {
+        return ResponseEntity.ok(translationService == null ? historyService.list(conferenceSeq, seq, page, size)
+                : translationService.list(conferenceSeq, seq, language == null ? "en" : language, page, size));
     }
 
     @GetMapping("/{seq}/html-histories/{historySeq}")
     public ResponseEntity<?> getHistory(@RequestHeader("X-Conference-Seq") Long conferenceSeq,
-                                       @PathVariable Long seq, @PathVariable Long historySeq) {
-        return ResponseEntity.ok(historyService.detail(conferenceSeq, seq, historySeq));
+                                       @PathVariable Long seq, @PathVariable Long historySeq, @RequestParam(required=false) String language) {
+        return ResponseEntity.ok(translationService == null ? historyService.detail(conferenceSeq, seq, historySeq)
+                : translationService.detail(conferenceSeq, seq, language == null ? "en" : language, historySeq));
     }
 
     public record RestoreRequest(String changeMemo) {}
@@ -169,10 +186,11 @@ public class MenuSettingsController {
     public ResponseEntity<?> restoreHtml(@RequestHeader("X-Conference-Seq") Long conferenceSeq,
                                         @PathVariable Long seq, @PathVariable Long historySeq,
                                         @RequestBody(required = false) RestoreRequest request,
-                                        HttpSession session) {
+                                        @RequestParam(required=false) String language, HttpSession session) {
         try {
-            return ResponseEntity.ok(menuSettingsService.restoreHtml(conferenceSeq, seq, historySeq,
-                    currentAdminSeq(session), request == null ? null : request.changeMemo()));
+            return ResponseEntity.ok(translationService == null ? menuSettingsService.restoreHtml(conferenceSeq, seq, historySeq,
+                    currentAdminSeq(session), request == null ? null : request.changeMemo()) : translationService.restore(conferenceSeq, seq,
+                    language == null ? "en" : language, historySeq, currentAdminSeq(session), request == null ? null : request.changeMemo()));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
         } catch (IllegalArgumentException e) {
@@ -191,9 +209,11 @@ public class MenuSettingsController {
 
     @PutMapping("/reorder")
     public ResponseEntity<?> reorderMenus(@RequestHeader("X-Conference-Seq") Long conferenceSeq,
+                                          @RequestParam(required=false) String language,
                                           @RequestBody MenuReorderRequest request) {
         try {
-            return ResponseEntity.ok(menuSettingsService.reorder(conferenceSeq, request != null ? request.getItems() : null));
+            var result = menuSettingsService.reorder(conferenceSeq, request != null ? request.getItems() : null);
+            return ResponseEntity.ok(language == null ? result : menuSettingsService.getMenuTree(conferenceSeq, language));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {

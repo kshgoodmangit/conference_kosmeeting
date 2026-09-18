@@ -21,16 +21,17 @@ class PublicPopupDisplayControllerTest {
         when(conferences.getLatestConferenceSeq()).thenReturn(7L);
         var display = new PublicPopupDisplay(5, List.of(
                 new PublicPopupDisplay.Item(1L, "Notice", "<p>Published</p>", null, null)));
-        when(popups.forManualOpen(7L)).thenReturn(display);
+        var site = new com.bjworld21.congress.publicsite.PublicSiteContext(7L, "apdrc8", "en", List.of("en"), "/apdrc8", "/api/public/7");
+        when(popups.forManualOpen(site)).thenReturn(display);
         var mvc = MockMvcBuilders.standaloneSetup(new PublicPopupDisplayController(conferences, popups)).build();
 
-        mvc.perform(get("/popups/display").cookie(new Cookie("conference_popups_hidden_7", "2026-09-15")))
+        mvc.perform(get("/api/public/7/popups/display").requestAttr(com.bjworld21.congress.publicsite.PublicSiteContext.ATTRIBUTE, new com.bjworld21.congress.publicsite.PublicSiteContext(7L, "apdrc8", "en", List.of("en"), "/apdrc8", "/api/public/7")).cookie(new Cookie("conference_popups_hidden_7", "2026-09-15")))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "private, no-store"))
                 .andExpect(header().doesNotExist("Set-Cookie"))
                 .andExpect(view().name("public/popups :: panel"))
                 .andExpect(model().attribute("popupDisplay", display));
-        verify(popups).forManualOpen(7L);
+        verify(popups).forManualOpen(site);
         verifyNoMoreInteractions(popups);
     }
 
@@ -40,7 +41,7 @@ class PublicPopupDisplayControllerTest {
         var popups = mock(PublicPopupService.class);
         when(conferences.getLatestConferenceSeq()).thenReturn(7L);
         var mvc = MockMvcBuilders.standaloneSetup(new PublicPopupDisplayController(conferences, popups)).build();
-        mvc.perform(get("/popups/display"))
+        mvc.perform(get("/api/public/7/popups/display").requestAttr(com.bjworld21.congress.publicsite.PublicSiteContext.ATTRIBUTE, new com.bjworld21.congress.publicsite.PublicSiteContext(7L, "apdrc8", "en", List.of("en"), "/apdrc8", "/api/public/7")))
                 .andExpect(status().isNoContent())
                 .andExpect(header().doesNotExist("Set-Cookie"))
                 .andExpect(content().string(""));

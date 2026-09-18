@@ -21,12 +21,12 @@ public class AnalyticsController {
         this.collector=collector;this.service=service;this.testData=testData;this.license=license;
     }
     @IpAccessExempt
-    @GetMapping("/api/analytics/config")
+    @GetMapping("/api/public/{conferenceSeq}/analytics/config")
     public ResponseEntity<?> config(CsrfToken csrf) {
         return ResponseEntity.ok().header("Cache-Control","no-store").body(Map.of("headerName",csrf.getHeaderName(),"token",csrf.getToken()));
     }
     @IpAccessExempt
-    @PostMapping("/api/analytics/events")
+    @PostMapping("/api/public/{conferenceSeq}/analytics/events")
     public ResponseEntity<?> event(@Valid @RequestBody AnalyticsCollector.Event event,HttpServletRequest request) {
         if("cross-site".equals(request.getHeader("Sec-Fetch-Site")))return ResponseEntity.status(403).build();
         try{return collector.collect(event,request)?ResponseEntity.noContent().build():ResponseEntity.status(429).build();}

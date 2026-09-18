@@ -20,6 +20,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 public class ConferenceSettingsController {
+    private com.bjworld21.congress.publicsite.PublicSiteProperties publicSiteProperties = new com.bjworld21.congress.publicsite.PublicSiteProperties();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPublicSiteProperties(com.bjworld21.congress.publicsite.PublicSiteProperties properties) { this.publicSiteProperties = properties; }
+
     private final ConferenceSettingsService conferenceSettingsService;
     private final LicenseProperties licenseProperties;
 
@@ -39,17 +43,19 @@ public class ConferenceSettingsController {
     @GetMapping("/admin/conference-settings/capabilities")
     public Capabilities getCapabilities() {
         return new Capabilities(
-                licenseProperties.isConferenceCreationEnabled(),
-                licenseProperties.isConferenceCreationEnabled(),
+                licenseProperties.isConferenceCreationEnabled() && publicSiteProperties.isMulti(),
+                licenseProperties.isConferenceCreationEnabled() && publicSiteProperties.isMulti(),
                 licenseProperties.isAbstractSimilarityEnabled(),
                 licenseProperties.isEventDashboardEnabled(),
                 licenseProperties.isUserAnalyticsDashboardEnabled()
         );
     }
 
-    @GetMapping("/conference-settings")
-    public ResponseEntity<ConferenceSettingsResponse> getSettings() {
-        return ResponseEntity.ok(conferenceSettingsService.getSettings());
+    @GetMapping("/public/{conferenceSeq}/conference-settings")
+    @com.bjworld21.congress.config.IpAccessExempt
+    public ResponseEntity<ConferenceSettingsResponse> getSettings(@PathVariable Long conferenceSeq) {
+        var settings = conferenceSettingsService.getSettings(conferenceSeq);
+        return settings.getSeq() == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(settings);
     }
 
     @GetMapping("/admin/conference-settings")
@@ -71,27 +77,23 @@ public class ConferenceSettingsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate abstractEndDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialStartDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialEndDate,
-            @RequestParam(required = false) String venueAddress
+            @RequestParam(required = false) String venueAddress,
+            @RequestParam(required = false) String sitePath,
+            @RequestParam(defaultValue = "en") String defaultLanguage,
+            @RequestParam(required = false) List<String> supportedLanguages
     ) {
-        if (!licenseProperties.isConferenceCreationEnabled()) {
+        if (!licenseProperties.isConferenceCreationEnabled() || !publicSiteProperties.isMulti()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("현재 라이선스에서는 학회를 추가할 수 없습니다.");
         }
         try {
-            return ResponseEntity.ok(conferenceSettingsService.saveSettings(
-                    eventName,
-                    eventStartDate,
-                    eventEndDate,
-                    earlyBirdStartDate,
-                    earlyBirdEndDate,
-                    regularStartDate,
-                    regularEndDate,
-                    registrationCurrency,
-                    abstractStartDate,
-                    abstractEndDate,
-                    presentationMaterialStartDate,
-                    presentationMaterialEndDate,
-                    venueAddress
-            ));
+            return ResponseEntity.ok(conferenceSettingsService.saveConfigured(null,
+                    com.bjworld21.congress.dto.ConferenceSettingsSaveAllRequest.builder()
+                            .eventName(eventName).eventStartDate(eventStartDate).eventEndDate(eventEndDate)
+                            .earlyBirdStartDate(earlyBirdStartDate).earlyBirdEndDate(earlyBirdEndDate)
+                            .regularStartDate(regularStartDate).regularEndDate(regularEndDate)
+                            .registrationCurrency(registrationCurrency).abstractStartDate(abstractStartDate).abstractEndDate(abstractEndDate)
+                            .presentationMaterialStartDate(presentationMaterialStartDate).presentationMaterialEndDate(presentationMaterialEndDate)
+                            .venueAddress(venueAddress).sitePath(sitePath).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -114,25 +116,20 @@ public class ConferenceSettingsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate abstractEndDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialStartDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialEndDate,
-            @RequestParam(required = false) String venueAddress
+            @RequestParam(required = false) String venueAddress,
+            @RequestParam(required = false) String sitePath,
+            @RequestParam(defaultValue = "en") String defaultLanguage,
+            @RequestParam(required = false) List<String> supportedLanguages
     ) {
         try {
-            return ResponseEntity.ok(conferenceSettingsService.updateSettings(
-                    seq,
-                    eventName,
-                    eventStartDate,
-                    eventEndDate,
-                    earlyBirdStartDate,
-                    earlyBirdEndDate,
-                    regularStartDate,
-                    regularEndDate,
-                    registrationCurrency,
-                    abstractStartDate,
-                    abstractEndDate,
-                    presentationMaterialStartDate,
-                    presentationMaterialEndDate,
-                    venueAddress
-            ));
+            return ResponseEntity.ok(conferenceSettingsService.saveConfigured(seq,
+                    com.bjworld21.congress.dto.ConferenceSettingsSaveAllRequest.builder()
+                            .eventName(eventName).eventStartDate(eventStartDate).eventEndDate(eventEndDate)
+                            .earlyBirdStartDate(earlyBirdStartDate).earlyBirdEndDate(earlyBirdEndDate)
+                            .regularStartDate(regularStartDate).regularEndDate(regularEndDate)
+                            .registrationCurrency(registrationCurrency).abstractStartDate(abstractStartDate).abstractEndDate(abstractEndDate)
+                            .presentationMaterialStartDate(presentationMaterialStartDate).presentationMaterialEndDate(presentationMaterialEndDate)
+                            .venueAddress(venueAddress).sitePath(sitePath).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {

@@ -299,7 +299,7 @@ public class SponsorService {
     private SponsorResponse toResponse(Sponsor sponsor) {
         String logoUrl = sponsor.getLogoSaveFilename() == null || sponsor.getLogoSaveFilename().isBlank()
                 ? null
-                : "/api/sponsors/" + sponsor.getSeq() + "/logo";
+                : "/api/public/" + sponsor.getConferenceSeq() + "/sponsors/" + sponsor.getSeq() + "/logo";
 
         return SponsorResponse.builder()
                 .seq(sponsor.getSeq())

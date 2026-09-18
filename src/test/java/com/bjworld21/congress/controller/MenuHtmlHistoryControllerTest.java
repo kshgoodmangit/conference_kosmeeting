@@ -18,6 +18,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class MenuHtmlHistoryControllerTest {
+    @Test void languageHistoryIsPassedToScopedServiceAndRejectsInvalidLanguage() throws Exception {
+        var translations=mock(com.bjworld21.congress.service.MenuTranslationService.class);
+        var controller=new MenuSettingsController(menus,histories);
+        controller.setTranslationService(translations);
+        var languageMvc=MockMvcBuilders.standaloneSetup(controller).addInterceptors(new AdminSessionInterceptor()).build();
+        when(translations.list(1L,2L,"ko",0,20)).thenReturn(new MenuHtmlHistoryService.HistoryPage(List.of(),0,0,20,2));
+        languageMvc.perform(get("/api/admin/menu-settings/2/html-histories").param("language","ko")
+                        .header("X-Conference-Seq",1).session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.currentRevisionNo").value(2));
+        verify(translations).list(1L,2L,"ko",0,20);
+        when(translations.list(1L,2L,"fr",0,20)).thenThrow(new IllegalArgumentException("지원하지 않는 언어"));
+        languageMvc.perform(get("/api/admin/menu-settings/2/html-histories").param("language","fr")
+                        .header("X-Conference-Seq",1).session(session)).andExpect(status().isBadRequest());
+    }
     private final MenuSettingsService menus = mock(MenuSettingsService.class);
     private final MenuHtmlHistoryService histories = mock(MenuHtmlHistoryService.class);
     private MockMvc mvc;

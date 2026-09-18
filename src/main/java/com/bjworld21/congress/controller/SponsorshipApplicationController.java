@@ -57,11 +57,11 @@ public class SponsorshipApplicationController {
     }
 
     @PostMapping(
-            value = {"/sponsorship-applications", "/admin/sponsorship-applications"},
+            value = "/admin/sponsorship-applications",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<?> create(
-            @RequestHeader(value = "X-Conference-Seq", required = false) Long conferenceSeq,
+            @RequestHeader("X-Conference-Seq") Long conferenceSeq,
             @RequestParam String companyKrName,
             @RequestParam(required = false) String companyEnName,
             @RequestParam String ceoName,
@@ -94,9 +94,7 @@ public class SponsorshipApplicationController {
                     contactPersonDepartment, contactPersonPhone, contactPersonMobile, contactPersonEmail, faxNumber,
                     isDeposited, depositDate, expectedDepositDate, taxInvoiceRecipient, taxInvoiceEmail, taxInvoiceIssueDate,
                     taxInvoiceType, remarks);
-            Long resolvedConferenceSeq = conferenceSeq != null
-                    ? conferenceSeq
-                    : conferenceSettingsService.getLatestConferenceSeq();
+            Long resolvedConferenceSeq = conferenceSeq;
             return ResponseEntity.status(HttpStatus.CREATED).body(sponsorshipApplicationService.create(resolvedConferenceSeq, application, businessLicenseFile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

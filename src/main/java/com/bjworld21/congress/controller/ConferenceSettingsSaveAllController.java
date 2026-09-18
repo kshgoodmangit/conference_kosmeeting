@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConferenceSettingsSaveAllController {
     private static final Logger log = LoggerFactory.getLogger(ConferenceSettingsSaveAllController.class);
 
+    private com.bjworld21.congress.publicsite.PublicSiteProperties publicSiteProperties = new com.bjworld21.congress.publicsite.PublicSiteProperties();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPublicSiteProperties(com.bjworld21.congress.publicsite.PublicSiteProperties properties) { this.publicSiteProperties = properties; }
+
     private final ConferenceSettingsManagementService managementService;
     private final LicenseProperties licenseProperties;
 
@@ -32,7 +36,7 @@ public class ConferenceSettingsSaveAllController {
 
     @PostMapping("/save-all")
     public ResponseEntity<?> create(@RequestBody ConferenceSettingsSaveAllRequest request) {
-        if (!licenseProperties.isConferenceCreationEnabled()) {
+        if (!licenseProperties.isConferenceCreationEnabled() || !publicSiteProperties.isMulti()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("현재 라이선스에서는 학회를 추가할 수 없습니다.");
         }
         return save(null, request);

@@ -223,6 +223,15 @@ export const ConferenceCopyModal = ({ source, onClose, onNotify }: ConferenceCop
                                         <label className="block space-y-1.5 text-sm font-semibold sm:col-span-2"><span className="block">행사장소</span>
                                             <input name="venueAddress" value={draft.venueAddress} onChange={event => setDraft(previous => ({ ...previous, venueAddress: event.target.value }))} maxLength={500} className={inputClass} placeholder="행사장 이름 또는 주소" />
                                         </label>
+                                        <label className="block space-y-1.5 text-sm font-semibold"><span className="block">새 학회 경로</span>
+                                            <input name="sitePath" value={draft.sitePath} onChange={event => setDraft(previous => ({ ...previous, sitePath: event.target.value.toLowerCase() }))} maxLength={100} className={inputClass} placeholder="예: apdrc9" />
+                                        </label>
+                                        <label className="block space-y-1.5 text-sm font-semibold"><span className="block">기본 언어</span>
+                                            <select value={draft.defaultLanguage} onChange={event => setDraft(previous => ({ ...previous, defaultLanguage: event.target.value }))} className={inputClass}>
+                                                {draft.supportedLanguages.map(language => <option key={language} value={language}>{language}</option>)}
+                                            </select>
+                                        </label>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 sm:col-span-2">지원 언어 {draft.supportedLanguages.join(', ')} · 메뉴와 언어별 본문은 새 학회의 경로에서 제공됩니다.</p>
                                         {(['eventStartDate', 'eventEndDate'] as const).map((field, index) => <label key={field} className="block space-y-1.5 text-sm font-semibold"><span className="block">행사 {index === 0 ? '시작일' : '종료일'} <span className="text-rose-500 dark:text-rose-400">*</span></span>
                                             <input type="date" name={field} value={draft[field]} onChange={event => changeDate(field, event.target.value)} min="1000-01-01" max="9999-12-31" className={inputClass} required />
                                         </label>)}
@@ -312,7 +321,7 @@ export const ConferenceCopyModal = ({ source, onClose, onNotify }: ConferenceCop
                                         {selectedSections.includes('options') && <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">등록 옵션의 개별 신청·변경 마감은 새 행사에 맞춰 별도로 확인해야 합니다.</p>}
                                         {(selectedSections.includes('menus') || selectedSections.includes('program') || selectedSections.includes('promotion')) && <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">콘텐츠에 포함된 연도, 날짜, 링크와 이미지는 새 행사 기준으로 검토해야 합니다.</p>}
                                     </section>
-                                    <p className="flex items-start gap-2 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>현재 운영 방식에서는 새 학회를 생성하면 공개 홈페이지의 대상 학회도 바뀝니다. 이번 미리보기는 홈페이지에 영향을 주지 않습니다.</span></p>
+                                    <p className="flex items-start gap-2 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>학회마다 별도의 사용자 경로를 사용합니다. 이번 미리보기는 실제 학회나 메뉴를 생성하지 않습니다.</span></p>
                                 </div>}
                             </>}
                         </div>

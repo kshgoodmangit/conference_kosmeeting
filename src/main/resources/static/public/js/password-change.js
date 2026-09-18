@@ -30,13 +30,12 @@
     };
     names.forEach(name => fields[name].addEventListener('input', clearErrors));
     form.querySelectorAll('[data-password-toggle]').forEach(button => {
-        const label = button.getAttribute('aria-label').replace(/^Show /, '');
         button.addEventListener('click', () => {
             const input = form.querySelector(`#${button.dataset.passwordToggle}`);
             const visible = input.type === 'password';
             input.type = visible ? 'text' : 'password';
             button.setAttribute('aria-pressed', String(visible));
-            button.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} ${label}`);
+            button.setAttribute('aria-label', window.PublicSite.t(visible ? window.PublicSite.t('Hide password') : window.PublicSite.t('Show password')));
         });
     });
 
@@ -45,18 +44,18 @@
         if (busy || locked) return;
         clearErrors();
         const data = Object.fromEntries(names.map(name => [name, fields[name].value]));
-        if (!data.currentPassword.trim()) return showError('Enter your current password.', 'currentPassword');
+        if (!data.currentPassword.trim()) return showError(window.PublicSite.t('Enter your current password.'), 'currentPassword');
         if (data.newPassword.length < 8 || data.newPassword.length > 16 || data.newPassword !== data.newPassword.trim()) {
-            return showError('Use 8-16 characters without leading or trailing spaces.', 'newPassword');
+            return showError(window.PublicSite.t('Use 8-16 characters without leading or trailing spaces.'), 'newPassword');
         }
         if (data.newPassword === data.currentPassword.trim()) {
-            return showError('Choose a password different from your current password.', 'newPassword');
+            return showError(window.PublicSite.t('Choose a password different from your current password.'), 'newPassword');
         }
-        if (data.newPassword !== data.newPasswordConfirm) return showError('Passwords do not match.', 'newPasswordConfirm');
+        if (data.newPassword !== data.newPasswordConfirm) return showError(window.PublicSite.t('Passwords do not match.'), 'newPasswordConfirm');
 
         busy = true;
         submit.disabled = true;
-        submit.textContent = 'Changing...';
+        submit.textContent = window.PublicSite.t('Changing...');
         form.setAttribute('aria-busy', 'true');
         names.forEach(name => { fields[name].readOnly = true; });
         const controller = new AbortController();
@@ -72,21 +71,21 @@
             if (response.ok) {
                 form.reset();
                 locked = true;
-                window.location.replace('/login?password=changed');
+                window.location.replace(window.PublicSite.pageUrl('/login?password=changed'));
                 return;
             }
             if (response.status === 401) {
                 form.reset();
                 locked = true;
-                window.location.replace('/login?password=session-expired');
+                window.location.replace(window.PublicSite.pageUrl('/login?password=session-expired'));
                 return;
             }
             if (response.status === 403 && response.headers.get('X-CSRF-ERROR') === 'true') {
-                showError('Your session has expired. Please reload this page and try again.');
+                showError(window.PublicSite.t('Your session has expired. Please reload this page and try again.'));
                 return;
             }
             const error = await response.json();
-            showError(error.message || 'Password change failed. Please try again.', error.field);
+            showError(error.message || window.PublicSite.t('Password change failed. Please try again.'), error.field);
             if (response.status === 429) {
                 locked = true;
                 const seconds = Number(response.headers.get('Retry-After')) || 3600;
@@ -94,15 +93,15 @@
             }
         } catch (error) {
             showError(error.name === 'AbortError'
-                ? 'The request timed out. Please try signing in with your new password before retrying.'
-                : 'Unable to complete the request. Please check your connection and try again.');
+                ? window.PublicSite.t('The request timed out. Please try signing in with your new password before retrying.')
+                : window.PublicSite.t('Unable to complete the request. Please check your connection and try again.'));
         } finally {
             clearTimeout(timeout);
             busy = false;
             form.removeAttribute('aria-busy');
             names.forEach(name => { fields[name].readOnly = false; });
             submit.disabled = locked;
-            submit.textContent = 'Change Password';
+            submit.textContent = window.PublicSite.t('Change Password');
         }
     });
     submit.disabled = false;

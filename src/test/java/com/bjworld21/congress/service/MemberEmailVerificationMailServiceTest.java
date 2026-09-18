@@ -42,4 +42,20 @@ class MemberEmailVerificationMailServiceTest {
         assertThatThrownBy(mail::checkAvailable).isInstanceOf(IllegalStateException.class);
         verifyNoInteractions(sender);
     }
+
+    @Test
+    void koreanVerificationMailHasTranslatedSubjectAndBody() throws Exception {
+        var sender = mock(JavaMailSender.class);
+        var properties = new MaintenanceMailProperties();
+        properties.setPassword("test-only-secret");
+        properties.setFromAddress("sender@example.com");
+        var message = new MimeMessage(Session.getInstance(new Properties()));
+        when(sender.createMimeMessage()).thenReturn(message);
+        new MemberEmailVerificationMailService(sender, properties)
+                .sendCode("member@example.com", "학회 <test>", "001234", 10, "ko");
+        assertThat(message.getSubject()).isEqualTo("[학회 <test>] 이메일 주소 인증");
+        var alternatives = (MimeMultipart) ((MimeMultipart) message.getContent()).getBodyPart(0).getContent();
+        assertThat(alternatives.getBodyPart(0).getContent().toString()).contains("인증번호", "001234", "10분");
+        assertThat(alternatives.getBodyPart(1).getContent().toString()).contains("학회 &lt;test&gt;", "001234");
+    }
 }

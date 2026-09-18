@@ -17,9 +17,23 @@
 
 ## API
 
-- `GET /api/admin/menu-settings/{seq}/html-histories?page=0&size=20`
-- `GET /api/admin/menu-settings/{seq}/html-histories/{historySeq}`
-- `POST /api/admin/menu-settings/{seq}/html-histories/{historySeq}/restore`: `{ "changeMemo": "선택 입력" }`
+- `GET /api/admin/menu-settings/{seq}/html-histories?language=ko&page=0&size=20`
+- `GET /api/admin/menu-settings/{seq}/html-histories/{historySeq}?language=ko`
+- `POST /api/admin/menu-settings/{seq}/html-histories/{historySeq}/restore?language=ko`: `{ "changeMemo": "선택 입력" }`
 - 기존 등록/수정 API: 선택 changeMemo(최대 500자), 수정 API의 menuHtmlChanged(기본 true) 추가.
 
 모든 API는 기존 관리자 세션·권한과 X-Conference-Seq, 변경 요청의 CSRF 보호를 그대로 사용한다.
+
+## 언어별 메뉴 편집
+
+- 배포 전에 `migrate_public_site_languages.sql`을 운영자가 수동 적용한다. 기존 사용자 메뉴명·HTML·이력은 영문으로 유지되며, 국문 번역은 자동 생성하지 않는다.
+- `/admin/menu`의 사용자 메뉴에서 편집 언어를 고른다. 지원 언어는 학회 설정의 `conference_languages`에 등록된 목록만 표시한다.
+- `menu_translations`에 `(menuSeq, languageCode)`별 메뉴명·HTML·현재 버전을 저장한다. 경로·계층·순서·사용 기간·인증 및 노출은 `menu_settings`의 공통 설정이다.
+- 미작성 언어에는 다른 언어 HTML을 대신 보여주지 않는다. 관리자 트리에 미작성 상태를 표시하고 해당 언어의 메뉴명과 본문을 직접 작성한다.
+- 메뉴 트리 조회 `GET /api/admin/menu-settings/tree?language=ko`, 생성/수정의 폼 항목 `language=ko`, 정렬의 `?language=ko`를 사용한다. 관리자 메뉴에는 번역을 적용하지 않는다.
+- HTML 이력은 `(menuSeq, languageCode, revisionNo)`로 구분한다. 다른 언어의 이력 번호를 전달해도 조회·복원할 수 없다. 선택한 언어 HTML만 복원하고 다른 언어의 본문·메뉴명은 유지한다.
+- 언어별 메뉴명만 바꾸면 HTML 이력은 늘리지 않는다. 최초 작성은 빈 HTML이어도 해당 언어의 INITIAL v1을 생성한다.
+- 편집 언어·메뉴 변경 시 미저장 메뉴명·HTML·설정·정렬이 있으면 공통 확인창으로 변경사항 폐기 여부를 확인한다.
+- 지원 언어를 해제해도 번역과 이력은 유지된다. 나중에 같은 언어를 다시 활성화하면 기존 콘텐츠를 편집할 수 있다.
+- 하나라도 HTML 이력이 있는 메뉴는 삭제할 수 없다. 이력이 전혀 없는 메뉴를 삭제할 때만 번역 행을 함께 제거한다.
+- 학회 복사 화면은 기존과 같이 미리보기다. 향후 실제 메뉴 복사에서는 메뉴 ID를 새 학회의 ID로 매핑한 뒤 `MenuTranslationService.copyTranslations`를 호출한다. 원본 이력 대신 새 메뉴별 INITIAL 이력이 생성된다.

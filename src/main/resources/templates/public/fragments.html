@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
 <head th:fragment="head">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,6 +29,8 @@
     <link rel="stylesheet" href="/public/js/select2/select2.css">
     <script th:if="${secureAccountPage != true}" src="/public/js/select2/select2.min.js"></script>
 
+    <script src="/public/js/public-messages.js" defer></script>
+    <script src="/public/js/public-site.js" defer></script>
     <script src="/public/js/user.js" defer></script>
     <script th:if="${secureAccountPage == true}" src="/public/js/password-reset.js" defer></script>
     <script th:if="${passwordChangePage == true}" src="/public/js/password-change.js" defer></script>
@@ -39,52 +41,54 @@
     <script src="/public/js/conference.js" defer></script>
     -->
 </head>
-<body>
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <header class="header" th:fragment="header">
     <div class="header-top">
-        <a class="brand" href="/" aria-label="APDRC8 home">
+        <a class="brand" href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}" th:aria-label="${eventName}">
             <img src="/public/img/logo-mark.svg" alt="" class="brand-mark">
         </a>
 
         <div class="header-actions">
-            <a class="header-button header-button-outline" th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${loginMenu.routePath}">
+            <nav class="public-language-switch" th:if="${resetTokenPage != true and languageLinks != null and #maps.size(languageLinks) > 1}" aria-label="Language" th:aria-label="#{public.ui.language.89b86a}">
+                <a class="header-button header-button-outline" th:each="entry : ${languageLinks}"
+                   th:href="${entry.value}" th:lang="${entry.key}" th:hreflang="${entry.key}"
+                   th:attr="aria-current=${entry.key == language ? 'true' : null}"
+                   th:text="${entry.key == 'ko' ? '한국어' : (entry.key == 'en' ? 'English' : entry.key)}">English</a>
+            </nav>
+            <a class="header-button header-button-outline" th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(loginMenu.routePath) : (loginMenu.routePath)}">
                 <img src="/public/img/icon-login.svg" alt="">
-                <span>LOGIN</span>
+                <span><th:block th:text="#{public.ui.login.d4fc47}">LOGIN</th:block></span>
             </a>
-            <a class="header-button header-button-primary" th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${joinMenu.routePath}">
+            <a class="header-button header-button-primary" th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(joinMenu.routePath) : (joinMenu.routePath)}">
                 <img src="/public/img/icon-user.svg" alt="">
-                <span>SIGN UP</span>
+                <span><th:block th:text="#{public.ui.sign.up.1e0c8c}">SIGN UP</th:block></span>
             </a>
 
-            <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" method="post">
+            <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/members/logout') : '/api/public/members/logout'}" method="post">
                 <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                 <button class="header-button header-button-outline" type="submit">
                     <img src="/public/img/icon-login.svg" alt="">
-                    <span>LOGOUT</span>
+                    <span><th:block th:text="#{public.ui.logout.ceea6d}">LOGOUT</th:block></span>
                 </button>
             </form>
-            <a class="header-button header-button-primary" th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${myPageMenu.routePath}">
+            <a class="header-button header-button-primary" th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(myPageMenu.routePath) : (myPageMenu.routePath)}">
                 <img src="/public/img/icon-user.svg" alt="">
-                <span>MY PAGE</span>
+                <span><th:block th:text="#{public.ui.my.page.6094c5}">MY PAGE</th:block></span>
             </a>
         </div>
     </div>
 
     <ul class="header-menu un-style">
-        <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}">
-            <!-- 하위 메뉴가 있으면 첫 번째 하위 메뉴로 이동 -->
-                <a th:if="${menu.children != null and !menu.children.isEmpty()}"
-                   th:with="firstChild=${menu.children[0]}"
-                   th:href="${(firstChild.pathType == 'external' or firstChild.menuType == 'link')
-                                ? firstChild.linkUrl
-                                : firstChild.routePath}"
-                   th:text="${menu.menuName}">
-                    APDRC8
-                </a>
+        <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}"
+            th:with="visibleChildren=${menu.children == null ? {} : menu.children.?[navigationVisible != false]},destination=${!visibleChildren.isEmpty() ? visibleChildren[0] : menu}">
+            <a th:if="${!visibleChildren.isEmpty() or menu.menuType != 'folder'}"
+               th:href="${siteContext.pageUrl(destination.menuType == 'link' ? destination.linkUrl : destination.routePath)}"
+               th:text="${menu.menuName}">APDRC8</a>
+            <span th:if="${visibleChildren.isEmpty() and menu.menuType == 'folder'}" th:text="${menu.menuName}">APDRC8</span>
 
             <ul class="un-style header-sub-menu" th:if="${menu.children != null and !menu.children.isEmpty()}">
                 <li th:each="child : ${menu.children}" th:if="${child.navigationVisible != false}">
-                    <a th:href="${(child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath}"
+                    <a th:href="${siteContext != null ? siteContext.pageUrl((child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath) : ((child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath)}"
                        th:text="${child.menuName}">Welcome Message</a>
                 </li>
             </ul>
@@ -94,10 +98,10 @@
     <div class="header-mobile">
         <input type="checkbox" id="mobileMenuOpen" class="mobile-menu-open">
         <div class="mobile-header-top">
-            <a class="mobile-brand" href="/" aria-label="APDRC8 home">
+            <a class="mobile-brand" href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}" th:aria-label="${eventName}">
                 <img src="/public/img/logo-mark.svg" alt="">
             </a>
-            <label for="mobileMenuOpen" class="mobile-menu-button" aria-label="Open menu">
+            <label for="mobileMenuOpen" class="mobile-menu-button" aria-label="Open menu" th:aria-label="#{public.ui.open.menu.197101}">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -107,26 +111,34 @@
         <div class="mobile-menu-panel">
             <div class="mobile-menu-head">
                 <div class="mobile-util">
-                    <a href="/">HOME</a>
-                    <a th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${loginMenu.routePath}">LOGIN</a>
-                    <a th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${joinMenu.routePath}">SIGN UP</a>
-                    <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" method="post">
+                    <th:block th:if="${resetTokenPage != true and languageLinks != null and #maps.size(languageLinks) > 1}">
+                        <a th:each="entry : ${languageLinks}" th:href="${entry.value}" th:lang="${entry.key}"
+                           th:hreflang="${entry.key}" th:attr="aria-current=${entry.key == language ? 'true' : null}"
+                           th:text="${entry.key == 'ko' ? '한국어' : (entry.key == 'en' ? 'English' : entry.key)}">English</a>
+                    </th:block>
+                    <a href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}"><th:block th:text="#{public.ui.home.773196}">HOME</th:block></a>
+                    <a th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(loginMenu.routePath) : (loginMenu.routePath)}"><th:block th:text="#{public.ui.login.d4fc47}">LOGIN</th:block></a>
+                    <a th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(joinMenu.routePath) : (joinMenu.routePath)}"><th:block th:text="#{public.ui.sign.up.1e0c8c}">SIGN UP</th:block></a>
+                    <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/members/logout') : '/api/public/members/logout'}" method="post">
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                        <button type="submit">LOGOUT</button>
+                        <button type="submit"><th:block th:text="#{public.ui.logout.ceea6d}">LOGOUT</th:block></button>
                     </form>
-                    <a th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${myPageMenu.routePath}">MY PAGE</a>
+                    <a th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${siteContext != null ? siteContext.pageUrl(myPageMenu.routePath) : (myPageMenu.routePath)}"><th:block th:text="#{public.ui.my.page.6094c5}">MY PAGE</th:block></a>
                 </div>
-                <label for="mobileMenuOpen" class="mobile-menu-close" aria-label="Close menu"></label>
+                <label for="mobileMenuOpen" class="mobile-menu-close" aria-label="Close menu" th:aria-label="#{public.ui.close.menu.6c9fc9}"></label>
             </div>
 
             <ul class="mobile-menu-list un-style">
-                <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}">
-                    <a th:href="${(menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath}"
-                    	   th:text="${menu.menuName}">APDRC8</a>
+                <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}"
+                    th:with="visibleChildren=${menu.children == null ? {} : menu.children.?[navigationVisible != false]},destination=${!visibleChildren.isEmpty() ? visibleChildren[0] : menu}">
+                    <a th:if="${!visibleChildren.isEmpty() or menu.menuType != 'folder'}"
+                       th:href="${siteContext.pageUrl(destination.menuType == 'link' ? destination.linkUrl : destination.routePath)}"
+                       th:text="${menu.menuName}">APDRC8</a>
+                    <span th:if="${visibleChildren.isEmpty() and menu.menuType == 'folder'}" th:text="${menu.menuName}">APDRC8</span>
 
                     <ul class="un-style header-sub-menu" th:if="${menu.children != null and !menu.children.isEmpty()}">
                         <li th:each="child : ${menu.children}" th:if="${child.navigationVisible != false}">
-                            <a th:href="${(child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath}"
+                            <a th:href="${siteContext != null ? siteContext.pageUrl((child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath) : ((child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath)}"
                                th:text="${child.menuName}">Welcome Message</a>
                         </li>
                     </ul>
@@ -137,30 +149,30 @@
 </header>
 
 <section class="quick-menu" th:fragment="quickmenu" th:classappend="${showPopupQuickMenu == true} ? 'quick-menu-with-popup'">
-    <strong>QUICK<br>MENU</strong>
+    <strong><th:block th:text="#{public.ui.quick.cc96b0}">QUICK</th:block><br><th:block th:text="#{public.ui.menu.c8910b}">MENU</th:block></strong>
     <ul class="un-style">
         <li>
-            <a href="/registration/online-registration">
+            <a href="/online-registration" th:href="${siteContext != null ? siteContext.pageUrl('/online-registration') : '/online-registration'}">
                 <span class="quick-icon quick-icon-register" aria-hidden="true"></span>
-                <span>Register<br>Now</span>
+                <span><th:block th:text="#{public.ui.register.d67299}">Register</th:block><br><th:block th:text="#{public.ui.now.e3b820}">Now</th:block></span>
             </a>
         </li>
         <li>
-            <a href="/abstract/abstract-submission">
+            <a href="/abstract-submission" th:href="${siteContext != null ? siteContext.pageUrl('/abstract-submission') : '/abstract-submission'}">
                 <span class="quick-icon quick-icon-abstract" aria-hidden="true"></span>
-                <span>Submit<br>Abstract</span>
+                <span><th:block th:text="#{public.ui.submit.2dacf6}">Submit</th:block><br><th:block th:text="#{public.ui.abstract.d79da3}">Abstract</th:block></span>
             </a>
         </li>
         <li>
-            <a href="/program/scientific-program">
+            <a href="/scientific-program" th:href="${siteContext != null ? siteContext.pageUrl('/scientific-program') : '/scientific-program'}">
                 <span class="quick-icon quick-icon-program" aria-hidden="true"></span>
-                <span>View<br>Program</span>
+                <span><th:block th:text="#{public.ui.view.69bd4e}">View</th:block><br><th:block th:text="#{public.ui.program.9d6800}">Program</th:block></span>
             </a>
         </li>
         <li th:if="${showPopupQuickMenu == true}">
-            <button type="button" data-popup-open aria-haspopup="dialog" aria-label="Open popups">
+            <button type="button" data-popup-open aria-haspopup="dialog" aria-label="Open popups" th:aria-label="#{public.ui.open.popups.65a3bd}">
                 <span class="quick-icon quick-icon-popup" aria-hidden="true"></span>
-                <span>Popup</span>
+                <span><th:block th:text="#{public.ui.popup.afcaf9}">Popup</th:block></span>
             </button>
         </li>
     </ul>
@@ -169,8 +181,8 @@
 
 <footer id="footer" th:fragment="footer">
     <div class="footer-links">
-        <a href="/privacy-policy">Privacy Policy</a>
-        <button type="button" class="cookie-settings-link" data-cookie-settings hidden>Cookie Settings</button>
+        <a href="/privacy-policy" th:href="${siteContext != null ? siteContext.pageUrl('/privacy-policy') : '/privacy-policy'}"><th:block th:text="#{public.ui.privacy.policy.9db108}">Privacy Policy</th:block></a>
+        <button type="button" class="cookie-settings-link" data-cookie-settings hidden><th:block th:text="#{public.ui.cookie.settings.b93fbd}">Cookie Settings</th:block></button>
     </div>
 
     <div class="footer-info">
@@ -182,50 +194,50 @@
 
         <div class="footer-meta">
             <ul class="un-style d-lg-flex mb-4">
-                <li><strong>E-mail</strong> <span><a href="mailto:apdrc8@planbear.co.kr">apdrc8@planbear.co.kr</a></span></li>
-                <li><strong>Tel</strong> <span>+82-2-568-4490</span></li>
-                <li><strong>Fax</strong> <span>+82-2-558-0131</span></li>
+                <li><strong><th:block th:text="#{public.ui.e.mail.0d01e2}">E-mail</th:block></strong> <span><a href="mailto:apdrc8@planbear.co.kr">apdrc8@planbear.co.kr</a></span></li>
+                <li><strong><th:block th:text="#{public.ui.tel.912a48}">Tel</th:block></strong> <span>+82-2-568-4490</span></li>
+                <li><strong><th:block th:text="#{public.ui.fax.b67fad}">Fax</th:block></strong> <span>+82-2-558-0131</span></li>
             </ul>
             <ul class="un-style d-lg-flex">
-                <li><strong>Organized by</strong> <span>Korean Society for Molecular and Cellular Biology (KSMCB)<br>The Genetics Society of Korea</span></li>
-                <li><strong>Congress Secretariat</strong> <span>APDRC8 Secretariat</span></li>
+                <li><strong><th:block th:text="#{public.ui.organized.by.2189f7}">Organized by</th:block></strong> <span>Korean Society for Molecular and Cellular Biology (KSMCB)<br>The Genetics Society of Korea</span></li>
+                <li><strong><th:block th:text="#{public.ui.congress.secretariat.834324}">Congress Secretariat</th:block></strong> <span th:text="${eventName}">Conference</span></li>
             </ul>
-            <p class="copyright">© 2027 8th Asia Pacific Drosophila Research Conference (APDRC8). All Rights Reserved.</p>
+            <p class="copyright" th:text="|© ${currentYear} ${eventName}. All Rights Reserved.|">© Conference. All Rights Reserved.</p>
         </div>
     </div>
     <section id="cookie-banner" class="cookie-banner" aria-labelledby="cookie-banner-title" hidden>
         <div class="cookie-banner-inner">
             <div class="cookie-banner-copy">
-                <h2 id="cookie-banner-title">Your cookie preferences</h2>
-                <p>We use essential cookies and browser storage to keep this conference website working. With your permission, we also use analytics storage to understand visits and improve the website. You can change your choice at any time in Cookie Settings. <a href="/privacy-policy">Privacy Policy</a></p>
+                <h2 id="cookie-banner-title"><th:block th:text="#{public.ui.your.cookie.preferences.fea6b4}">Your cookie preferences</th:block></h2>
+                <p><th:block th:text="#{public.ui.we.use.essential.cookies.and.browser.01d8e7}">We use essential cookies and browser storage to keep this conference website working. With your permission, we also use analytics storage to understand visits and improve the website. You can change your choice at any time in Cookie Settings.</th:block> <a href="/privacy-policy" th:href="${siteContext != null ? siteContext.pageUrl('/privacy-policy') : '/privacy-policy'}"><th:block th:text="#{public.ui.privacy.policy.9db108}">Privacy Policy</th:block></a></p>
             </div>
             <div class="cookie-actions">
-                <button type="button" class="cookie-button" data-cookie-settings>Settings</button>
-                <button type="button" class="cookie-button" data-cookie-choice="essential">Essential Only</button>
-                <button type="button" class="cookie-button cookie-button-primary" data-cookie-choice="all">Accept All</button>
+                <button type="button" class="cookie-button" data-cookie-settings><th:block th:text="#{public.ui.settings.c7f73b}">Settings</th:block></button>
+                <button type="button" class="cookie-button" data-cookie-choice="essential"><th:block th:text="#{public.ui.essential.only.fc8750}">Essential Only</th:block></button>
+                <button type="button" class="cookie-button cookie-button-primary" data-cookie-choice="all"><th:block th:text="#{public.ui.accept.all.258653}">Accept All</th:block></button>
             </div>
         </div>
     </section>
     <div id="cookie-banner-spacer" aria-hidden="true"></div>
     <dialog id="cookie-preferences" class="cookie-preferences" aria-labelledby="cookie-preferences-title" aria-describedby="cookie-preferences-description">
         <div class="cookie-dialog-header">
-            <h2 id="cookie-preferences-title">Cookie Settings</h2>
-            <button type="button" class="cookie-close" id="cookie-preferences-close" aria-label="Close cookie settings" autofocus>&times;</button>
+            <h2 id="cookie-preferences-title"><th:block th:text="#{public.ui.cookie.settings.b93fbd}">Cookie Settings</th:block></h2>
+            <button type="button" class="cookie-close" id="cookie-preferences-close" aria-label="Close cookie settings" th:aria-label="#{public.ui.close.cookie.settings.90601d}" autofocus>&times;</button>
         </div>
-        <p id="cookie-preferences-description">Choose how this conference website uses cookies and browser storage. Your choice is remembered in this browser for six months.</p>
+        <p id="cookie-preferences-description"><th:block th:text="#{public.ui.choose.how.this.conference.website.uses.a7c621}">Choose how this conference website uses cookies and browser storage. Your choice is remembered in this browser for six months.</th:block></p>
         <div class="cookie-category">
-            <div class="cookie-category-heading"><h3>Essential</h3><span class="cookie-required">Always active</span></div>
-            <p>Required for sign-in, security, registration, abstract submission and remembering your cookie choice. These cannot be turned off here.</p>
+            <div class="cookie-category-heading"><h3><th:block th:text="#{public.ui.essential.b4183c}">Essential</th:block></h3><span class="cookie-required"><th:block th:text="#{public.ui.always.active.9bd7d1}">Always active</th:block></span></div>
+            <p><th:block th:text="#{public.ui.required.for.sign.in.security.registration.70e518}">Required for sign-in, security, registration, abstract submission and remembering your cookie choice. These cannot be turned off here.</th:block></p>
         </div>
         <div class="cookie-category">
-            <label class="cookie-category-heading" for="cookie-analytics"><span>Analytics</span><input type="checkbox" id="cookie-analytics" aria-describedby="cookie-analytics-description"></label>
-            <p id="cookie-analytics-description">Helps us measure visits, pages viewed and time spent on the website. Optional visitor and session identifiers are stored in your browser only when you allow analytics.</p>
-            <p id="cookie-browser-preference" class="cookie-browser-preference" hidden>Your browser requests no tracking. Analytics will remain off while this preference is enabled.</p>
+            <label class="cookie-category-heading" for="cookie-analytics"><span><th:block th:text="#{public.ui.analytics.25bc96}">Analytics</th:block></span><input type="checkbox" id="cookie-analytics" aria-describedby="cookie-analytics-description"></label>
+            <p id="cookie-analytics-description"><th:block th:text="#{public.ui.helps.us.measure.visits.pages.viewed.c5da51}">Helps us measure visits, pages viewed and time spent on the website. Optional visitor and session identifiers are stored in your browser only when you allow analytics.</th:block></p>
+            <p id="cookie-browser-preference" class="cookie-browser-preference" hidden><th:block th:text="#{public.ui.your.browser.requests.no.tracking.analytics.17f3cc}">Your browser requests no tracking. Analytics will remain off while this preference is enabled.</th:block></p>
         </div>
-        <p class="cookie-policy-note">Read our <a href="/privacy-policy">Privacy Policy</a> for more information. Change or withdraw your choice at any time using Cookie Settings in the footer.</p>
+        <p class="cookie-policy-note"><th:block th:text="#{public.ui.read.our.c068ef}">Read our</th:block> <a href="/privacy-policy" th:href="${siteContext != null ? siteContext.pageUrl('/privacy-policy') : '/privacy-policy'}"><th:block th:text="#{public.ui.privacy.policy.9db108}">Privacy Policy</th:block></a> <th:block th:text="#{public.ui.for.more.information.change.or.withdraw.4673be}">for more information. Change or withdraw your choice at any time using Cookie Settings in the footer.</th:block></p>
         <div class="cookie-actions">
-            <button type="button" class="cookie-button" data-cookie-choice="essential">Essential Only</button>
-            <button type="button" class="cookie-button cookie-button-primary" id="cookie-preferences-save">Save Preferences</button>
+            <button type="button" class="cookie-button" data-cookie-choice="essential"><th:block th:text="#{public.ui.essential.only.fc8750}">Essential Only</th:block></button>
+            <button type="button" class="cookie-button cookie-button-primary" id="cookie-preferences-save"><th:block th:text="#{public.ui.save.preferences.e9fdd1}">Save Preferences</th:block></button>
         </div>
     </dialog>
     <p id="cookie-status" class="cookie-status" role="status" aria-live="polite"></p>

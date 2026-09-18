@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 	<div class="faq-page" th:fragment="content">
 		<div class="container">
-			<nav class="faq-category-tabs" aria-label="FAQ categories">
-				<a th:href="@{/information/faq}"
-				   th:classappend="${selectedFaqCategory == null or selectedFaqCategory.isEmpty()} ? ' is-active'">ALL</a>
+			<nav class="faq-category-tabs" aria-label="FAQ categories" th:aria-label="#{public.ui.faq.categories.2e9f71}">
+				<a th:href="@{${siteContext.pageUrl('/faq')}}"
+				   th:classappend="${selectedFaqCategory == null or selectedFaqCategory.isEmpty()} ? ' is-active'"><th:block th:text="#{public.ui.all.6b4287}">ALL</th:block></a>
 				<a th:each="category : ${faqCategories}"
-				   th:href="@{/information/faq(category=${category.categoryCode})}"
+				   th:href="@{${siteContext.pageUrl('/faq')}(category=${category.categoryCode})}"
 				   th:classappend="${category.categoryCode == selectedFaqCategory} ? ' is-active'"
 				   th:text="${category.categoryName}">General</a>
 			</nav>
@@ -29,26 +29,26 @@
 			</div>
 
 			<div class="empty-content" th:if="${faqPage == null or #lists.isEmpty(faqPage.items)}">
-				<h3>No FAQs have been posted.</h3>
+				<h3><th:block th:text="#{public.ui.no.faqs.have.been.posted.200a3d}">No FAQs have been posted.</th:block></h3>
 			</div>
 
-			<nav class="pagination d-flex justify-content-center" aria-label="FAQ pagination"
+			<nav class="pagination d-flex justify-content-center" aria-label="FAQ pagination" th:aria-label="#{public.ui.faq.pagination.21a76e}"
 				 th:if="${faqPage != null and faqPage.totalPages > 1}">
 				<ul class="un-style d-flex align-items-center">
 					<li class="pg-arw" th:classappend="${faqPage.page == 1 ? ' d-none' : ''}">
-						<a th:if="${faqPage.page > 1}" th:href="@{/information/faq(page=1, category=${selectedFaqCategory})}" aria-label="First page"><img src="/public/img/nav-first.svg" alt=""></a>
+						<a th:if="${faqPage.page > 1}" th:href="@{${siteContext.pageUrl('/faq')}(page=1, category=${selectedFaqCategory})}" aria-label="First page" th:aria-label="#{public.ui.first.page.49d74b}"><img src="/public/img/nav-first.svg" alt=""></a>
 					</li>
 					<li class="pg-arw" th:classappend="${faqPage.page == 1 ? ' d-none' : ''}">
-						<a th:if="${faqPage.page > 1}" th:href="@{/information/faq(page=${faqPage.page - 1}, category=${selectedFaqCategory})}" aria-label="Previous page"><img src="/public/img/nav-prev.svg" alt=""></a>
+						<a th:if="${faqPage.page > 1}" th:href="@{${siteContext.pageUrl('/faq')}(page=${faqPage.page - 1}, category=${selectedFaqCategory})}" aria-label="Previous page" th:aria-label="#{public.ui.previous.page.81f547}"><img src="/public/img/nav-prev.svg" alt=""></a>
 					</li>
 					<li th:each="pageNum : ${#numbers.sequence(1, faqPage.totalPages)}" th:classappend="${pageNum == faqPage.page ? ' active' : ''}">
-						<a th:href="@{/information/faq(page=${pageNum}, category=${selectedFaqCategory})}" th:text="${pageNum}">1</a>
+						<a th:href="@{${siteContext.pageUrl('/faq')}(page=${pageNum}, category=${selectedFaqCategory})}" th:text="${pageNum}">1</a>
 					</li>
 					<li class="pg-arw" th:classappend="${faqPage.page == faqPage.totalPages ? ' d-none' : ''}">
-						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{/information/faq(page=${faqPage.page + 1}, category=${selectedFaqCategory})}" aria-label="Next page"><img src="/public/img/nav-next.svg" alt=""></a>
+						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{${siteContext.pageUrl('/faq')}(page=${faqPage.page + 1}, category=${selectedFaqCategory})}" aria-label="Next page" th:aria-label="#{public.ui.next.page.4bfc19}"><img src="/public/img/nav-next.svg" alt=""></a>
 					</li>
 					<li class="pg-arw" th:classappend="${faqPage.page == faqPage.totalPages ? ' d-none' : ''}">
-						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{/information/faq(page=${faqPage.totalPages}, category=${selectedFaqCategory})}" aria-label="Last page"><img src="/public/img/nav-last.svg" alt=""></a>
+						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{${siteContext.pageUrl('/faq')}(page=${faqPage.totalPages}, category=${selectedFaqCategory})}" aria-label="Last page" th:aria-label="#{public.ui.last.page.b01f16}"><img src="/public/img/nav-last.svg" alt=""></a>
 					</li>
 				</ul>
 			</nav>

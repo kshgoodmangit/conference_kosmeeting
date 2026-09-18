@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.dto.PublicPreRegistrationData;
 import com.bjworld21.congress.service.ConferenceSettingsService;
 import com.bjworld21.congress.service.PublicPreRegistrationService;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Signed-in member API for loading, creating, paying, and cancelling one registration. */
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/pre-registrations")
+@RequestMapping("/api/public/{conferenceSeq}/pre-registrations")
 public class PublicPreRegistrationController {
     private final PublicPreRegistrationService service;
     private final ConferenceSettingsService conferences;
@@ -95,6 +96,6 @@ public class PublicPreRegistrationController {
     }
 
     private PublicMemberSession memberSession(HttpSession session) {
-        return PublicMemberSession.resolve(session, () -> conferences.getLatestConferenceSeq());
+        return PublicMemberSession.resolve(session, () -> PublicApiRequest.context().conferenceSeq());
     }
 }

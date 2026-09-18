@@ -47,6 +47,15 @@ class ProgramOverviewStatsTest {
                 .isEqualTo("<p>No statistics block</p>");
     }
 
+    @Test
+    void localizesGeneratedStatisticsWithoutTranslatingTheEditorsContent() {
+        var program = ProgramManagementResponse.builder().days(List.of(day(1L, true))).items(List.of()).build();
+        var result = Jsoup.parseBodyFragment(ProgramOverviewStats.render(HTML, program, "ko"));
+        assertThat(result.select(".program-overview-stats li").eachText()).containsExactly(
+                "01 학회 일수", "00 학술 세션", "00 기조 및 회장 강연");
+        assertThat(result.select("p").text()).isEqualTo("Editable introduction");
+    }
+
     private ProgramDay day(Long seq, boolean enabled) {
         return ProgramDay.builder().seq(seq).enabled(enabled).build();
     }

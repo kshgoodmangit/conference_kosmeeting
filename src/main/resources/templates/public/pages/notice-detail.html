@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 	<div class="notice-detail" th:fragment="content">
         <div class="container">
             <table class="w-100 bddetail mb5">
@@ -14,22 +14,22 @@
                         <td class="bddetail-meta-cell" colspan="4">
                             <ul class="notice-meta un-style">
                                 <li>
-                                    <strong>Author</strong>
-                                    <span th:text="${notice.createdByName ?: 'Administrator'}">APDRC8 Secretariat</span>
+                                    <strong><th:block th:text="#{public.ui.author.5fda23}">Author</th:block></strong>
+                                    <span th:text="${notice.createdByName ?: #messages.msg('public.ui.administrator.1eda23')}">APDRC8 Secretariat</span>
                                 </li>
                                 <li>
-                                    <strong>Posted Date</strong>
+                                    <strong><th:block th:text="#{public.ui.posted.date.8e7487}">Posted Date</th:block></strong>
                                     <span th:with="noticeDate=${notice.publishedAt != null ? notice.publishedAt : notice.createdAt}"
                                           th:text="${#temporals.format(noticeDate, 'MMMM d, yyyy')}">August 25, 2026</span>
                                 </li>
                                 <li>
-                                    <strong>Attachment</strong>
+                                    <strong><th:block th:text="#{public.ui.attachment.83a562}">Attachment</th:block></strong>
                                     <span class="bdfile-list">
                                         <a th:each="attachment : ${notice.attachments}"
-                                           th:href="${attachment.downloadUrl}">
+                                           th:href="${siteContext.apiUrl(attachment.downloadUrl)}">
                                             <label class="mb-0" th:text="${attachment.originalFilename}">APDRC8_2027_Overview.pdf</label>
                                             <span class="ml-2">
-                                                Download
+                                                <th:block th:text="#{public.ui.download.a479c9}">Download</th:block>
                                                 <img class="ml-2 img-position" src="/public/img/download.png" alt="Download">
                                             </span>
                                         </a>
@@ -46,7 +46,7 @@
                 </tbody>
             </table>
             <div class="text-center bddetail-actions">
-                <a class="btn btn-normal" th:href="@{/information/notice}">LIST</a>
+                <a class="btn btn-normal" th:href="@{${siteContext.pageUrl('/notice')}}"><th:block th:text="#{public.ui.list.735cf1}">LIST</th:block></a>
             </div>
         </div>
 	</div>

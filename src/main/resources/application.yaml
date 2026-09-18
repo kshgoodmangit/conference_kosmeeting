@@ -1,4 +1,8 @@
 spring:
+  messages:
+    basename: public-ui,public-api
+    encoding: UTF-8
+    fallback-to-system-locale: false
   application:
     name: bjworld21_cms_congress
   datasource:
@@ -24,6 +28,9 @@ mybatis:
   mapper-locations: classpath:/mappers/*.xml
 
 app:
+  public-site:
+    conference-mode: ${PUBLIC_SITE_CONFERENCE_MODE:multi}
+    default-conference-seq: ${PUBLIC_SITE_DEFAULT_CONFERENCE_SEQ:1}
   admin-access-request:
     cooldown-minutes: 10
     daily-limit: 3

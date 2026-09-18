@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 	<div class="member-login-page" th:fragment="content">
         <style>
             .page-top {
@@ -15,23 +15,23 @@
 
         <div class="member-login-shell container">
             <div class="member-login-art member-login-art-top" aria-hidden="true"></div>
-            <form id="member-login-form" class="member-login-card" action="/api/public/members/login" method="post" novalidate data-success-url="/">
+            <form id="member-login-form" class="member-login-card" action="/api/public/members/login" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/members/login') : '/api/public/members/login'}" method="post" novalidate data-success-url="/" th:attr="data-success-url=${siteContext.pageUrl('/')}">
                 <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                <h2>Login</h2>
+                <h2><th:block th:text="#{public.ui.login.4e5a28}">Login</th:block></h2>
                 <p class="member-recovery-status" data-password-login-notice role="status" hidden></p>
                 <div class="member-login-fields">
-                    <label for="login-email" class="sr-only">ID (E-mail)</label>
-                    <input id="login-email" type="email" name="email" autocomplete="email" placeholder="ID (E-mail)" required>
+                    <label for="login-email" class="sr-only"><th:block th:text="#{public.ui.id.e.mail.a2609e}">ID (E-mail)</th:block></label>
+                    <input id="login-email" type="email" name="email" autocomplete="email" placeholder="ID (E-mail)" th:placeholder="#{public.ui.id.e.mail.a2609e}" required>
 
-                    <label for="login-password" class="sr-only">Password</label>
-                    <input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="Password" required>
+                    <label for="login-password" class="sr-only"><th:block th:text="#{public.ui.password.8be3c9}">Password</th:block></label>
+                    <input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="Password" th:placeholder="#{public.ui.password.8be3c9}" required>
 
-                    <button type="submit">LOGIN</button>
-                    <a class="member-login-recovery" href="/forgot-password">Forgot your password?</a>
+                    <button type="submit"><th:block th:text="#{public.ui.login.d4fc47}">LOGIN</th:block></button>
+                    <a class="member-login-recovery" href="/forgot-password" th:href="${siteContext != null ? siteContext.pageUrl('/forgot-password') : '/forgot-password'}"><th:block th:text="#{public.ui.forgot.your.password.a2f060}">Forgot your password?</th:block></a>
                 </div>
                 <div class="member-login-join">
-                    <p>Please log in with your ID and password. First time here?</p>
-                    <a href="/join" th:href="${joinMenu != null ? joinMenu.routePath : '/join'}">Sign Up</a>
+                    <p><th:block th:text="#{public.ui.please.log.in.with.your.id.907f31}">Please log in with your ID and password. First time here?</th:block></p>
+                    <a href="/join" th:href="${siteContext != null ? siteContext.pageUrl(joinMenu != null ? joinMenu.routePath : '/join') : (joinMenu != null ? joinMenu.routePath : '/join')}"><th:block th:text="#{public.ui.sign.up.2ba402}">Sign Up</th:block></a>
                 </div>
             </form>
             <div class="member-login-art member-login-art-bottom" aria-hidden="true"></div>

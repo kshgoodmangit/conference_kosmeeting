@@ -4,6 +4,8 @@ import com.bjworld21.congress.config.IpAccessExempt;
 import com.bjworld21.congress.service.ConferenceSettingsService;
 import com.bjworld21.congress.service.PublicPopupService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import com.bjworld21.congress.publicsite.PublicSiteContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -21,15 +23,18 @@ public class PublicPopupDisplayController {
         this.popups = popups;
     }
 
-    @GetMapping(value = "/popups/display", produces = MediaType.TEXT_HTML_VALUE)
-    public String display(HttpServletResponse response, Model model) {
+    @GetMapping(value = "/api/public/{conferenceSeq}/popups/display", produces = MediaType.TEXT_HTML_VALUE)
+    public String display(HttpServletRequest request, HttpServletResponse response, Model model) {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store");
         // Explicit viewing does not clear or renew the daily suppression cookie.
-        var display = popups.forManualOpen(conferences.getLatestConferenceSeq());
+        var site = PublicSiteContext.from(request);
+        var display = popups.forManualOpen(site);
         if (display == null) {
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
             return null;
         }
+        model.addAttribute("siteContext", site);
+        model.addAttribute("language", site.language());
         model.addAttribute("popupDisplay", display);
         return "public/popups :: panel";
     }

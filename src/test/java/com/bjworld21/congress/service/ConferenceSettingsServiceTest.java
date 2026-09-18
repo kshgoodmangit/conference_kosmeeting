@@ -23,6 +23,57 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ConferenceSettingsServiceTest {
 
+    @Test
+    void sitePathLookupDoesNotFallbackToLatestConference() {
+        when(repository.findBySitePath("missing")).thenReturn(null);
+        assertThatThrownBy(() -> service.getSettingsBySitePath("missing"))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        verify(repository, never()).findLatest();
+    }
+
+    @Test
+    void savesUnderscoreSitePathWithoutRewritingTheConferenceUrl() {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).build());
+        when(repository.findLanguages(1L)).thenReturn(List.of("ko", "en"));
+        var response = service.savePublicSite(1L, "2026_136", "en", List.of("ko", "en"));
+        assertThat(response.getSitePath()).isEqualTo("2026_136");
+        ArgumentCaptor<ConferenceSettings> captor = ArgumentCaptor.forClass(ConferenceSettings.class);
+        verify(repository).updatePublicSite(captor.capture());
+        assertThat(captor.getValue().getSitePath()).isEqualTo("2026_136");
+    }
+
+    @Test
+    void rejectsEmptyLanguagesAndDefaultOutsideSupportedList() {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).build());
+        assertThatThrownBy(() -> service.savePublicSite(1L, "apdrc8", "en", List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.savePublicSite(1L, "apdrc8", "en", List.of("ko")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).updatePublicSite(any());
+        verify(repository, never()).deleteLanguages(any());
+    }
+
+    @Test
+    void rejectsDuplicateSitePathAndLanguageCodes() {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).build());
+        when(repository.findBySitePath("apdrc9")).thenReturn(ConferenceSettings.builder().seq(2L).build());
+        assertThatThrownBy(() -> service.savePublicSite(1L, "apdrc9", "en", List.of("en")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("학회 경로");
+        assertThatThrownBy(() -> service.savePublicSite(1L, "apdrc8", "en", List.of("en", "EN")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("중복");
+    }
+
+    @Test
+    void supportsAdditionalLanguageCodesAndReturnsConfiguredList() {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).build());
+        when(repository.findLanguages(1L)).thenReturn(List.of("ko", "zh-Hans"));
+        var response=service.savePublicSite(1L, "APDRC8", "zh-hans", List.of("ko", "zh-Hans"));
+        assertThat(response.getSitePath()).isEqualTo("apdrc8");
+        assertThat(response.getDefaultLanguage()).isEqualTo("zh-Hans");
+        assertThat(response.getSupportedLanguages()).containsExactly("ko", "zh-Hans");
+        verify(repository).insertLanguage(1L, "zh-Hans", 1);
+    }
+
     @Mock
     private ConferenceSettingsRepository repository;
 

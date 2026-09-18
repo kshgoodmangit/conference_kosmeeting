@@ -79,10 +79,10 @@ export const MemberRegisterModal: React.FC<ModalProps> = ({ isOpen, member, onCl
         setErrors({});
     };
 
-    useEffect(() => {
+    const [draftSource, setDraftSource] = useState({ isOpen: false, member });
+    if (draftSource.isOpen !== isOpen || draftSource.member !== member) {
+        setDraftSource({ isOpen, member });
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
-
             if (member) {
                 setMemberType(member.memberType);
                 setCountry(member.country ?? '');
@@ -106,15 +106,16 @@ export const MemberRegisterModal: React.FC<ModalProps> = ({ isOpen, member, onCl
                 setMemberType('international');
             }
         } else {
-            document.body.style.overflow = '';
-            resetForm();
-            setMemberType('international');
+            resetForm(); setMemberType('international');
         }
+    }
 
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [isOpen, member]);
+    useEffect(() => {
+        if (!isOpen) return;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = previousOverflow; };
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -214,7 +215,7 @@ export const MemberRegisterModal: React.FC<ModalProps> = ({ isOpen, member, onCl
 
         if (!mobilePhoneNumber.trim()) {
             newErrors.mobilePhoneNumber = 'Mobile number is required';
-        } else if (!/^[0-9\-\s\(\)]*$/.test(mobilePhoneNumber)) {
+        } else if (!/^[0-9\-\s()]*$/.test(mobilePhoneNumber)) {
             newErrors.mobilePhoneNumber = 'Invalid mobile number';
         }
 
@@ -255,7 +256,7 @@ export const MemberRegisterModal: React.FC<ModalProps> = ({ isOpen, member, onCl
         }
 
         try {
-            const response = await fetch(isEditMode ? `/api/admin/members/${member?.seq}` : '/api/members/register', {
+            const response = await fetch(isEditMode ? `/api/admin/members/${member?.seq}` : '/api/admin/members/register', {
                 method: isEditMode ? 'PUT' : 'POST',
                 body: formData
             });

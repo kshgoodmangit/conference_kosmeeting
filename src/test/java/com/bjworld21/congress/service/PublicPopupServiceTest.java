@@ -67,8 +67,8 @@ class PublicPopupServiceTest {
                 .content("<p class='header'>Text before image</p><img src='/api/popups/images/202609/a.png' onerror='bad()'>"
                         + "<p>Text after image</p><script>bad()</script>")
                 .linkUrl("javascript:bad()").build();
-        var image = Popup.builder().seq(2L).title("Legacy image").popupImageSaveFilename("202609/a.png")
-                .content("<p>&nbsp;</p>").linkUrl("/registration/online-registration").build();
+        var image = Popup.builder().conferenceSeq(7L).seq(2L).title("Legacy image").popupImageSaveFilename("202609/a.png")
+                .content("<p>&nbsp;</p>").linkUrl("/online-registration").build();
         var empty = Popup.builder().seq(3L).title("Empty").content("<p><br></p>").build();
         when(repository.findVisible(7L, LocalDate.of(2026, 9, 15))).thenReturn(List.of(body, image, empty));
         when(layouts.getPopupLayoutNo(7L)).thenReturn(7);
@@ -78,8 +78,8 @@ class PublicPopupServiceTest {
         assertThat(display.items().get(0).contentHtml()).contains("Text before image", "Text after image", "/api/popups/images/202609/a.png")
                 .doesNotContain("script", "onerror", "class=");
         assertThat(display.items().get(0).linkUrl()).isNull();
-        assertThat(display.items().get(1).imageUrl()).isEqualTo("/api/popups/2/image");
-        assertThat(display.items().get(1).linkUrl()).isEqualTo("/registration/online-registration");
+        assertThat(display.items().get(1).imageUrl()).isEqualTo("/api/public/7/popups/2/image");
+        assertThat(display.items().get(1).linkUrl()).isEqualTo("/online-registration");
     }
 
     @Test
@@ -97,5 +97,21 @@ class PublicPopupServiceTest {
         when(repository.findVisible(anyLong(), any())).thenThrow(new IllegalStateException("unavailable"));
         assertThat(service.forHome(7L, null)).isNull();
         verifyNoInteractions(layouts);
+    }
+
+    @Test
+    void popupHtmlAndImageLinksFollowCurrentConferenceAndLanguage() {
+        var popup = Popup.builder().conferenceSeq(7L).seq(1L).title("Notice")
+                .content("<a href='/notice'>Read</a><a href='https://example.com'>External</a>")
+                .linkUrl("/online-registration").build();
+        var image = Popup.builder().conferenceSeq(7L).seq(2L).title("Image")
+                .popupImageSaveFilename("202609/a.png").build();
+        when(repository.findVisible(7L, LocalDate.of(2026, 9, 15))).thenReturn(List.of(popup, image));
+        when(layouts.getPopupLayoutNo(7L)).thenReturn(1);
+        var site = com.bjworld21.congress.publicsite.PublicSiteTestContext.context(7, "ko");
+        var display = service.forManualOpen(site);
+        assertThat(display.items().get(0).contentHtml()).contains("/apdrc8/ko/notice", "https://example.com");
+        assertThat(display.items().get(0).linkUrl()).isEqualTo("/apdrc8/ko/online-registration");
+        assertThat(display.items().get(1).imageUrl()).isEqualTo("/api/public/7/popups/2/image?lang=ko");
     }
 }

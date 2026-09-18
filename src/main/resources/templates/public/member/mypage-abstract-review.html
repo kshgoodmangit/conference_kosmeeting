@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <div class="member-page" th:fragment="content">
     <div class="container">
-        <h2 class="bbtitle fnb mb-5">My Page</h2>
-        <nav class="member-tabs" aria-label="My Page">
-            <a href="/mypage">My Page Home</a>
-            <a class="is-active" href="/mypage/abstract" aria-current="page">Abstract Submission</a>
-            <a href="/mypage/registration">Registration</a>
+        <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
+        <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+            <a href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+            <a class="is-active" href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}" aria-current="page"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+            <a href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
         </nav>
 
         <section id="public-abstract-review" class="member-section member-section--spaced public-form mb7">
             <div class="text-center mb5">
-                <h5 class="fnsb cl-title mb-2">Abstract Preview</h5>
-                <p class="mb-0 pp-content">Read-only · this is how your abstract was submitted</p>
-                <p class="mb-0 pp-content" data-review-loading>Loading your abstract...</p>
+                <h5 class="fnsb cl-title mb-2"><th:block th:text="#{public.ui.abstract.preview.14dc67}">Abstract Preview</th:block></h5>
+                <p class="mb-0 pp-content"><th:block th:text="#{public.ui.read.only.this.is.how.your.f70585}">Read-only · this is how your abstract was submitted</th:block></p>
+                <p class="mb-0 pp-content" data-review-loading><th:block th:text="#{public.ui.loading.your.abstract.17fbb1}">Loading your abstract...</th:block></p>
             </div>
 
             <div data-review-content hidden>
                 <section class="abstract-form-section" aria-labelledby="review-ai-title">
-                    <h4 id="review-ai-title" class="cm-title fnb mb-4">Use of Artificial Intelligence</h4>
+                    <h4 id="review-ai-title" class="cm-title fnb mb-4"><th:block th:text="#{public.ui.use.of.artificial.intelligence.bb0f2a}">Use of Artificial Intelligence</th:block></h4>
                     <table class="w-100 type-05 abstract-form-table">
                         <colgroup>
                             <col class="abstract-label-column">
@@ -27,27 +27,27 @@
                         </colgroup>
                         <tbody>
                             <tr>
-                                <th scope="row">AI Usage</th>
+                                <th scope="row"><th:block th:text="#{public.ui.ai.usage.f82fd7}">AI Usage</th:block></th>
                                 <td data-review-field="aiUsage">-</td>
                             </tr>
                             <tr>
-                                <th scope="row">AI Tools Used</th>
+                                <th scope="row"><th:block th:text="#{public.ui.ai.tools.used.b125e2}">AI Tools Used</th:block></th>
                                 <td data-review-field="aiTools">-</td>
                             </tr>
                             <tr>
-                                <th scope="row">Version Information</th>
+                                <th scope="row"><th:block th:text="#{public.ui.version.information.f6ac74}">Version Information</th:block></th>
                                 <td data-review-field="aiVersionInfo">-</td>
                             </tr>
                             <tr>
-                                <th scope="row">Scope of AI Use</th>
+                                <th scope="row"><th:block th:text="#{public.ui.scope.of.ai.use.7f282e}">Scope of AI Use</th:block></th>
                                 <td data-review-field="aiScopes">-</td>
                             </tr>
                             <tr>
-                                <th scope="row">Special rule: Data analysis</th>
+                                <th scope="row"><th:block th:text="#{public.ui.special.rule.data.analysis.847e1a}">Special rule: Data analysis</th:block></th>
                                 <td data-review-field="aiDataAnalysisUsed">-</td>
                             </tr>
                             <tr>
-                                <th scope="row">Compliance Confirmation</th>
+                                <th scope="row"><th:block th:text="#{public.ui.compliance.confirmation.c238f1}">Compliance Confirmation</th:block></th>
                                 <td data-review-field="plagiarismPolicyConfirmed">-</td>
                             </tr>
                         </tbody>
@@ -55,7 +55,7 @@
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="review-authors-title">
-                    <h4 id="review-authors-title" class="cm-title fnb mb-4">Author Information</h4>
+                    <h4 id="review-authors-title" class="cm-title fnb mb-4"><th:block th:text="#{public.ui.author.information.42f4e6}">Author Information</th:block></h4>
                     <div class="abstract-table-scroll">
                         <table class="w-100 type-04">
                             <colgroup>
@@ -68,12 +68,12 @@
                             </colgroup>
                             <thead>
                                 <tr>
-                                    <th scope="col">Order</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Role</th>
-                                    <th scope="col">Institution</th>
-                                    <th scope="col">Position</th>
-                                    <th scope="col">E-mail</th>
+                                    <th scope="col"><th:block th:text="#{public.ui.order.1d7577}">Order</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.name.709a23}">Name</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.role.c3f104}">Role</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.institution.429f94}">Institution</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.position.cf1c85}">Position</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.e.mail.0d01e2}">E-mail</th:block></th>
                                 </tr>
                             </thead>
                             <tbody data-review-authors></tbody>
@@ -82,43 +82,43 @@
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="review-information-title">
-                    <h4 id="review-information-title" class="cm-title fnb mb-4">Abstract Information</h4>
+                    <h4 id="review-information-title" class="cm-title fnb mb-4"><th:block th:text="#{public.ui.abstract.information.bf8682}">Abstract Information</th:block></h4>
                     <table class="w-100 type-05 abstract-form-table">
                         <colgroup><col class="abstract-label-column"><col></colgroup>
                         <tbody>
-                            <tr><th scope="row">Abstract No.</th><td data-review-field="submissionNo">-</td></tr>
-                            <tr><th scope="row">Status</th><td><span data-review-field="status">-</span></td></tr>
-                            <tr><th scope="row">Presentation Type</th><td data-review-field="presentationType">-</td></tr>
-                            <tr><th scope="row">Categories</th><td data-review-field="category">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.abstract.no.c47534}">Abstract No.</th:block></th><td data-review-field="submissionNo">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.status.bae7d5}">Status</th:block></th><td><span data-review-field="status">-</span></td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.presentation.type.bebb7d}">Presentation Type</th:block></th><td data-review-field="presentationType">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.categories.6ccb60}">Categories</th:block></th><td data-review-field="category">-</td></tr>
                         </tbody>
                     </table>
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="review-content-title">
-                    <h4 id="review-content-title" class="cm-title fnb mb-4">Abstract Content</h4>
+                    <h4 id="review-content-title" class="cm-title fnb mb-4"><th:block th:text="#{public.ui.abstract.content.c3afcc}">Abstract Content</th:block></h4>
                     <table class="w-100 type-05 abstract-review-content">
                         <colgroup><col class="abstract-label-column"><col></colgroup>
                         <tbody>
-                            <tr><th scope="row">Title</th><td data-review-field="title">-</td></tr>
-                            <tr><th scope="row">Objective</th><td><span data-review-field="objectiveText">-</span></td></tr>
-                            <tr><th scope="row">Methods</th><td data-review-field="methodsText">-</td></tr>
-                            <tr><th scope="row">Results</th><td data-review-field="resultsText">-</td></tr>
-                            <tr><th scope="row">Conclusion</th><td data-review-field="conclusionsText">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.title.768e0c}">Title</th:block></th><td data-review-field="title">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.objective.50c892}">Objective</th:block></th><td><span data-review-field="objectiveText">-</span></td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.methods.7e4ac6}">Methods</th:block></th><td data-review-field="methodsText">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.results.612e12}">Results</th:block></th><td data-review-field="resultsText">-</td></tr>
+                            <tr><th scope="row"><th:block th:text="#{public.ui.conclusion.e39262}">Conclusion</th:block></th><td data-review-field="conclusionsText">-</td></tr>
                         </tbody>
                     </table>
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="presentation-material-title" data-presentation-materials hidden>
-                    <h4 id="presentation-material-title" class="cm-title fnb mb-4">Presentation Materials</h4>
-                    <p class="pp-content mb-4">Accepted abstracts can upload PDF, PPT, or PPTX files during the presentation material submission period. Up to 5 files, 100MB each.</p>
+                    <h4 id="presentation-material-title" class="cm-title fnb mb-4"><th:block th:text="#{public.ui.presentation.materials.02e4e2}">Presentation Materials</th:block></h4>
+                    <p class="pp-content mb-4"><th:block th:text="#{public.ui.accepted.abstracts.can.upload.pdf.ppt.475fb5}">Accepted abstracts can upload PDF, PPT, or PPTX files during the presentation material submission period. Up to 5 files, 100MB each.</th:block></p>
                     <form data-presentation-upload-form>
                         <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                         <div class="member-row-actions mb-4">
-                            <label class="member-button member-button--outline member-button--compact" for="presentation-material-file">Select File</label>
+                            <label class="member-button member-button--outline member-button--compact" for="presentation-material-file"><th:block th:text="#{public.ui.select.file.5c0c87}">Select File</th:block></label>
                             <input id="presentation-material-file" name="file" type="file" accept=".pdf,.ppt,.pptx" required hidden>
-                            <button class="member-button member-button--accent member-button--compact" type="submit">Upload</button>
+                            <button class="member-button member-button--accent member-button--compact" type="submit"><th:block th:text="#{public.ui.upload.8bdf05}">Upload</th:block></button>
                         </div>
-                        <p class="text-center pp-content mb-4" data-presentation-file-name>No file selected.</p>
+                        <p class="text-center pp-content mb-4" data-presentation-file-name><th:block th:text="#{public.ui.no.file.selected.9bcce0}">No file selected.</th:block></p>
                     </form>
                     <div class="registration-status" data-presentation-status role="status" aria-live="polite" hidden></div>
                     <div class="abstract-table-scroll">
@@ -130,9 +130,9 @@
                             </colgroup>
                             <thead>
                                 <tr>
-                                    <th scope="col">File</th>
-                                    <th scope="col">Size</th>
-                                    <th scope="col">Actions</th>
+                                    <th scope="col"><th:block th:text="#{public.ui.file.2c3caf}">File</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.size.b71523}">Size</th:block></th>
+                                    <th scope="col"><th:block th:text="#{public.ui.actions.c3cd63}">Actions</th:block></th>
                                 </tr>
                             </thead>
                             <tbody data-presentation-attachments></tbody>
@@ -143,30 +143,30 @@
             </div>
 
             <div class="public-form-actions">
-                <a class="public-save-button abstract-action-link" data-review-edit hidden>Edit</a>
-                <button class="public-save-button abstract-action-link" type="button" data-delete-abstract hidden>Delete Draft</button>
-                <a class="public-submit-button abstract-action-link" href="/mypage/abstract">Close</a>
+                <a class="public-save-button abstract-action-link" data-review-edit hidden><th:block th:text="#{public.ui.edit.530164}">Edit</th:block></a>
+                <button class="public-save-button abstract-action-link" type="button" data-delete-abstract hidden><th:block th:text="#{public.ui.delete.draft.685df8}">Delete Draft</th:block></button>
+                <a class="public-submit-button abstract-action-link" href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}"><th:block th:text="#{public.ui.close.bbfa77}">Close</th:block></a>
             </div>
-            <p class="text-center mt-3 mb-0 pp-content"><span class="co-danger">*</span> Read-only view. Drafts can be deleted during the submission period.</p>
+            <p class="text-center mt-3 mb-0 pp-content"><span class="co-danger">*</span> <th:block th:text="#{public.ui.read.only.view.drafts.can.be.68fc4f}">Read-only view. Drafts can be deleted during the submission period.</th:block></p>
         </section>
 
         <dialog class="registration-cancel-dialog" aria-labelledby="abstract-delete-title"
                 aria-describedby="abstract-delete-description" data-abstract-delete-dialog>
-            <h2 id="abstract-delete-title">Delete Draft Abstract</h2>
-            <p id="abstract-delete-description">This draft and its entered content will be permanently deleted.</p>
+            <h2 id="abstract-delete-title"><th:block th:text="#{public.ui.delete.draft.abstract.e23865}">Delete Draft Abstract</th:block></h2>
+            <p id="abstract-delete-description"><th:block th:text="#{public.ui.this.draft.and.its.entered.content.265f5b}">This draft and its entered content will be permanently deleted.</th:block></p>
             <form method="dialog">
-                <button class="member-button member-button--outline member-button--compact" value="cancel">Cancel</button>
-                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-abstract-delete>Delete</button>
+                <button class="member-button member-button--outline member-button--compact" value="cancel"><th:block th:text="#{public.ui.cancel.77dfd2}">Cancel</th:block></button>
+                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-abstract-delete><th:block th:text="#{public.ui.delete.f6fdbe}">Delete</th:block></button>
             </form>
         </dialog>
 
         <dialog class="registration-cancel-dialog" aria-labelledby="presentation-delete-title"
                 aria-describedby="presentation-delete-description" data-presentation-delete-dialog>
-            <h2 id="presentation-delete-title">Delete Presentation Material</h2>
-            <p id="presentation-delete-description">The selected file will be permanently deleted.</p>
+            <h2 id="presentation-delete-title"><th:block th:text="#{public.ui.delete.presentation.material.98240e}">Delete Presentation Material</th:block></h2>
+            <p id="presentation-delete-description"><th:block th:text="#{public.ui.the.selected.file.will.be.permanently.fe55f1}">The selected file will be permanently deleted.</th:block></p>
             <form method="dialog">
-                <button class="member-button member-button--outline member-button--compact" value="cancel">Cancel</button>
-                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-presentation-delete>Delete</button>
+                <button class="member-button member-button--outline member-button--compact" value="cancel"><th:block th:text="#{public.ui.cancel.77dfd2}">Cancel</th:block></button>
+                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-presentation-delete><th:block th:text="#{public.ui.delete.f6fdbe}">Delete</th:block></button>
             </form>
         </dialog>
     </div>

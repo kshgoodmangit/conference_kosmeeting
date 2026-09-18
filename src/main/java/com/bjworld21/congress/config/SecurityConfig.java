@@ -37,8 +37,17 @@ public class SecurityConfig {
             response.setHeader("X-CSRF-ERROR", "true");
             response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.setContentType("text/plain;charset=UTF-8");
-            response.getWriter().write("CSRF 토큰이 없거나 유효하지 않습니다.");
+            if (request.getRequestURI().startsWith("/api/public/")) {
+                response.setContentType("application/json;charset=UTF-8");
+                String language = request.getParameter("lang");
+                String message = com.bjworld21.congress.publicsite.PublicApiMessages.message(
+                        "CSRF_INVALID", language == null || language.isBlank() ? "en" : language);
+                new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getWriter(),
+                        java.util.Map.of("code", "CSRF_INVALID", "message", message));
+            } else {
+                response.setContentType("text/plain;charset=UTF-8");
+                response.getWriter().write("CSRF 토큰이 없거나 유효하지 않습니다.");
+            }
         };
 
         http

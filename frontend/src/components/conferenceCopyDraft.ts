@@ -9,7 +9,7 @@ export const copyDateRanges = [
 ] as const;
 
 export type CopyDateField = typeof copyDateRanges[number]['start' | 'end'];
-export type CopyDraft = Record<CopyDateField, string> & { eventName: string; venueAddress: string };
+export type CopyDraft = Record<CopyDateField, string> & { eventName: string; venueAddress: string; sitePath: string; defaultLanguage: string; supportedLanguages: string[] };
 export type CopyScheduleMode = 'relative' | 'manual';
 
 const dayMilliseconds = 86_400_000;
@@ -35,6 +35,7 @@ const shiftDate = (value: string | null | undefined, days: number): string => {
 };
 
 export const createCopyDraft = (source: ConferenceSettings): CopyDraft => ({
+    sitePath: '', defaultLanguage: source.defaultLanguage ?? 'en', supportedLanguages: [...(source.supportedLanguages ?? ['ko', 'en'])],
     eventName: source.eventName ? `${source.eventName.slice(0, 250)} (복사)` : '',
     venueAddress: source.venueAddress ?? '',
     eventStartDate: '', eventEndDate: '',

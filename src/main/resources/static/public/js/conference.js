@@ -19,7 +19,7 @@
         }
         mobileNavigation.hidden = true;
         menuButton.setAttribute('aria-expanded', 'false');
-        menuButton.setAttribute('aria-label', 'Open menu');
+        menuButton.setAttribute('aria-label', window.PublicSite.t('Open menu'));
     };
 
     menuButton?.addEventListener('click', () => {
@@ -29,7 +29,7 @@
         const willOpen = mobileNavigation.hidden;
         mobileNavigation.hidden = !willOpen;
         menuButton.setAttribute('aria-expanded', String(willOpen));
-        menuButton.setAttribute('aria-label', willOpen ? 'Close menu' : 'Open menu');
+        menuButton.setAttribute('aria-label', willOpen ? window.PublicSite.t('Close menu') : window.PublicSite.t('Open menu'));
     });
 
     window.matchMedia('(min-width: 1121px)').addEventListener('change', (event) => {

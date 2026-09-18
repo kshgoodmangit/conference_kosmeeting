@@ -1,124 +1,124 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <div class="abstract-submission-section" th:fragment="content">
     <div class="container">
         <section class="public-form" th:fragment="form">
-            <form id="public-abstract-form" action="/api/public/abstracts" method="post">
+            <form id="public-abstract-form" action="/api/public/abstracts" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/abstracts') : '/api/public/abstracts'}" method="post">
                 <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
                 <div class="bottom-line mb4">
-                    <h4 class="bbtitle fnb mb-4" data-abstract-form-title>Abstract Submission Form</h4>
-                    <p class="mb-0 pp-content">Fields marked <span class="co-danger">*</span> are required.</p>
+                    <h4 class="bbtitle fnb mb-4" data-abstract-form-title><th:block th:text="#{public.ui.abstract.submission.form.6a6c30}">Abstract Submission Form</th:block></h4>
+                    <p class="mb-0 pp-content"><th:block th:text="#{public.ui.fields.marked.ad5709}">Fields marked</th:block> <span class="co-danger">*</span> <th:block th:text="#{public.ui.are.required.0c5acf}">are required.</th:block></p>
                 </div>
 
                 <section class="abstract-form-section" aria-labelledby="ai-section-title">
-                    <h5 id="ai-section-title" class="cl-title fnb mb-4">1. Use of Artificial Intelligence</h5>
+                    <h5 id="ai-section-title" class="cl-title fnb mb-4"><th:block th:text="#{public.ui.1.use.of.artificial.intelligence.e7745e}">1. Use of Artificial Intelligence</th:block></h5>
                     <table class="w-100 type-02 abstract-form-table">
                         <colgroup><col class="abstract-label-column"><col></colgroup>
                         <tbody>
                         <tr>
-                            <th scope="row">AI Usage <span class="co-danger">*</span></th>
+                            <th scope="row"><th:block th:text="#{public.ui.ai.usage.f82fd7}">AI Usage</th:block> <span class="co-danger">*</span></th>
                             <td><div class="abstract-choice-list">
-                                <label><input type="radio" name="aiUsage" value="true" required> Yes</label>
-                                <label><input type="radio" name="aiUsage" value="false" checked required> No</label>
+                                <label><input type="radio" name="aiUsage" value="true" required> <th:block th:text="#{public.ui.yes.5397e0}">Yes</th:block></label>
+                                <label><input type="radio" name="aiUsage" value="false" checked required> <th:block th:text="#{public.ui.no.816c52}">No</th:block></label>
                             </div></td>
                         </tr>
                         <tr data-ai-details hidden>
-                            <th scope="row">AI Tools Used <span class="co-danger">*</span></th>
+                            <th scope="row"><th:block th:text="#{public.ui.ai.tools.used.b125e2}">AI Tools Used</th:block> <span class="co-danger">*</span></th>
                             <td>
                                 <div class="abstract-choice-list" data-ai-tools></div>
                                 <div class="abstract-other-fields" data-other-ai-tool hidden>
-                                    <input type="text" name="otherAiToolName" maxlength="255" placeholder="Other tool name" aria-label="Other AI tool name">
-                                    <input type="text" name="otherAiProviderName" maxlength="255" placeholder="Provider name" aria-label="Other AI provider name">
+                                    <input type="text" name="otherAiToolName" maxlength="255" placeholder="Other tool name" th:placeholder="#{public.ui.other.tool.name.21f8d1}" aria-label="Other AI tool name" th:aria-label="#{public.ui.other.ai.tool.name.4f823c}">
+                                    <input type="text" name="otherAiProviderName" maxlength="255" placeholder="Provider name" th:placeholder="#{public.ui.provider.name.34ea99}" aria-label="Other AI provider name" th:aria-label="#{public.ui.other.ai.provider.name.99088c}">
                                 </div>
                             </td>
                         </tr>
                         <tr data-ai-details hidden>
-                            <th scope="row"><label for="ai-version">Version Information <span class="co-danger">*</span></label></th>
+                            <th scope="row"><label for="ai-version"><th:block th:text="#{public.ui.version.information.f6ac74}">Version Information</th:block> <span class="co-danger">*</span></label></th>
                             <td><input id="ai-version" type="text" name="aiVersionInfo" maxlength="1000" placeholder="e.g. GPT-4o"></td>
                         </tr>
                         <tr data-ai-details hidden>
-                            <th scope="row">Scope of AI Use <span class="co-danger">*</span></th>
+                            <th scope="row"><th:block th:text="#{public.ui.scope.of.ai.use.7f282e}">Scope of AI Use</th:block> <span class="co-danger">*</span></th>
                             <td>
                                 <div class="abstract-choice-list" data-ai-scopes></div>
                                 <div class="abstract-other-fields" data-other-ai-scope hidden>
-                                    <input type="text" name="otherAiScopeText" maxlength="500" placeholder="Describe the other use" aria-label="Other AI usage scope">
+                                    <input type="text" name="otherAiScopeText" maxlength="500" placeholder="Describe the other use" th:placeholder="#{public.ui.describe.the.other.use.b572e4}" aria-label="Other AI usage scope" th:aria-label="#{public.ui.other.ai.usage.scope.f52828}">
                                 </div>
                             </td>
                         </tr>
                         <tr data-ai-details hidden>
-                            <th scope="row">Data analysis</th>
-                            <td><label><input type="checkbox" name="aiDataAnalysisUsed"> AI was used for data analysis or interpretation of results</label></td>
+                            <th scope="row"><th:block th:text="#{public.ui.data.analysis.ff91c2}">Data analysis</th:block></th>
+                            <td><label><input type="checkbox" name="aiDataAnalysisUsed"> <th:block th:text="#{public.ui.ai.was.used.for.data.analysis.912bde}">AI was used for data analysis or interpretation of results</th:block></label></td>
                         </tr>
                         <tr>
-                            <th scope="row">Compliance Confirmation <span class="co-danger">*</span></th>
-                            <td><label><input type="checkbox" name="plagiarismPolicyConfirmed" required> I confirm accuracy, no plagiarism, and policy compliance.</label></td>
+                            <th scope="row"><th:block th:text="#{public.ui.compliance.confirmation.c238f1}">Compliance Confirmation</th:block> <span class="co-danger">*</span></th>
+                            <td><label><input type="checkbox" name="plagiarismPolicyConfirmed" required> <th:block th:text="#{public.ui.i.confirm.accuracy.no.plagiarism.and.d9c407}">I confirm accuracy, no plagiarism, and policy compliance.</th:block></label></td>
                         </tr>
                         </tbody>
                     </table>
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="authors-section-title">
-                    <h5 id="authors-section-title" class="cl-title fnb mb-4">2. Authors</h5>
+                    <h5 id="authors-section-title" class="cl-title fnb mb-4"><th:block th:text="#{public.ui.2.authors.cd4d3d}">2. Authors</th:block></h5>
                     <div class="abstract-subsection">
                         <div class="abstract-subsection-heading">
-                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/institutions-icon.png" alt="">2-1. Institutions</strong> - register institutions before assigning authors.</p>
+                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/institutions-icon.png" alt=""><th:block th:text="#{public.ui.2.1.institutions.565184}">2-1. Institutions</th:block></strong> <th:block th:text="#{public.ui.register.institutions.before.assigning.authors.7eaefc}">- register institutions before assigning authors.</th:block></p>
                         </div>
                         <div class="abstract-table-scroll">
                             <table class="w-100 type-04">
                                 <colgroup><col class="institution-number-column"><col><col><col class="institution-country-column"><col class="institution-action-column"></colgroup>
-                                <thead><tr><th scope="col">No.</th><th scope="col">Department</th><th scope="col">Affiliation</th><th scope="col">Country</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+                                <thead><tr><th scope="col"><th:block th:text="#{public.ui.no.b8b9f1}">No.</th:block></th><th scope="col"><th:block th:text="#{public.ui.department.db4010}">Department</th:block></th><th scope="col"><th:block th:text="#{public.ui.affiliation.df55b4}">Affiliation</th:block></th><th scope="col"><th:block th:text="#{public.ui.country.d523eb}">Country</th:block></th><th scope="col"><span class="sr-only"><th:block th:text="#{public.ui.actions.c3cd63}">Actions</th:block></span></th></tr></thead>
                                 <tbody data-institution-list></tbody>
                             </table>
                         </div>
-                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-institution><img src="/public/img/member/mypage-plus-circle.svg"> Add Institution</button></div>
+                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-institution><img src="/public/img/member/mypage-plus-circle.svg"> <th:block th:text="#{public.ui.add.institution.59885f}">Add Institution</th:block></button></div>
                     </div>
 
                     <div class="abstract-subsection">
                         <div class="abstract-subsection-heading">
-                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/author-icon.png" alt="">2-2. Author List</strong> - select at least one presenting author.</p>
+                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/author-icon.png" alt=""><th:block th:text="#{public.ui.2.2.author.list.3ec1cb}">2-2. Author List</th:block></strong> <th:block th:text="#{public.ui.select.at.least.one.presenting.author.810071}">- select at least one presenting author.</th:block></p>
                         </div>
                         <div data-author-list></div>
-                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-author><img src="/public/img/member/mypage-plus-circle.svg"> Add Co-Author</button></div>
+                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-author><img src="/public/img/member/mypage-plus-circle.svg"> <th:block th:text="#{public.ui.add.co.author.bddd27}">Add Co-Author</th:block></button></div>
                     </div>
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="information-section-title">
-                    <h5 id="information-section-title" class="cl-title fnb mb-4">3. Abstract Information</h5>
+                    <h5 id="information-section-title" class="cl-title fnb mb-4"><th:block th:text="#{public.ui.3.abstract.information.6a3a53}">3. Abstract Information</th:block></h5>
                     <table class="w-100 type-02 abstract-form-table">
                         <colgroup><col class="abstract-label-column"><col></colgroup>
                         <tbody>
-                        <tr><th scope="row">Abstract No.</th><td><input type="text" value="Generated after saving" data-submission-no disabled></td></tr>
-                        <tr><th scope="row"><label for="presentation-type">Presentation Type <span class="co-danger">*</span></label></th><td><select id="presentation-type" name="presentationTypeCode" required><option value="">Loading...</option></select></td></tr>
-                        <tr><th scope="row"><label for="abstract-category">Category <span class="co-danger">*</span></label></th><td><select id="abstract-category" name="categoryCode" required><option value="">Loading...</option></select></td></tr>
+                        <tr><th scope="row"><th:block th:text="#{public.ui.abstract.no.c47534}">Abstract No.</th:block></th><td><input type="text" value="Generated after saving" data-submission-no disabled></td></tr>
+                        <tr><th scope="row"><label for="presentation-type"><th:block th:text="#{public.ui.presentation.type.bebb7d}">Presentation Type</th:block> <span class="co-danger">*</span></label></th><td><select id="presentation-type" name="presentationTypeCode" required><option value=""><th:block th:text="#{public.ui.loading.b04ba4}">Loading...</th:block></option></select></td></tr>
+                        <tr><th scope="row"><label for="abstract-category"><th:block th:text="#{public.ui.category.a3c686}">Category</th:block> <span class="co-danger">*</span></label></th><td><select id="abstract-category" name="categoryCode" required><option value=""><th:block th:text="#{public.ui.loading.b04ba4}">Loading...</th:block></option></select></td></tr>
                         </tbody>
                     </table>
                 </section>
 
                 <section class="abstract-form-section" aria-labelledby="content-section-title">
                     <div class="public-content-heading">
-                        <h5 id="content-section-title" class="cl-title fnb mb-0">4. Abstract Content</h5>
-                        <span><strong data-word-count>0</strong> / 300 words · English only</span>
+                        <h5 id="content-section-title" class="cl-title fnb mb-0"><th:block th:text="#{public.ui.4.abstract.content.8d534f}">4. Abstract Content</th:block></h5>
+                        <span><strong data-word-count>0</strong> <th:block th:text="#{public.ui.300.words.english.only.a2c9cc}">/ 300 words · English only</th:block></span>
                     </div>
                     <div class="public-content-fields">
-                        <label for="abstract-title">Title <span class="co-danger">*</span></label>
-                        <input id="abstract-title" type="text" name="title" maxlength="500" placeholder="Abstract title" required>
-                        <label for="abstract-objective">Objective <span class="co-danger">*</span></label>
-                        <textarea id="abstract-objective" name="objectiveText" rows="4" maxlength="1000" placeholder="Objective" required></textarea>
-                        <label for="abstract-methods">Methods <span class="co-danger">*</span></label>
-                        <textarea id="abstract-methods" name="methodsText" rows="4" maxlength="1000" placeholder="Methods" required></textarea>
-                        <label for="abstract-results">Results <span class="co-danger">*</span></label>
-                        <textarea id="abstract-results" name="resultsText" rows="4" maxlength="1000" placeholder="Results" required></textarea>
-                        <label for="abstract-conclusion">Conclusion <span class="co-danger">*</span></label>
-                        <textarea id="abstract-conclusion" name="conclusionsText" rows="4" maxlength="1000" placeholder="Conclusion" required></textarea>
+                        <label for="abstract-title"><th:block th:text="#{public.ui.title.768e0c}">Title</th:block> <span class="co-danger">*</span></label>
+                        <input id="abstract-title" type="text" name="title" maxlength="500" placeholder="Abstract title" th:placeholder="#{public.ui.abstract.title.a2c026}" required>
+                        <label for="abstract-objective"><th:block th:text="#{public.ui.objective.50c892}">Objective</th:block> <span class="co-danger">*</span></label>
+                        <textarea id="abstract-objective" name="objectiveText" rows="4" maxlength="1000" placeholder="Objective" th:placeholder="#{public.ui.objective.50c892}" required></textarea>
+                        <label for="abstract-methods"><th:block th:text="#{public.ui.methods.7e4ac6}">Methods</th:block> <span class="co-danger">*</span></label>
+                        <textarea id="abstract-methods" name="methodsText" rows="4" maxlength="1000" placeholder="Methods" th:placeholder="#{public.ui.methods.7e4ac6}" required></textarea>
+                        <label for="abstract-results"><th:block th:text="#{public.ui.results.612e12}">Results</th:block> <span class="co-danger">*</span></label>
+                        <textarea id="abstract-results" name="resultsText" rows="4" maxlength="1000" placeholder="Results" th:placeholder="#{public.ui.results.612e12}" required></textarea>
+                        <label for="abstract-conclusion"><th:block th:text="#{public.ui.conclusion.e39262}">Conclusion</th:block> <span class="co-danger">*</span></label>
+                        <textarea id="abstract-conclusion" name="conclusionsText" rows="4" maxlength="1000" placeholder="Conclusion" th:placeholder="#{public.ui.conclusion.e39262}" required></textarea>
                     </div>
                 </section>
 
                 <p class="abstract-form-status" data-abstract-status role="status" aria-live="polite" hidden></p>
                 <div class="public-form-actions">
-                    <button class="public-save-button" type="submit" data-status="draft"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt="">Temporary Save</button>
-                    <button class="public-submit-button" type="submit" data-status="submitted">Submit</button>
+                    <button class="public-save-button" type="submit" data-status="draft"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt=""><th:block th:text="#{public.ui.temporary.save.7ca592}">Temporary Save</th:block></button>
+                    <button class="public-submit-button" type="submit" data-status="submitted"><th:block th:text="#{public.ui.submit.2dacf6}">Submit</th:block></button>
                 </div>
             </form>
         </section>
@@ -127,10 +127,10 @@
     <template id="abstract-institution-template" th:fragment="institution-template">
         <tr>
             <th scope="row" data-institution-number></th>
-            <td><input type="text" name="institutionDepartment" maxlength="1000" placeholder="Department"></td>
-            <td><input type="text" name="institutionName" placeholder="University/Institute" required></td>
-            <td><select name="institutionCountry" aria-label="Institution country" required><option value="">Select a country</option></select></td>
-            <td><button class="abstract-icon-button" type="button" data-remove-institution aria-label="Remove institution">×</button></td>
+            <td><input type="text" name="institutionDepartment" maxlength="1000" placeholder="Department" th:placeholder="#{public.ui.department.db4010}"></td>
+            <td><input type="text" name="institutionName" placeholder="University/Institute" th:placeholder="#{public.ui.university.institute.95b270}" required></td>
+            <td><select name="institutionCountry" aria-label="Institution country" th:aria-label="#{public.ui.institution.country.87d21c}" required><option value=""><th:block th:text="#{public.ui.select.a.country.69cc52}">Select a country</th:block></option></select></td>
+            <td><button class="abstract-icon-button" type="button" data-remove-institution aria-label="Remove institution" th:aria-label="#{public.ui.remove.institution.5127a4}">×</button></td>
         </tr>
     </template>
 
@@ -138,21 +138,21 @@
         <article class="abstract-author-card">
             <header class="abstract-author-header">
                 <span data-author-order></span>
-                <strong data-author-role>Author</strong>
+                <strong data-author-role><th:block th:text="#{public.ui.author.5fda23}">Author</th:block></strong>
                 <div class="abstract-summary-actions">
-                    <button type="button" data-move-author="up" aria-label="Move author up">↑</button>
-                    <button type="button" data-move-author="down" aria-label="Move author down">↓</button>
-                    <button type="button" data-remove-author aria-label="Remove author">×</button>
+                    <button type="button" data-move-author="up" aria-label="Move author up" th:aria-label="#{public.ui.move.author.up.10bf5f}">↑</button>
+                    <button type="button" data-move-author="down" aria-label="Move author down" th:aria-label="#{public.ui.move.author.down.658029}">↓</button>
+                    <button type="button" data-remove-author aria-label="Remove author" th:aria-label="#{public.ui.remove.author.f40e17}">×</button>
                 </div>
             </header>
             <div class="abstract-author-body">
-                <div class="abstract-field-row"><label>Name <span class="co-danger">*</span></label><input type="text" name="authorName" placeholder="Full name" required></div>
-                <div class="abstract-field-row"><label>Affiliation <span class="co-danger">*</span></label><select name="authorInstitutionNo" required></select></div>
-                <div class="abstract-field-row"><span class="abstract-field-label">Role <span class="co-danger">*</span></span><div class="abstract-choice-list"><label><input type="checkbox" name="isPresentingAuthor"> Presenting author</label><label><input type="checkbox" name="isCorrespondingAuthor"> Corresponding author</label></div></div>
-                <div class="abstract-field-row"><label>E-mail</label><input type="email" name="authorEmail" placeholder="name@example.com"></div>
-                <div class="abstract-field-row"><label>Country</label><select name="authorCountry"><option value="">Select a country</option></select></div>
-                <div class="abstract-field-row"><label>Office</label><div class="abstract-phone-fields"><input type="text" name="officeCountryCode" maxlength="1000" placeholder="Country code" aria-label="Office country code" readonly><input type="tel" name="officePhoneNumber" maxlength="1000" placeholder="Phone number" aria-label="Office phone number"></div></div>
-                <div class="abstract-field-row"><label>Mobile</label><div class="abstract-phone-fields"><input type="text" name="mobileCountryCode" maxlength="1000" placeholder="Country code" aria-label="Mobile country code" readonly><input type="tel" name="mobilePhoneNumber" maxlength="1000" placeholder="Phone number" aria-label="Mobile phone number"></div></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.name.709a23}">Name</th:block> <span class="co-danger">*</span></label><input type="text" name="authorName" placeholder="Full name" th:placeholder="#{public.ui.full.name.eeb692}" required></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.affiliation.df55b4}">Affiliation</th:block> <span class="co-danger">*</span></label><select name="authorInstitutionNo" required></select></div>
+                <div class="abstract-field-row"><span class="abstract-field-label"><th:block th:text="#{public.ui.role.c3f104}">Role</th:block> <span class="co-danger">*</span></span><div class="abstract-choice-list"><label><input type="checkbox" name="isPresentingAuthor"> <th:block th:text="#{public.ui.presenting.author.985ac1}">Presenting author</th:block></label><label><input type="checkbox" name="isCorrespondingAuthor"> <th:block th:text="#{public.ui.corresponding.author.5a3ca4}">Corresponding author</th:block></label></div></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.e.mail.0d01e2}">E-mail</th:block></label><input type="email" name="authorEmail" placeholder="name@example.com"></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.country.d523eb}">Country</th:block></label><select name="authorCountry"><option value=""><th:block th:text="#{public.ui.select.a.country.69cc52}">Select a country</th:block></option></select></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.office.6c3a72}">Office</th:block></label><div class="abstract-phone-fields"><input type="text" name="officeCountryCode" maxlength="1000" placeholder="Country code" th:placeholder="#{public.ui.country.code.2eb6c4}" aria-label="Office country code" th:aria-label="#{public.ui.office.country.code.831676}" readonly><input type="tel" name="officePhoneNumber" maxlength="1000" placeholder="Phone number" th:placeholder="#{public.ui.phone.number.8961d3}" aria-label="Office phone number" th:aria-label="#{public.ui.office.phone.number.7c4379}"></div></div>
+                <div class="abstract-field-row"><label><th:block th:text="#{public.ui.mobile.b1d702}">Mobile</th:block></label><div class="abstract-phone-fields"><input type="text" name="mobileCountryCode" maxlength="1000" placeholder="Country code" th:placeholder="#{public.ui.country.code.2eb6c4}" aria-label="Mobile country code" th:aria-label="#{public.ui.mobile.country.code.8718b5}" readonly><input type="tel" name="mobilePhoneNumber" maxlength="1000" placeholder="Phone number" th:placeholder="#{public.ui.phone.number.8961d3}" aria-label="Mobile phone number" th:aria-label="#{public.ui.mobile.phone.number.4c70e8}"></div></div>
             </div>
         </article>
     </template>

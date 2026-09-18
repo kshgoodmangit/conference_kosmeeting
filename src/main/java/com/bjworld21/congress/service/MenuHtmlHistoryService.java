@@ -82,7 +82,7 @@ public class MenuHtmlHistoryService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "유효한 관리자 계정이 필요합니다.");
         }
         histories.insert(MenuHtmlHistory.builder()
-                .menuSeq(menu.getSeq()).revisionNo(menu.getHtmlRevisionNo()).menuHtml(menu.getMenuHtml())
+                .languageCode(menu.getLanguageCode()).menuSeq(menu.getSeq()).revisionNo(menu.getHtmlRevisionNo()).menuHtml(menu.getMenuHtml())
                 .operationType(operation).restoredFromSeq(sourceSeq).changeMemo(normalizedMemo)
                 .createdBy(admin.getSeq()).createdByName(admin.getAdminName()).build());
     }

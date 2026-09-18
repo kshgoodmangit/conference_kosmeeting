@@ -13,6 +13,9 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ConferenceSettingsSaveAllRequest {
+    private String sitePath;
+    private String defaultLanguage;
+    private java.util.List<String> supportedLanguages;
     private String eventName;
     private LocalDate eventStartDate;
     private LocalDate eventEndDate;

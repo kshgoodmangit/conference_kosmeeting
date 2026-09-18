@@ -6,6 +6,7 @@ import com.bjworld21.congress.dto.MemberDetailResponse;
 import com.bjworld21.congress.dto.MemberListResponse;
 import com.bjworld21.congress.dto.ProgramManagementResponse;
 import com.bjworld21.congress.service.*;
+import com.bjworld21.congress.publicsite.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
@@ -33,16 +34,18 @@ class PublicPageControllerTest {
     private MockMvc mockMvc;
     private MemberService memberService;
     private ConferenceSettingsService conferenceSettingsService;
+    private MenuSettingsService menuSettingsService;
+    private BoardPostService boardPostService;
     private com.bjworld21.congress.repository.PopupRepository popupRepository;
     private PopupLayoutSettingsService popupLayouts;
 
     @BeforeEach
     void setUp() {
-        MenuSettingsService menuSettingsService = mock(MenuSettingsService.class);
+        menuSettingsService = mock(MenuSettingsService.class);
         conferenceSettingsService = mock(ConferenceSettingsService.class);
         ProgramService programService = mock(ProgramService.class);
         SpeakerService speakerService = mock(SpeakerService.class);
-        BoardPostService boardPostService = mock(BoardPostService.class);
+        boardPostService = mock(BoardPostService.class);
         SponsorService sponsorService = mock(SponsorService.class);
         memberService = mock(MemberService.class);
         popupRepository = mock(com.bjworld21.congress.repository.PopupRepository.class);
@@ -56,7 +59,7 @@ class PublicPageControllerTest {
                 .menuName("Scientific Program")
                 .menuType("page")
                 .pathType("full")
-                .routePath("/program/scientific-program")
+                .routePath("/scientific-program")
                 .navigationVisible(true)
                 .menuHtml("<h2>Program</h2><script>unsafe()</script>")
                 .sortOrder(10)
@@ -77,7 +80,7 @@ class PublicPageControllerTest {
                 .children(List.of(currentMenu, MenuSettingsResponse.builder()
                         .seq(3L).menuScope("user").menuKey("program-at-a-glance").parentKey("program")
                         .menuName("Program at a Glance").menuType("page").pathType("full")
-                        .routePath("/program/program-at-a-glance").enabled(true).navigationVisible(true)
+                        .routePath("/program-at-a-glance").enabled(true).navigationVisible(true)
                         .menuHtml("<ul class='program-overview-stats'><li>08 Session Tracks</li></ul>"
                                 + "<p>Introduction</p><script>unsafe()</script>")
                         .children(List.of()).build()))
@@ -85,7 +88,7 @@ class PublicPageControllerTest {
         MenuSettingsResponse abstractMenu = MenuSettingsResponse.builder()
                 .seq(12L).menuScope("user").menuKey("mypage-abstract").parentKey("mypage")
                 .menuName("Abstract Submission").menuType("page").pathType("full")
-                .routePath("/mypage/abstract").navigationVisible(true).authRequired(true)
+                .routePath("/mypage-abstract").navigationVisible(true).authRequired(true)
                 .menuHtml("").sortOrder(10).enabled(true).children(List.of()).build();
         MenuSettingsResponse myPageMenu = MenuSettingsResponse.builder()
                 .seq(11L).menuScope("user").menuKey("mypage").parentKey("member")
@@ -104,17 +107,17 @@ class PublicPageControllerTest {
                 .children(List.of(loginMenu, myPageMenu)).build();
         MenuSettingsResponse abstractSubmissionMenu = MenuSettingsResponse.builder()
                 .seq(20L).menuScope("user").menuKey("abstract-submission").menuName("Abstract Submission")
-                .menuType("page").pathType("full").routePath("/abstract/abstract-submission")
+                .menuType("page").pathType("full").routePath("/abstract-submission")
                 .navigationVisible(true).menuHtml("").sortOrder(30).enabled(true).children(List.of()).build();
         MenuSettingsResponse onlineRegistrationMenu = MenuSettingsResponse.builder()
                 .seq(21L).menuScope("user").menuKey("online-registration").menuName("Online Registration")
-                .menuType("page").pathType("full").routePath("/registration/online-registration")
+                .menuType("page").pathType("full").routePath("/online-registration")
                 .navigationVisible(true).menuHtml("").sortOrder(40).enabled(true).children(List.of()).build();
         when(conferenceSettingsService.getLatestConferenceSeq()).thenReturn(1L);
-        when(menuSettingsService.getActiveUserMenuTree(1L)).thenReturn(List.of(
+        when(menuSettingsService.getActiveUserMenuTree(1L, "en")).thenReturn(List.of(
                 sectionMenu, memberMenu, abstractSubmissionMenu, onlineRegistrationMenu
         ));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .eventStartDate(LocalDate.of(2026, 10, 1))
@@ -128,6 +131,9 @@ class PublicPageControllerTest {
                 .items(List.of())
                 .build());
 
+        PublicSiteProperties siteProperties = new PublicSiteProperties();
+        siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.SINGLE);
+        siteProperties.setDefaultConferenceSeq(1L);
         PublicPageController controller = new PublicPageController(
                 menuSettingsService,
                 conferenceSettingsService,
@@ -140,14 +146,14 @@ class PublicPageControllerTest {
                 Clock.system(ZoneId.of("Asia/Seoul")),
                 new PublicPopupService(popupRepository, popupLayouts,
                         new PublicPopupPreferences(Clock.system(ZoneId.of("Asia/Seoul"))),
-                        new CmsHtmlSanitizer(), Clock.system(ZoneId.of("Asia/Seoul")))
+                        new CmsHtmlSanitizer(), Clock.system(ZoneId.of("Asia/Seoul"))), new PublicSiteService(conferenceSettingsService, siteProperties)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     @Test
     void programOverviewReplacesCmsStatisticsWithLiveScheduleCounts() throws Exception {
-        var result = mockMvc.perform(get("/program/program-at-a-glance"))
+        var result = mockMvc.perform(get("/program-at-a-glance"))
                 .andExpect(status().isOk()).andReturn();
         String html = (String) result.getModelAndView().getModel().get("contentHtml");
         assertThat(html).contains("Conference Days", "Scientific Sessions", "Plenary &amp; Presidential Lectures",
@@ -156,14 +162,54 @@ class PublicPageControllerTest {
     }
 
     @Test
+    void oldMenuPathsAreNotSilentlyMatchedToNewPageNames() throws Exception {
+        var menu = MenuSettingsResponse.builder().seq(90L).menuKey("welcome-message")
+                .menuName("Welcome").routePath("/apdrc8/welcome-message").menuType("page")
+                .children(List.of()).build();
+        when(menuSettingsService.getActiveUserMenuTree(1L, "en")).thenReturn(List.of(menu));
+        mockMvc.perform(get("/welcome-message"))
+                .andExpect(status().isNotFound()).andExpect(view().name("public/not-found"));
+    }
+
+    @Test
+    void protectedNoticeDetailsAndHomePreviewRequireThisConferencesLoginBeforeReadingPosts() throws Exception {
+        configureNotice(true);
+        mockMvc.perform(get("/notice-detail?seq=12").session(memberSession(2L)))
+                .andExpect(status().is3xxRedirection()).andExpect(view().name("redirect:/login"));
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk()).andExpect(model().attribute("notices", List.of()));
+        org.mockito.Mockito.verifyNoInteractions(boardPostService);
+    }
+
+    @Test
+    void noticeCanonicalUrlIncludesOnlyItsIdentity() throws Exception {
+        configureNotice(false);
+        when(boardPostService.getPublishedNotice(1L, 12L)).thenReturn(
+                com.bjworld21.congress.dto.BoardPostResponse.builder().seq(12L).title("Notice")
+                        .content("<p>Published</p>").attachments(List.of()).build());
+        mockMvc.perform(get("/notice-detail?seq=12&page=3&tracking=ignored"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("canonicalUrl", "http://localhost/notice-detail?seq=12"));
+    }
+
+    private void configureNotice(boolean protectedParent) {
+        var notice = MenuSettingsResponse.builder().seq(31L).menuKey("notice").menuName("Notice")
+                .parentKey("information").routePath("/notice").menuType("board").boardSeq(1L)
+                .authRequired(false).children(List.of()).build();
+        var parent = MenuSettingsResponse.builder().seq(30L).menuKey("information").menuName("Information")
+                .routePath("/information").menuType("folder").authRequired(protectedParent)
+                .children(List.of(notice)).build();
+        when(menuSettingsService.getActiveUserMenuTree(1L, "en")).thenReturn(List.of(parent));
+    }
+
+    @Test
     void passwordChangePageRequiresLoginAndRendersWithoutANewMenuRow() throws Exception {
-        mockMvc.perform(get("/mypage/password"))
+        mockMvc.perform(get("/mypage-password"))
                 .andExpect(status().is3xxRedirection()).andExpect(view().name("redirect:/login"));
         when(memberService.findDetail(1L, 11L)).thenReturn(MemberDetailResponse.builder()
                 .member(MemberListResponse.builder().seq(11L).email("member@example.com")
                         .firstName("Jane").lastName("Doe").build()).abstractSubmissions(List.of()).build());
-        var result = mockMvc.perform(get("/mypage/password").sessionAttr("memberSeq", 11L)
-                        .sessionAttr("memberConferenceSeq", 1L))
+        var result = mockMvc.perform(get("/mypage-password").session(memberSession(1L)))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("contentTemplate", "public/member/mypage-password"))
                 .andExpect(model().attribute("secureAccountPage", true))
@@ -175,6 +221,9 @@ class PublicPageControllerTest {
         resolver.setCharacterEncoding("UTF-8");
         var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
         engine.setTemplateResolver(resolver);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("public-ui"); messages.setDefaultEncoding("UTF-8");
+        engine.setTemplateEngineMessageSource(messages);
         var context = new org.thymeleaf.context.Context(Locale.ENGLISH, result.getModelAndView().getModel());
         context.setVariable("_csrf", new org.springframework.security.web.csrf.DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "test-csrf"));
         String html = engine.process("public/page", context);
@@ -199,6 +248,9 @@ class PublicPageControllerTest {
             resolver.setCharacterEncoding("UTF-8");
             var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
             engine.setTemplateResolver(resolver);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("public-ui"); messages.setDefaultEncoding("UTF-8");
+        engine.setTemplateEngineMessageSource(messages);
             var context = new org.thymeleaf.context.Context(Locale.ENGLISH, result.getModelAndView().getModel());
             context.setVariable("_csrf", new org.springframework.security.web.csrf.DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "test-csrf"));
             String html = engine.process("public/page", context);
@@ -233,10 +285,9 @@ class PublicPageControllerTest {
     }
 
     @Test
-    void expiresOldMemberSessionWithoutChangingThePublishedHome() throws Exception {
+    void preservesOtherConferenceSessionWithoutTreatingItAsCurrentLogin() throws Exception {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("memberSeq", 11L);
-        session.setAttribute("memberConferenceSeq", 2L);
+        PublicMemberSession.signIn(session, 2L, 11L, "fingerprint");
 
         mockMvc.perform(get("/").session(session))
                 .andExpect(status().isOk())
@@ -244,20 +295,20 @@ class PublicPageControllerTest {
                 .andExpect(model().attribute("eventName", "APDRC8"))
                 .andExpect(model().attribute("memberLoggedIn", false));
 
-        assertThat(session.isInvalid()).isTrue();
+        assertThat(session.isInvalid()).isFalse();
+        assertThat(PublicMemberSession.resolve(session, 2L)).isNotNull();
     }
 
     @Test
     void showsTheCurrentRegistrationPeriodAndRemainingDaysOnMyPage() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute("memberSeq", 11L);
-        session.setAttribute("memberConferenceSeq", 1L);
+        PublicMemberSession.signIn(session, 1L, 11L, "fingerprint");
         when(memberService.findDetail(1L, 11L)).thenReturn(MemberDetailResponse.builder()
                 .member(MemberListResponse.builder().seq(11L).firstName("Jane").lastName("Doe").build())
                 .abstractSubmissions(List.of())
                 .build());
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(1))
@@ -271,7 +322,7 @@ class PublicPageControllerTest {
                 .andExpect(model().attribute("mypageRegistrationLabel", "Early-bird"))
                 .andExpect(model().attribute("mypageRegistrationDday", "D-5"));
 
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(20))
@@ -289,7 +340,7 @@ class PublicPageControllerTest {
     @Test
     void marksHomeRegistrationClosedAfterItsEndDate() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .regularStartDate(today.minusDays(30))
@@ -305,7 +356,7 @@ class PublicPageControllerTest {
     @Test
     void opensHomeCtasDuringConfiguredPeriodsAndUsesEarlyBirdStartDate() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today)
@@ -329,7 +380,7 @@ class PublicPageControllerTest {
     void usesRegularStartDateAfterEarlyBirdRegistrationEnds() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate regularStartDate = today.plusDays(2);
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(30))
                 .earlyBirdEndDate(today.minusDays(1))
@@ -347,7 +398,7 @@ class PublicPageControllerTest {
 
     @Test
     void rendersCmsPageAndSanitizesHtml() throws Exception {
-        mockMvc.perform(get("/program/scientific-program"))
+        mockMvc.perform(get("/scientific-program"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("public/page"))
                 .andExpect(model().attribute("currentTopMenuKey", "program"))
@@ -357,7 +408,7 @@ class PublicPageControllerTest {
 
     @Test
     void returnsPublishedNotFoundPageForUnknownRoute() throws Exception {
-        mockMvc.perform(get("/program/unknown"))
+        mockMvc.perform(get("/unknown"))
                 .andExpect(status().isNotFound())
                 .andExpect(view().name("public/not-found"));
     }
@@ -377,10 +428,9 @@ class PublicPageControllerTest {
                 .abstractSubmissions(List.of())
                 .build());
 
-        mockMvc.perform(get("/mypage/abstract/review")
+        mockMvc.perform(get("/abstract-review")
                         .param("seq", "31")
-                        .sessionAttr("memberSeq", 11L)
-                        .sessionAttr("memberConferenceSeq", 1L))
+                        .session(memberSession(1L)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("public/page"))
                 .andExpect(model().attribute("contentTemplate", "public/member/mypage-abstract-review"));
@@ -389,19 +439,19 @@ class PublicPageControllerTest {
     @Test
     void blocksApplicationPagesOutsideTheirConfiguredPeriods() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .eventName("APDRC8")
                 .abstractEndDate(today.minusDays(1))
                 .earlyBirdEndDate(today.minusDays(1))
                 .regularStartDate(today.plusDays(1))
                 .build());
 
-        mockMvc.perform(get("/abstract/abstract-submission"))
+        mockMvc.perform(get("/abstract-submission"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("public/page"))
                 .andExpect(model().attribute("contentTemplate", "public/access-notice"))
                 .andExpect(model().attribute("accessNotice", "abstract-closed"));
-        mockMvc.perform(get("/registration/online-registration"))
+        mockMvc.perform(get("/online-registration"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("public/page"))
                 .andExpect(model().attribute("contentTemplate", "public/access-notice"))
@@ -423,6 +473,10 @@ class PublicPageControllerTest {
 
         mockMvc.perform(get("/sitemap.xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("/program/scientific-program")));
+                .andExpect(content().string(containsString("/scientific-program")));
     }
-}
+    private MockHttpSession memberSession(long conferenceSeq) {
+        var session = new MockHttpSession();
+        PublicMemberSession.signIn(session, conferenceSeq, 11L, "fingerprint");
+        return session;
+    }}

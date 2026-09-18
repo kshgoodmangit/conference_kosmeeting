@@ -121,7 +121,7 @@
                     const tokenResponse = await fetch('/api/security/csrf-token', { credentials: 'same-origin', cache: 'no-store', signal: abort.signal });
                     if (!tokenResponse.ok) throw new Error('token');
                     const token = await tokenResponse.json();
-                    const response = await fetch('/api/popups/dismiss-today', {
+                    const response = await fetch(window.PublicSite.apiUrl('/api/popups/dismiss-today'), {
                         method: 'POST', credentials: 'same-origin', cache: 'no-store',
                         headers: { [token.headerName]: token.token }, signal: abort.signal
                     });
@@ -194,13 +194,13 @@
         const abort = new AbortController();
         const timeout = window.setTimeout(() => abort.abort(), 15000);
         try {
-            const response = await fetch('/popups/display', {
+            const response = await fetch(window.PublicSite.apiUrl('/popups/display'), {
                 credentials: 'same-origin', cache: 'no-store', signal: abort.signal
             });
             if (response.status === 204) { notify('No popups available.'); return; }
             if (!response.ok) throw new Error('load');
             const template = document.createElement('template');
-            template.innerHTML = await response.text();
+            template.innerHTML = await window.PublicSite.responseMessage(response);
             const root = template.content.querySelector('#conference-popups');
             if (!root) throw new Error('content');
             document.body.append(root);

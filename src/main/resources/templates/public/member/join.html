@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="join-section" th:fragment="content">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-5">
-                    <span class="d-block co-blue fnsb ss-content mb-3">APDRC8 / ACCOUNT</span>
+                    <span class="d-block co-blue fnsb ss-content mb-3"><th:block th:text="${eventName}">Conference</th:block> / <th:block th:text="#{public.ui.account.label}">ACCOUNT</th:block></span>
                     <h4 class="fnb mb-5">
-                        Select the right<br class="ii-none">
-                        registration path.
+                        <th:block th:text="#{public.ui.select.the.right.56af1a}">Select the right</th:block><br class="ii-none">
+                        <th:block th:text="#{public.ui.registration.path.fbb101}">registration path.</th:block>
                     </h4>
                     <p class="pp-content mb-0">
-                        Choose a participant type based on your current place<br class="ii-none">
-                        of residence. You can enter your account details on the<br class="ii-none">
-                        next screen.
+                        <th:block th:text="#{public.ui.choose.a.participant.type.based.on.5a4fcd}">Choose a participant type based on your current place</th:block><br class="ii-none">
+                        <th:block th:text="#{public.ui.of.residence.you.can.enter.your.d5cc58}">of residence. You can enter your account details on the</th:block><br class="ii-none">
+                        <th:block th:text="#{public.ui.next.screen.c67ef4}">next screen.</th:block>
                     </p>
                 </div>
                 <div class="col-lg-7">
@@ -21,18 +21,18 @@
                         <div class="text-center">
                             <img src="/public/img/member/type-01.png">
                             <div>
-                                <h5 class="cm-title fnb mb-3">International Participant</h5>
-                                <p class="cs-content mb-0">For participants based overseas</p>
+                                <h5 class="cm-title fnb mb-3"><th:block th:text="#{public.ui.international.participant.d55dee}">International Participant</th:block></h5>
+                                <p class="cs-content mb-0"><th:block th:text="#{public.ui.for.participants.based.overseas.3af53c}">For participants based overseas</th:block></p>
                             </div>
-                            <a class="btn fnsb" href="/join/international">INTERNATIONAL SIGN UP →</a>
+                            <a class="btn fnsb" href="/join-international" th:href="${siteContext != null ? siteContext.pageUrl('/join-international') : '/join-international'}"><th:block th:text="#{public.ui.international.sign.up.4a084b}">INTERNATIONAL SIGN UP →</th:block></a>
                         </div>
                         <div class="text-center">
                             <img src="/public/img/member/type-02.png">
                             <div>
-                                <h5 class="cm-title fnb mb-3">Domestic Participant</h5>
-                                <p class="cs-content mb-0">For participants based in Korea</p>
+                                <h5 class="cm-title fnb mb-3"><th:block th:text="#{public.ui.domestic.participant.db5a77}">Domestic Participant</th:block></h5>
+                                <p class="cs-content mb-0"><th:block th:text="#{public.ui.for.participants.based.in.korea.4da86c}">For participants based in Korea</th:block></p>
                             </div>
-                            <a class="btn fnsb" href="/join/domestic">DOMESTIC SIGN UP →</a>
+                            <a class="btn fnsb" href="/join-domestic" th:href="${siteContext != null ? siteContext.pageUrl('/join-domestic') : '/join-domestic'}"><th:block th:text="#{public.ui.domestic.sign.up.f21316}">DOMESTIC SIGN UP →</th:block></a>
                         </div>
                     </div>
                 </div>

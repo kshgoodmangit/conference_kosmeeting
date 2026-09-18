@@ -33,14 +33,14 @@ class PublicMemberPasswordResetControllerTest {
     @Autowired private FilterChainProxy filters;
     private MemberPasswordResetService service;
     private MockMvc mvc;
-    private static final String BASE = "/api/public/members/password-reset";
+    private static final String BASE = "/api/public/7/members/password-reset";
     private static final String TOKEN = "a".repeat(43);
 
     @BeforeEach
     void setUp() {
         service = mock(MemberPasswordResetService.class);
         var controller = new PublicMemberPasswordResetController(service, new ClientIpResolver(new AdminIpAccessProperties()));
-        mvc = MockMvcBuilders.standaloneSetup(controller).apply(springSecurity(filters)).build();
+        mvc = MockMvcBuilders.standaloneSetup(controller).apply(springSecurity(filters)).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
     }
 
     @Test

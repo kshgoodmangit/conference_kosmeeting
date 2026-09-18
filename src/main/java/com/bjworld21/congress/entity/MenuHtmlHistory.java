@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MenuHtmlHistory {
+    private String languageCode;
     private Long seq;
     private Long menuSeq;
     private Long revisionNo;

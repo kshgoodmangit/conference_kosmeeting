@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="speaker-section" th:fragment="content">
         <div class="container">
             <section class="speaker-group" th:each="type : ${speakersTypes}">
@@ -11,7 +11,7 @@
                              th:each="speaker, speakerStat : ${speakersData.items.?[speakerTypeCode == #vars.type.seq]}">
                         <div class="speaker-photo speaker-photo-man" aria-hidden="true">
                             <img th:if="${speaker.profileImageUrl != null}"
-                                 th:src="@{/public/speakers/{seq}/image(seq=${speaker.seq})}"
+                                 th:src="${siteContext.apiUrl('/speakers/' + speaker.seq + '/image')}"
                                  th:alt="${speaker.displayName}">
                         </div>
                         <div class="speaker-info">

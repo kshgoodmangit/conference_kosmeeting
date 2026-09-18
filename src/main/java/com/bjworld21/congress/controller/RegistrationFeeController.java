@@ -24,9 +24,10 @@ public class RegistrationFeeController {
         this.registrationFeeService = registrationFeeService;
     }
 
-    @GetMapping("/registration-fees")
+    @GetMapping("/public/{conferenceSeq}/registration-fees")
+    @com.bjworld21.congress.config.IpAccessExempt
     public ResponseEntity<List<RegistrationFeeCategoryResponse>> findAll() {
-        return ResponseEntity.ok(registrationFeeService.findAll());
+        return ResponseEntity.ok(registrationFeeService.findAll(com.bjworld21.congress.publicsite.PublicApiRequest.context().conferenceSeq()));
     }
 
     @GetMapping("/admin/registration-fees")

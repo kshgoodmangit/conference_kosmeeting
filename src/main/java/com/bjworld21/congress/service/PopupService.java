@@ -206,7 +206,7 @@ public class PopupService {
     private PopupResponse toResponse(Popup popup) {
         String imageUrl = firstContentImageUrl(popup.getContent());
         if (imageUrl == null && popup.getPopupImageSaveFilename() != null && !popup.getPopupImageSaveFilename().isBlank()) {
-            imageUrl = "/api/popups/" + popup.getSeq() + "/image";
+            imageUrl = "/api/public/" + popup.getConferenceSeq() + "/popups/" + popup.getSeq() + "/image";
         }
 
         return PopupResponse.builder()

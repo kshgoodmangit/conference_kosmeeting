@@ -1,6 +1,7 @@
 package com.bjworld21.congress.config;
 
 import com.bjworld21.congress.repository.MemberRepository;
+import com.bjworld21.congress.controller.PublicMemberSession;
 import com.bjworld21.congress.security.MemberCredentialFingerprint;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -18,7 +19,7 @@ class MemberCredentialSessionConfigTest {
         request.getSession().setAttribute("adminSeq", 99L);
         when(members.findCredential(7L, 11L)).thenReturn("changed-bcrypt");
         assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
-        assertThat(request.getSession().getAttribute("memberSeq")).isNull();
+        assertThat(PublicMemberSession.resolve(request.getSession(), 7)).isNull();
         assertThat(request.getSession().getAttribute("memberConferenceSeq")).isNull();
         assertThat(request.getSession().getAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE)).isNull();
         assertThat(request.getSession().getAttribute("adminSeq")).isEqualTo(99L);
@@ -29,16 +30,16 @@ class MemberCredentialSessionConfigTest {
         var request = signedIn();
         when(members.findCredential(7L, 11L)).thenReturn("existing-bcrypt");
         interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
-        assertThat(request.getSession().getAttribute("memberSeq")).isEqualTo(11L);
+        assertThat(PublicMemberSession.resolve(request.getSession(), 7).memberSeq()).isEqualTo(11L);
     }
 
     @Test
     void preDeploymentSessionsMustSignInAgain() {
         var request = signedIn();
-        request.getSession().removeAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE);
+        request.getSession().removeAttribute("publicMember.7.credential");
         when(members.findCredential(7L, 11L)).thenReturn("existing-bcrypt");
         interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
-        assertThat(request.getSession().getAttribute("memberSeq")).isNull();
+        assertThat(PublicMemberSession.resolve(request.getSession(), 7)).isNull();
     }
 
     @Test
@@ -49,12 +50,20 @@ class MemberCredentialSessionConfigTest {
         verifyNoInteractions(members);
     }
 
+    @Test
+    void passwordChangeAtOneConferenceLeavesOtherConferenceLoginIntact() {
+        var request = signedIn();
+        PublicMemberSession.signIn(request.getSession(), 8, 22, MemberCredentialFingerprint.hash("other"));
+        when(members.findCredential(7L, 11L)).thenReturn("changed");
+        when(members.findCredential(8L, 22L)).thenReturn("other");
+        interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
+        assertThat(PublicMemberSession.resolve(request.getSession(), 7)).isNull();
+        assertThat(PublicMemberSession.resolve(request.getSession(), 8).memberSeq()).isEqualTo(22);
+    }
+
     private MockHttpServletRequest signedIn() {
         var request = new MockHttpServletRequest("GET", "/mypage");
-        request.getSession().setAttribute("memberSeq", 11L);
-        request.getSession().setAttribute("memberConferenceSeq", 7L);
-        request.getSession().setAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE,
-                MemberCredentialFingerprint.hash("existing-bcrypt"));
+        PublicMemberSession.signIn(request.getSession(), 7, 11, MemberCredentialFingerprint.hash("existing-bcrypt"));
         return request;
     }
 }

@@ -22,6 +22,11 @@ public final class ProgramOverviewStats {
     }
 
     public static String render(String sanitizedHtml, ProgramManagementResponse program) {
+        return render(sanitizedHtml, program, "en");
+    }
+
+    public static String render(String sanitizedHtml, ProgramManagementResponse program, String language) {
+        boolean korean = "ko".equals(language);
         var document = Jsoup.parseBodyFragment(sanitizedHtml);
         var containers = document.select(".program-overview-stats");
         if (containers.isEmpty()) {
@@ -42,9 +47,9 @@ public final class ProgramOverviewStats {
         long lectures = items.stream().filter(item -> "PLENARY".equals(item.getItemType())).count();
         for (Element container : containers) {
             container.empty();
-            addStat(container, visibleDays.size(), "Conference Days");
-            addStat(container, sessions, "Scientific Sessions");
-            addStat(container, lectures, "Plenary & Presidential Lectures");
+            addStat(container, visibleDays.size(), korean ? "학회 일수" : "Conference Days");
+            addStat(container, sessions, korean ? "학술 세션" : "Scientific Sessions");
+            addStat(container, lectures, korean ? "기조 및 회장 강연" : "Plenary & Presidential Lectures");
         }
         return document.body().html();
     }

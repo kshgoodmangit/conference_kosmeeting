@@ -1,5 +1,7 @@
 package com.bjworld21.congress.controller;
 
+import com.bjworld21.congress.publicsite.PublicApiRequest;
+
 import com.bjworld21.congress.config.IpAccessExempt;
 
 import com.bjworld21.congress.dto.PopupPageResponse;
@@ -116,11 +118,11 @@ public class PopupController {
         }
     }
 
-    @GetMapping("/popups/{seq}/image")
+    @GetMapping("/public/{conferenceSeq}/popups/{seq}/image")
     @IpAccessExempt
     public ResponseEntity<?> image(@PathVariable Long seq) {
         try {
-            Resource resource = popupService.getImage(conferenceSettingsService.getLatestConferenceSeq(), seq);
+            Resource resource = popupService.getImage(PublicApiRequest.context().conferenceSeq(), seq);
             return ResponseEntity.ok()
                     .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
                     .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))

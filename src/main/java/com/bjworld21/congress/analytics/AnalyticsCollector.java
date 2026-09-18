@@ -1,6 +1,7 @@
 package com.bjworld21.congress.analytics;
 
 import com.bjworld21.congress.config.PersonalDataProperties;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.security.ClientIpResolver;
 import com.bjworld21.congress.service.ConferenceSettingsService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,7 +49,7 @@ public class AnalyticsCollector {
         Instant now=Instant.now();
         if(event.occurredAt().isBefore(now.minusSeconds(86400)) || event.occurredAt().isAfter(now.plusSeconds(60)))
             throw new IllegalArgumentException("유효하지 않은 이벤트 시각입니다.");
-        long conference=conferences.getLatestConferenceSeq();
+        long conference=com.bjworld21.congress.publicsite.PublicSiteContext.from(request).conferenceSeq();
         String ip=ipResolver.resolve(request);
         long minute=System.currentTimeMillis()/60000;
         if(limits.size()>10000)limits.entrySet().removeIf(e->e.getValue().minute<minute);

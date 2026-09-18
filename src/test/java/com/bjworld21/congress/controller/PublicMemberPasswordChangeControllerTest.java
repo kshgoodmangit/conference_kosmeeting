@@ -33,7 +33,7 @@ class PublicMemberPasswordChangeControllerTest {
     private MemberPasswordChangeService service;
     private MockMvc mvc;
     private MockHttpSession session;
-    private static final String URL = "/api/public/members/password/change";
+    private static final String URL = "/api/public/7/members/password/change";
     private static final String BODY = """
             {"currentPassword":"OldPassword123!","newPassword":"NewPassword123!","newPasswordConfirm":"NewPassword123!",
              "memberSeq":999,"conferenceSeq":999}
@@ -45,11 +45,11 @@ class PublicMemberPasswordChangeControllerTest {
         var conferences = mock(ConferenceSettingsService.class);
         when(conferences.getLatestConferenceSeq()).thenReturn(7L);
         mvc = MockMvcBuilders.standaloneSetup(new PublicMemberPasswordChangeController(service, conferences))
-                .apply(springSecurity(filters)).build();
+                .apply(springSecurity(filters)).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
         session = new MockHttpSession();
-        session.setAttribute("memberSeq", 11L);
-        session.setAttribute("memberConferenceSeq", 7L);
-        session.setAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE, "fingerprint");
+        PublicMemberSession.signIn(session, 7, 11, "fingerprint");
+
+
         session.setAttribute("adminSeq", 3L);
     }
 
@@ -58,9 +58,9 @@ class PublicMemberPasswordChangeControllerTest {
         mvc.perform(post(URL).with(csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isNoContent()).andExpect(header().string("Cache-Control", "no-store"));
         verify(service).change(7L, 11L, "fingerprint", "OldPassword123!", "NewPassword123!", "NewPassword123!");
-        assertThat(session.getAttribute("memberSeq")).isNull();
+        assertThat(PublicMemberSession.resolve(session, 7)).isNull();
         assertThat(session.getAttribute("memberConferenceSeq")).isNull();
-        assertThat(session.getAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE)).isNull();
+        assertThat(PublicMemberSession.fingerprint(session, 7)).isNull();
         assertThat(session.getAttribute("adminSeq")).isEqualTo(3L);
     }
 
@@ -68,7 +68,7 @@ class PublicMemberPasswordChangeControllerTest {
     void rejectsAnonymousAndCrossConferenceSessions() throws Exception {
         mvc.perform(post(URL).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
-        session.setAttribute("memberConferenceSeq", 8L);
+        PublicMemberSession.signOut(session, 7); PublicMemberSession.signIn(session, 8, 11, "other");
         mvc.perform(post(URL).with(csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
         assertThat(session.getAttribute("adminSeq")).isEqualTo(3L);
@@ -88,7 +88,7 @@ class PublicMemberPasswordChangeControllerTest {
                 .when(service).change(anyLong(), anyLong(), anyString(), anyString(), anyString(), anyString());
         mvc.perform(post(URL).with(csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("currentPassword"));
-        assertThat(session.getAttribute("memberSeq")).isEqualTo(11L);
+        assertThat(PublicMemberSession.resolve(session, 7).memberSeq()).isEqualTo(11L);
         doThrow(new MemberPasswordChangeService.TooManyAttemptsException())
                 .when(service).change(anyLong(), anyLong(), anyString(), anyString(), anyString(), anyString());
         mvc.perform(post(URL).with(csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content(BODY))
@@ -101,7 +101,7 @@ class PublicMemberPasswordChangeControllerTest {
                 .when(service).change(anyLong(), anyLong(), anyString(), anyString(), anyString(), anyString());
         mvc.perform(post(URL).with(csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isUnauthorized());
-        assertThat(session.getAttribute("memberSeq")).isNull();
+        assertThat(PublicMemberSession.resolve(session, 7)).isNull();
         assertThat(session.getAttribute("adminSeq")).isEqualTo(3L);
     }
 

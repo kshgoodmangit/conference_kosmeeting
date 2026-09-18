@@ -1,6 +1,6 @@
 (() => {
     'use strict';
-    if (window.__congressAnalytics || location.pathname.startsWith('/admin')) return;
+    if (window.__congressAnalytics || location.pathname.startsWith('/admin') || !document.body?.dataset.apiBase) return;
     window.__congressAnalytics = true;
     const allowed = () => navigator.doNotTrack !== '1' && navigator.globalPrivacyControl !== true
         && window.congressCookieConsent?.isAnalyticsAllowed() === true;
@@ -27,10 +27,10 @@
         const sessionStore = storage('sessionStorage');
         const safeRead = (store, key) => { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } };
         const safeWrite = (store, key, value) => { try { store.setItem(key, JSON.stringify(value)); } catch { /* In-memory fallback. */ } };
-        let visitor = safeRead(visitorStore, 'conference.analytics.visitor');
+        let visitor = safeRead(visitorStore, window.PublicSite.storageKey('analytics.visitor'));
         if (!visitor || typeof visitor.id !== 'string' || !Number.isFinite(visitor.expires) || visitor.expires <= Date.now())
             visitor = { id: uuid(), expires: Date.now() + 365 * 86400000 };
-        safeWrite(visitorStore, 'conference.analytics.visitor', visitor);
+        safeWrite(visitorStore, window.PublicSite.storageKey('analytics.visitor'), visitor);
         const incoming = new URLSearchParams(location.search);
         let referrer = '';
         try { const url = new URL(document.referrer); if (url.origin !== location.origin) referrer = url.hostname; } catch { /* Direct navigation. */ }
@@ -40,9 +40,9 @@
             utmMedium: (incoming.get('utm_medium') || '').slice(0, 100),
             utmCampaign: (incoming.get('utm_campaign') || '').slice(0, 200)
         });
-        let session = safeRead(sessionStore, 'conference.analytics.session');
+        let session = safeRead(sessionStore, window.PublicSite.storageKey('analytics.session'));
         if (!session || typeof session.id !== 'string' || !Number.isFinite(session.lastActivity) || Date.now() - session.lastActivity > 1800000) session = newSession();
-        safeWrite(sessionStore, 'conference.analytics.session', session);
+        safeWrite(sessionStore, window.PublicSite.storageKey('analytics.session'), session);
         let csrf;
         let started = false;
         let lastTick = performance.now();
@@ -63,7 +63,7 @@
         };
         const getConfig = async () => {
             if (!canSend()) return null;
-            const response = await fetch('/api/analytics/config', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+            const response = await fetch(window.PublicSite.apiUrl('/api/analytics/config'), { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
             if (!response.ok || !canSend()) return null;
             const config = await response.json();
             return canSend() ? config : null;
@@ -83,7 +83,7 @@
             };
             const post = async () => {
                 if (!canSend() || stopped) return null;
-                return fetch('/api/analytics/events', {
+                return fetch(window.PublicSite.apiUrl('/api/analytics/events'), {
                     method: 'POST', credentials: 'same-origin', keepalive: true, signal: controller.signal,
                     headers: { 'Content-Type': 'application/json', [csrf.headerName]: csrf.token },
                     body: JSON.stringify(payload)
@@ -108,7 +108,7 @@
                 accumulated = 0; session = newSession(); send('PAGE_VIEW'); rotated = true;
             }
             activeAt = Date.now(); session.lastActivity = activeAt;
-            safeWrite(sessionStore, 'conference.analytics.session', session);
+            safeWrite(sessionStore, window.PublicSite.storageKey('analytics.session'), session);
             return rotated;
         };
         ['pointerdown', 'keydown', 'scroll'].forEach(event => listen(window, event, activity));

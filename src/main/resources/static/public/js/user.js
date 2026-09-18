@@ -166,7 +166,7 @@
         if (!(input instanceof HTMLInputElement)) return true;
         const length = input.value.trim().length;
         input.setCustomValidity((optional && length === 0) || (length >= 8 && length <= 16)
-            ? '' : 'Password must be 8-16 characters.');
+            ? '' : window.PublicSite.t('Password must be 8-16 characters.'));
         return input.reportValidity();
     };
 
@@ -190,7 +190,7 @@
                         || Number(verification.dataset.verifiedUntil || 0) <= Date.now())) {
                 const message = verification.querySelector('[data-email-verification-status]');
                 if (message instanceof HTMLElement) {
-                    message.textContent = 'Please verify your email before signing up.';
+                    message.textContent = window.PublicSite.t('Please verify your email before signing up.');
                     message.hidden = false;
                     message.focus();
                 }
@@ -203,20 +203,20 @@
             }
             if (passwordInput instanceof HTMLInputElement && passwordConfirmInput instanceof HTMLInputElement
                 && passwordInput.value.trim() !== passwordConfirmInput.value.trim()) {
-                passwordConfirmInput.setCustomValidity('Passwords do not match.');
-                window.alert('Passwords do not match.');
+                passwordConfirmInput.setCustomValidity(window.PublicSite.t('Passwords do not match.'));
+                window.alert(window.PublicSite.t('Passwords do not match.'));
                 return;
             }
 
             if (!form.checkValidity()) {
-                window.alert('Please complete all required fields correctly.');
+                window.alert(window.PublicSite.t('Please complete all required fields correctly.'));
                 return;
             }
 
             const originalButtonText = submitButton?.textContent;
             if (submitButton instanceof HTMLButtonElement) {
                 submitButton.disabled = true;
-                submitButton.textContent = 'Signing Up...';
+                submitButton.textContent = window.PublicSite.t('Signing Up...');
             }
 
             try {
@@ -225,16 +225,16 @@
                     body: new FormData(form),
                     headers: {'Accept': 'application/json'}
                 });
-                if (!response.ok) throw new Error(await response.text() || 'Registration failed.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Registration failed.'));
 
-                const successUrl = form.dataset.successUrl || '/login';
-                window.alert('Registration complete. Please log in.');
+                const successUrl = form.dataset.successUrl || window.PublicSite.pageUrl('/login');
+                window.alert(window.PublicSite.t('Registration complete. Please log in.'));
                 window.location.assign(successUrl);
             } catch (error) {
-                window.alert(error instanceof Error ? error.message : 'Registration failed. Please try again.');
+                window.alert(error instanceof Error ? error.message : window.PublicSite.t('Registration failed. Please try again.'));
                 if (submitButton instanceof HTMLButtonElement) {
                     submitButton.disabled = false;
-                    submitButton.textContent = originalButtonText || 'Sign Up';
+                    submitButton.textContent = originalButtonText || window.PublicSite.t('Sign Up');
                 }
             }
         });
@@ -279,7 +279,7 @@
             code.value = '';
             code.disabled = true;
             verify.disabled = true;
-            verify.textContent = 'Verify';
+            verify.textContent = window.PublicSite.t('Verify');
             clearStatus();
         };
         const validateEmail = () => {
@@ -292,12 +292,12 @@
             const verified = Boolean(section.dataset.verifiedEmail);
             if (verified && Number(section.dataset.verifiedUntil) <= Date.now()) {
                 resetVerification();
-                status.textContent = 'Email verification has expired. Please request a new code.';
+                status.textContent = window.PublicSite.t('Email verification has expired. Please request a new code.');
                 status.hidden = false;
             }
             if (expiresAt && Date.now() >= expiresAt) {
                 resetVerification();
-                status.textContent = 'The code has expired. Please request a new code.';
+                status.textContent = window.PublicSite.t('The code has expired. Please request a new code.');
                 status.hidden = false;
             }
             if (!expiresAt && !section.dataset.verifiedEmail && remaining === 0 && timer !== null) {
@@ -305,7 +305,7 @@
                 timer = null;
             }
             send.disabled = sending || verifying || Boolean(section.dataset.verifiedEmail) || existingMember || remaining > 0;
-            send.textContent = sending ? 'Sending...' : section.dataset.verifiedEmail || existingMember ? 'Code sent' : remaining > 0 ? `Resend in ${remaining}s` : expiresAt ? 'Resend code' : 'Send code';
+            send.textContent = sending ? window.PublicSite.t('Sending...') : section.dataset.verifiedEmail || existingMember ? window.PublicSite.t('Code sent') : remaining > 0 ? window.PublicSite.t('Resend in {seconds}s', {seconds: remaining}) : expiresAt ? window.PublicSite.t('Resend code') : window.PublicSite.t('Send code');
         };
         send.addEventListener('click', async () => {
             if (sending || verifying || section.dataset.verifiedEmail || existingMember || Date.now() < resendAt || !validateEmail()) return;
@@ -317,7 +317,7 @@
             refreshButtons();
             try {
                 const csrf = email.form?.querySelector('[name="_csrf"]');
-                const response = await fetch('/api/public/members/email-verification/send', {
+                const response = await fetch(window.PublicSite.apiUrl('/api/public/members/email-verification/send'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -328,22 +328,22 @@
                 });
                 if (!response.ok) {
                     if (response.status === 429) resendAt = Date.now() + 60000;
-                    const message = await response.text();
+                    const message = await window.PublicSite.responseMessage(response);
                     throw new Error(response.status === 403
-                        ? 'Your session has expired. Please reload this page and try again.'
-                        : message || 'The verification code could not be sent. Please try again later.');
+                        ? window.PublicSite.t('Your session has expired. Please reload this page and try again.')
+                        : message || window.PublicSite.t('The verification code could not be sent. Please try again later.'));
                 }
                 const result = await response.json();
                 resendAt = Date.now() + result.resendAfterSeconds * 1000;
                 if (requestGeneration !== generation || email.value !== requestedEmail) return;
                 expiresAt = Date.now() + result.expiresInSeconds * 1000;
                 code.disabled = false;
-                status.textContent = `${result.message} The code is valid for ${Math.ceil(result.expiresInSeconds / 60)} minutes.`;
+                status.textContent = `${result.message} ${window.PublicSite.t('The code is valid for {minutes} minutes.', {minutes: Math.ceil(result.expiresInSeconds / 60)})}`;
                 status.hidden = false;
                 code.focus();
             } catch (error) {
                 if (requestGeneration === generation) {
-                    status.textContent = error instanceof Error ? error.message : 'The verification code could not be sent.';
+                    status.textContent = error instanceof Error ? error.message : window.PublicSite.t('The verification code could not be sent.');
                     status.hidden = false;
                 }
             } finally {
@@ -362,23 +362,23 @@
             email.readOnly = true;
             code.readOnly = true;
             verify.disabled = true;
-            verify.textContent = 'Verifying...';
+            verify.textContent = window.PublicSite.t('Verifying...');
             refreshButtons();
             try {
                 const csrf = email.form?.querySelector('[name="_csrf"]');
-                const response = await fetch('/api/public/members/email-verification/verify', {
+                const response = await fetch(window.PublicSite.apiUrl('/api/public/members/email-verification/verify'), {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json', 'Accept': 'application/json',
                         ...(csrf instanceof HTMLInputElement ? {'X-CSRF-TOKEN': csrf.value} : {})},
                     body: JSON.stringify({email: requestedEmail, code: code.value})
                 });
                 if (!response.ok) {
-                    const message = await response.text();
+                    const message = await window.PublicSite.responseMessage(response);
                     if (requestGeneration !== generation) return;
                     if (response.status === 410 || response.status === 429 || response.status === 403) resetVerification();
                     status.textContent = response.status === 403
-                        ? 'Your session has expired. Please reload this page and try again.'
-                        : message || 'The code could not be verified. Please try again.';
+                        ? window.PublicSite.t('Your session has expired. Please reload this page and try again.')
+                        : message || window.PublicSite.t('The code could not be verified. Please try again.');
                     status.hidden = false;
                     return;
                 }
@@ -388,7 +388,7 @@
                 existingMember = result.existingMember;
                 code.disabled = true;
                 code.value = '';
-                verify.textContent = 'Verified';
+                verify.textContent = window.PublicSite.t('Verified');
                 if (memberLinks instanceof HTMLElement) memberLinks.hidden = !existingMember;
                 if (!existingMember) {
                     section.dataset.verifiedEmail = requestedEmail.trim().toLowerCase();
@@ -399,7 +399,7 @@
                 status.hidden = false;
             } catch (error) {
                 if (requestGeneration === generation) {
-                    status.textContent = 'The code could not be verified. Please try again.';
+                    status.textContent = window.PublicSite.t('The code could not be verified. Please try again.');
                     status.hidden = false;
                 }
             } finally {
@@ -407,7 +407,7 @@
                 email.readOnly = false;
                 code.readOnly = false;
                 verify.disabled = code.disabled || !/^\d{6}$/.test(code.value);
-                if (!section.dataset.verifiedEmail && !existingMember) verify.textContent = 'Verify';
+                if (!section.dataset.verifiedEmail && !existingMember) verify.textContent = window.PublicSite.t('Verify');
                 refreshButtons();
             }
         });
@@ -445,7 +445,7 @@
 
         fetch('/api/countries/used')
             .then(async (response) => {
-                if (!response.ok) throw new Error(await response.text() || 'Country list could not be loaded.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Country list could not be loaded.'));
                 return response.json();
             })
             .then((countries) => {
@@ -465,13 +465,13 @@
 
                 if (window.jQuery?.fn.select2) {
                     window.jQuery(countryInput).select2({
-                        placeholder: countryInput.options[0]?.text || 'Select a country.',
+                        placeholder: countryInput.options[0]?.text || window.PublicSite.t('Select a country.'),
                         minimumResultsForSearch: 0,
                         width: '100%'
                     });
                 }
             })
-            .catch((error) => window.alert(error instanceof Error ? error.message : 'Country list could not be loaded.'));
+            .catch((error) => window.alert(error instanceof Error ? error.message : window.PublicSite.t('Country list could not be loaded.')));
 
         const updateMobileCountryCode = () => {
             if (countryInput instanceof HTMLSelectElement && mobileCountryCodeInput instanceof HTMLInputElement) {
@@ -514,7 +514,7 @@
             const originalButtonHtml = submitButton?.innerHTML;
             if (submitButton instanceof HTMLButtonElement) {
                 submitButton.disabled = true;
-                submitButton.textContent = 'Saving...';
+                submitButton.textContent = window.PublicSite.t('Saving...');
             }
 
             try {
@@ -525,23 +525,23 @@
                     headers: {'Accept': 'application/json'}
                 });
                 if (response.status === 401) {
-                    window.location.assign('/login');
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
                 if (response.status === 403 && response.headers.get('X-CSRF-ERROR') === 'true') {
-                    throw new Error('Your session has expired. Please reload this page and try again.');
+                    throw new Error(window.PublicSite.t('Your session has expired. Please reload this page and try again.'));
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Profile update failed.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Profile update failed.'));
 
-                showProfileStatus('Profile saved.');
+                showProfileStatus(window.PublicSite.t('Profile saved.'));
             } catch (error) {
-                showProfileStatus(error instanceof Error ? error.message : 'Profile update failed. Please try again.', true);
+                showProfileStatus(error instanceof Error ? error.message : window.PublicSite.t('Profile update failed. Please try again.'), true);
             } finally {
                 savingProfile = false;
                 memberProfileForm.removeAttribute('aria-busy');
                 if (submitButton instanceof HTMLButtonElement) {
                     submitButton.disabled = false;
-                    submitButton.innerHTML = originalButtonHtml || 'Save';
+                    submitButton.innerHTML = originalButtonHtml || window.PublicSite.t('Save');
                 }
             }
         });
@@ -557,8 +557,8 @@
         const passwordStatus = loginUrl.searchParams.get('password');
         if (passwordNotice && (passwordStatus === 'changed' || passwordStatus === 'session-expired')) {
             passwordNotice.textContent = passwordStatus === 'changed'
-                ? 'Your password has been changed. Please sign in again.'
-                : 'Your session has expired. Please sign in again.';
+                ? window.PublicSite.t('Your password has been changed. Please sign in again.')
+                : window.PublicSite.t('Your session has expired. Please sign in again.');
             passwordNotice.hidden = false;
             loginUrl.searchParams.delete('password');
             window.history.replaceState(null, '', loginUrl.pathname + loginUrl.search + loginUrl.hash);
@@ -567,14 +567,14 @@
         memberLoginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             if (!memberLoginForm.checkValidity()) {
-                window.alert('Please enter your email and password.');
+                window.alert(window.PublicSite.t('Please enter your email and password.'));
                 return;
             }
 
             const originalButtonText = submitButton?.textContent;
             if (submitButton instanceof HTMLButtonElement) {
                 submitButton.disabled = true;
-                submitButton.textContent = 'LOGGING IN...';
+                submitButton.textContent = window.PublicSite.t('LOGGING IN...');
             }
 
             try {
@@ -583,14 +583,14 @@
                     body: new FormData(memberLoginForm),
                     headers: {'Accept': 'application/json'}
                 });
-                if (!response.ok) throw new Error(await response.text() || 'Login failed.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Login failed.'));
 
-                window.location.assign(memberLoginForm.dataset.successUrl || '/mypage');
+                window.location.assign(memberLoginForm.dataset.successUrl || window.PublicSite.pageUrl('/mypage'));
             } catch (error) {
-                window.alert(error instanceof Error ? error.message : 'Login failed. Please try again.');
+                window.alert(error instanceof Error ? error.message : window.PublicSite.t('Login failed. Please try again.'));
                 if (submitButton instanceof HTMLButtonElement) {
                     submitButton.disabled = false;
-                    submitButton.textContent = originalButtonText || 'LOGIN';
+                    submitButton.textContent = originalButtonText || window.PublicSite.t('LOGIN');
                 }
             }
         });
@@ -650,7 +650,7 @@
         const addCountryOptions = (select) => {
             if (!(select instanceof HTMLSelectElement)) return;
             const selected = select.value;
-            select.replaceChildren(new Option('Select a country', ''));
+            select.replaceChildren(new Option(window.PublicSite.t('Select a country'), ''));
             countries.forEach((country) => select.append(new Option(country.countryName, country.countryName)));
             select.value = selected;
             enhanceSelect(select);
@@ -672,7 +672,7 @@
                 select.replaceChildren(...rows.map((row, index) => {
                     const name = row.querySelector('[name="institutionName"]')?.value.trim();
                     const department = row.querySelector('[name="institutionDepartment"]')?.value.trim();
-                    return new Option([name || `Institution ${index + 1}`, department].filter(Boolean).join(' · '), String(index + 1));
+                    return new Option([name || window.PublicSite.t('Institution {number}', {number: index + 1}), department].filter(Boolean).join(' · '), String(index + 1));
                 }));
                 select.value = Array.from(select.options).some((option) => option.value === selected) ? selected : '1';
                 enhanceSelect(select);
@@ -707,8 +707,8 @@
                 const presenting = card.querySelector('[name="isPresentingAuthor"]');
                 const order = card.querySelector('[data-author-order]');
                 const role = card.querySelector('[data-author-role]');
-                if (order) order.textContent = `Order ${index + 1}`;
-                if (role) role.textContent = presenting instanceof HTMLInputElement && presenting.checked ? 'Presenting Author' : 'Author';
+                if (order) order.textContent = window.PublicSite.t('Order {number}', {number: index + 1});
+                if (role) role.textContent = presenting instanceof HTMLInputElement && presenting.checked ? window.PublicSite.t('Presenting Author') : window.PublicSite.t('Author');
                 card.querySelectorAll('[data-remove-author]').forEach((button) => {
                     if (button instanceof HTMLButtonElement) button.disabled = cards.length === 1;
                 });
@@ -871,11 +871,11 @@
             const submissionNo = publicAbstractForm.querySelector('[data-submission-no]');
             const formTitle = publicAbstractForm.querySelector('[data-abstract-form-title]');
             if (submissionNo instanceof HTMLInputElement) submissionNo.value = abstract.submissionNo || '-';
-            if (formTitle) formTitle.textContent = 'Abstract Submission Form';
+            if (formTitle) formTitle.textContent = window.PublicSite.t('Abstract Submission Form');
             const draftButton = publicAbstractForm.querySelector('[data-status="draft"]');
             if (draftButton instanceof HTMLButtonElement) draftButton.hidden = abstract.status !== 'draft';
             if (!['draft', 'submitted'].includes(abstract.status)) {
-                window.location.assign(`/mypage/abstract/review?seq=${abstract.seq}`);
+                window.location.assign(window.PublicSite.pageUrl(`/abstract-review?seq=${abstract.seq}`));
                 return;
             }
             updateAiFields();
@@ -961,32 +961,32 @@
         updateAiFields();
 
         Promise.all([
-            fetch('/api/public/abstracts/meta').then(async (response) => {
-                if (!response.ok) throw new Error(await response.text() || 'Abstract form options could not be loaded.');
+            fetch(window.PublicSite.apiUrl('/api/public/abstracts/meta')).then(async (response) => {
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Abstract form options could not be loaded.'));
                 return response.json();
             }),
             fetch('/api/countries/used').then(async (response) => {
-                if (!response.ok) throw new Error(await response.text() || 'Country list could not be loaded.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Country list could not be loaded.'));
                 return response.json();
             })
         ]).then(async ([meta, countryItems]) => {
             countries = countryItems;
-            addOptions(presentationType, meta.presentationTypes, 'Select a presentation type');
-            addOptions(category, meta.categories, 'Select a category');
+            addOptions(presentationType, meta.presentationTypes, window.PublicSite.t('Select a presentation type'));
+            addOptions(category, meta.categories, window.PublicSite.t('Select a category'));
             renderAiOptions(aiTools, meta.aiTools, 'tool');
             renderAiOptions(aiScopes, meta.aiScopes, 'scope');
             publicAbstractForm.querySelectorAll('[name="institutionCountry"], [name="authorCountry"]').forEach(addCountryOptions);
             updateAiFields();
             if (editingSeq) {
-                const response = await fetch(`/api/public/abstracts/${encodeURIComponent(editingSeq)}`);
+                const response = await fetch(window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(editingSeq)}`));
                 if (response.status === 401) {
-                    window.location.assign('/login');
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Abstract submission could not be loaded.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Abstract submission could not be loaded.'));
                 loadExisting(await response.json());
             }
-        }).catch((error) => setStatus(error instanceof Error ? error.message : 'Abstract form could not be loaded.', true));
+        }).catch((error) => setStatus(error instanceof Error ? error.message : window.PublicSite.t('Abstract form could not be loaded.'), true));
 
         // 초록 저장/제출 시 필수값, 발표저자, AI 사용정보, 단어 수, 영문 입력 여부를 검사한 뒤 API 호출
         publicAbstractForm.addEventListener('submit', async (event) => {
@@ -997,32 +997,32 @@
 
             if (!publicAbstractForm.reportValidity()) return;
             if (!publicAbstractForm.querySelector('[name="isPresentingAuthor"]:checked')) {
-                window.alert('Select at least one presenting author.');
+                window.alert(window.PublicSite.t('Select at least one presenting author.'));
                 return;
             }
             if (publicAbstractForm.querySelector('[name="aiUsage"]:checked')?.value === 'true'
                 && (!publicAbstractForm.querySelector('[data-ai-option="tool"]:checked') || !publicAbstractForm.querySelector('[data-ai-option="scope"]:checked'))) {
-                window.alert('Select at least one AI tool and scope of use.');
+                window.alert(window.PublicSite.t('Select at least one AI tool and scope of use.'));
                 return;
             }
             if (abstractWordCount() > 300) {
-                window.alert('Abstract content must be 300 words or less.');
+                window.alert(window.PublicSite.t('Abstract content must be 300 words or less.'));
                 return;
             }
             const englishFields = ['title', 'objectiveText', 'methodsText', 'resultsText', 'conclusionsText'];
             if (englishFields.some((name) => !isEnglish(publicAbstractForm.elements.namedItem(name)?.value || ''))) {
-                window.alert('Title and abstract content must contain English characters only.');
+                window.alert(window.PublicSite.t('Title and abstract content must contain English characters only.'));
                 return;
             }
 
             const buttons = publicAbstractForm.querySelectorAll('button[type="submit"]');
             buttons.forEach((button) => button.disabled = true);
             const originalText = submitter?.textContent;
-            if (submitter) submitter.textContent = status === 'draft' ? 'Saving...' : 'Submitting...';
+            if (submitter) submitter.textContent = status === 'draft' ? window.PublicSite.t('Saving...') : window.PublicSite.t('Submitting...');
 
             try {
                 const csrf = publicAbstractForm.querySelector('[name="_csrf"]');
-                const response = await fetch(editingSeq ? `${publicAbstractForm.action}/${encodeURIComponent(editingSeq)}` : publicAbstractForm.action, {
+                const response = await fetch(editingSeq ? window.PublicSite.apiUrl(`/abstracts/${encodeURIComponent(editingSeq)}`) : publicAbstractForm.action, {
                     method: editingSeq ? 'PUT' : 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -1032,20 +1032,20 @@
                     body: JSON.stringify(payload(status))
                 });
                 if (response.status === 401) {
-                    window.alert('Please log in before submitting an abstract.');
-                    window.location.assign('/login');
+                    window.alert(window.PublicSite.t('Please log in before submitting an abstract.'));
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Abstract submission failed.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Abstract submission failed.'));
                 const saved = await response.json();
-                window.alert(status === 'draft' ? `Draft ${saved.submissionNo} was saved.` : `Abstract ${saved.submissionNo} was submitted.`);
-                window.location.assign('/mypage/abstract');
+                window.alert(window.PublicSite.t(status === 'draft' ? window.PublicSite.t('Draft {number} was saved.') : window.PublicSite.t('Abstract {number} was submitted.'), {number: saved.submissionNo}));
+                window.location.assign(window.PublicSite.pageUrl('/mypage-abstract'));
             } catch (error) {
-                setStatus(error instanceof Error ? error.message : 'Abstract submission failed.', true);
-                window.alert(error instanceof Error ? error.message : 'Abstract submission failed.');
+                setStatus(error instanceof Error ? error.message : window.PublicSite.t('Abstract submission failed.'), true);
+                window.alert(error instanceof Error ? error.message : window.PublicSite.t('Abstract submission failed.'));
             } finally {
                 buttons.forEach((button) => button.disabled = false);
-                if (submitter) submitter.textContent = originalText || (status === 'draft' ? 'Temporary Save' : 'Submit');
+                if (submitter) submitter.textContent = originalText || (status === 'draft' ? window.PublicSite.t('Temporary Save') : window.PublicSite.t('Submit'));
             }
         });
     }
@@ -1072,11 +1072,11 @@
         let currentAbstract;
         let pendingAttachmentSeq;
         const statusLabels = {
-            draft: 'Draft',
-            submitted: 'Submission Completed',
-            under_review: 'Under Review',
-            approved: 'Accepted',
-            rejected: 'Rejected'
+            draft: window.PublicSite.t('Draft'),
+            submitted: window.PublicSite.t('Submission Completed'),
+            under_review: window.PublicSite.t('Under Review'),
+            approved: window.PublicSite.t('Accepted'),
+            rejected: window.PublicSite.t('Rejected')
         };
         // 초록 상세 화면의 data-review-field 영역에 값을 출력
         const text = (field, value) => {
@@ -1092,7 +1092,7 @@
                 const row = document.createElement('tr');
                 values.forEach((value) => {
                     const cell = document.createElement('td');
-                    cell.innerHTML = value || '-';
+                    cell.textContent = value || '-';
                     row.append(cell);
                 });
                 return row;
@@ -1126,7 +1126,7 @@
                 const cell = document.createElement('td');
                 cell.colSpan = 3;
                 cell.className = 'member-table-empty';
-                cell.textContent = 'No presentation material has been uploaded.';
+                cell.textContent = window.PublicSite.t('No presentation material has been uploaded.');
                 row.append(cell);
                 attachmentBody.replaceChildren(row);
                 return;
@@ -1143,16 +1143,16 @@
                 actions.className = 'member-row-actions';
                 const download = document.createElement('a');
                 download.className = 'member-button member-button--outline member-button--compact';
-                download.href = `/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments/${encodeURIComponent(attachment.seq)}`;
+                download.href = window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments/${encodeURIComponent(attachment.seq)}`);
                 download.target = '_blank';
                 download.rel = 'noopener noreferrer';
-                download.textContent = 'Download';
+                download.textContent = window.PublicSite.t('Download');
                 const remove = document.createElement('button');
                 remove.className = 'member-button member-button--soft member-button--compact';
                 remove.type = 'button';
                 remove.dataset.deleteAttachment = String(attachment.seq);
                 remove.setAttribute('aria-label', `Delete ${attachment.originalFilename || 'presentation material'}`);
-                remove.textContent = 'Delete';
+                remove.textContent = window.PublicSite.t('Delete');
                 actions.append(download, remove);
                 actionCell.append(actions);
                 row.append(nameCell, sizeCell, actionCell);
@@ -1164,7 +1164,7 @@
             if (fileName instanceof HTMLElement) {
                 fileName.textContent = fileInput instanceof HTMLInputElement && fileInput.files?.[0]
                     ? fileInput.files[0].name
-                    : 'No file selected.';
+                    : window.PublicSite.t('No file selected.');
             }
         });
         // 발표자료 업로드: 확장자·100MB 제한·최대 5개 여부 확인 후 서버로 전송
@@ -1174,39 +1174,39 @@
             const file = fileInput.files[0];
             const extension = file.name.split('.').pop()?.toLowerCase();
             if (!['pdf', 'ppt', 'pptx'].includes(extension || '')) {
-                setMaterialStatus('Please select a PDF, PPT, or PPTX file.', true);
+                setMaterialStatus(window.PublicSite.t('Please select a PDF, PPT, or PPTX file.'), true);
                 return;
             }
             if (file.size > 100 * 1024 * 1024) {
-                setMaterialStatus('Presentation materials must be 100MB or smaller.', true);
+                setMaterialStatus(window.PublicSite.t('Presentation materials must be 100MB or smaller.'), true);
                 return;
             }
             if ((currentAbstract.attachments || []).length >= 5) {
-                setMaterialStatus('Up to 5 presentation materials can be uploaded.', true);
+                setMaterialStatus(window.PublicSite.t('Up to 5 presentation materials can be uploaded.'), true);
                 return;
             }
 
             const submit = uploadForm.querySelector('button[type="submit"]');
             if (submit instanceof HTMLButtonElement) submit.disabled = true;
-            setMaterialStatus('Uploading...');
+            setMaterialStatus(window.PublicSite.t('Uploading...'));
             try {
                 const body = new FormData();
                 body.append('file', file);
-                const response = await fetch(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments`, {
+                const response = await fetch(window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments`), {
                     method: 'POST', headers: csrfHeaders(), body
                 });
                 if (response.status === 401) {
-                    window.location.assign('/login');
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Presentation material could not be uploaded.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Presentation material could not be uploaded.'));
                 currentAbstract.attachments = [...(currentAbstract.attachments || []), await response.json()];
                 uploadForm.reset();
-                if (fileName instanceof HTMLElement) fileName.textContent = 'No file selected.';
+                if (fileName instanceof HTMLElement) fileName.textContent = window.PublicSite.t('No file selected.');
                 renderAttachments();
-                setMaterialStatus('Presentation material uploaded.');
+                setMaterialStatus(window.PublicSite.t('Presentation material uploaded.'));
             } catch (error) {
-                setMaterialStatus(error instanceof Error ? error.message : 'Presentation material could not be uploaded.', true);
+                setMaterialStatus(error instanceof Error ? error.message : window.PublicSite.t('Presentation material could not be uploaded.'), true);
             } finally {
                 if (submit instanceof HTMLButtonElement) submit.disabled = false;
             }
@@ -1221,22 +1221,22 @@
         confirmDelete?.addEventListener('click', async () => {
             if (!currentAbstract || !pendingAttachmentSeq) return;
             if (deleteDialog instanceof HTMLDialogElement) deleteDialog.close();
-            setMaterialStatus('Deleting...');
+            setMaterialStatus(window.PublicSite.t('Deleting...'));
             try {
-                const response = await fetch(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments/${encodeURIComponent(pendingAttachmentSeq)}`, {
+                const response = await fetch(window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}/attachments/${encodeURIComponent(pendingAttachmentSeq)}`), {
                     method: 'DELETE', headers: csrfHeaders()
                 });
                 if (response.status === 401) {
-                    window.location.assign('/login');
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Presentation material could not be deleted.');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Presentation material could not be deleted.'));
                 currentAbstract.attachments = (currentAbstract.attachments || [])
                     .filter((attachment) => String(attachment.seq) !== String(pendingAttachmentSeq));
                 renderAttachments();
-                setMaterialStatus('Presentation material deleted.');
+                setMaterialStatus(window.PublicSite.t('Presentation material deleted.'));
             } catch (error) {
-                setMaterialStatus(error instanceof Error ? error.message : 'Presentation material could not be deleted.', true);
+                setMaterialStatus(error instanceof Error ? error.message : window.PublicSite.t('Presentation material could not be deleted.'), true);
             } finally {
                 pendingAttachmentSeq = undefined;
             }
@@ -1249,31 +1249,31 @@
             if (!currentAbstract || !(confirmAbstractDelete instanceof HTMLButtonElement)) return;
             confirmAbstractDelete.disabled = true;
             try {
-                const response = await fetch(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}`, {
+                const response = await fetch(window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(currentAbstract.seq)}`), {
                     method: 'DELETE', headers: csrfHeaders()
                 });
                 if (response.status === 401) {
-                    window.location.assign('/login');
+                    window.location.assign(window.PublicSite.pageUrl('/login'));
                     return;
                 }
-                if (!response.ok) throw new Error(await response.text() || 'Draft deletion failed.');
-                window.location.assign('/mypage/abstract');
+                if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Draft deletion failed.'));
+                window.location.assign(window.PublicSite.pageUrl('/mypage-abstract'));
             } catch (error) {
-                window.alert(error instanceof Error ? error.message : 'Draft deletion failed. Please try again.');
+                window.alert(error instanceof Error ? error.message : window.PublicSite.t('Draft deletion failed. Please try again.'));
                 confirmAbstractDelete.disabled = false;
             }
         });
 
         if (!seq) {
-            window.location.assign('/mypage/abstract');
+            window.location.assign(window.PublicSite.pageUrl('/mypage-abstract'));
         } else {
-            fetch(`/api/public/abstracts/${encodeURIComponent(seq)}`)
+            fetch(window.PublicSite.apiUrl(`/api/public/abstracts/${encodeURIComponent(seq)}`))
                 .then(async (response) => {
                     if (response.status === 401) {
-                        window.location.assign('/login');
+                        window.location.assign(window.PublicSite.pageUrl('/login'));
                         return null;
                     }
-                    if (!response.ok) throw new Error(await response.text() || 'Abstract submission could not be loaded.');
+                    if (!response.ok) throw new Error(await window.PublicSite.responseMessage(response) || window.PublicSite.t('Abstract submission could not be loaded.'));
                     return response.json();
                 })
                 .then((abstract) => {
@@ -1288,17 +1288,17 @@
                     text('methodsText', abstract.methodsText);
                     text('resultsText', abstract.resultsText);
                     text('conclusionsText', abstract.conclusionsText);
-                    text('aiUsage', abstract.aiUsage ? 'Yes' : 'No');
-                    text('aiTools', abstract.aiUsage ? (abstract.aiTools || []).map((tool) => [tool.otherToolName || tool.aiToolName, tool.otherProviderName].filter(Boolean).join(' · ')).filter(Boolean).join(', ') : 'Not used');
-                    text('aiVersionInfo', abstract.aiUsage ? abstract.aiVersionInfo : 'Not used');
-                    text('aiScopes', abstract.aiUsage ? (abstract.aiScopes || []).map((scope) => scope.otherScopeText || scope.aiScopeName).filter(Boolean).join(', ') : 'Not used');
-                    text('aiDataAnalysisUsed', abstract.aiDataAnalysisUsed ? 'Yes' : 'No');
-                    text('plagiarismPolicyConfirmed', abstract.plagiarismPolicyConfirmed ? 'Yes' : 'No');
+                    text('aiUsage', abstract.aiUsage ? window.PublicSite.t('Yes') : window.PublicSite.t('No'));
+                    text('aiTools', abstract.aiUsage ? (abstract.aiTools || []).map((tool) => [tool.otherToolName || tool.aiToolName, tool.otherProviderName].filter(Boolean).join(' · ')).filter(Boolean).join(', ') : window.PublicSite.t('Not used'));
+                    text('aiVersionInfo', abstract.aiUsage ? abstract.aiVersionInfo : window.PublicSite.t('Not used'));
+                    text('aiScopes', abstract.aiUsage ? (abstract.aiScopes || []).map((scope) => scope.otherScopeText || scope.aiScopeName).filter(Boolean).join(', ') : window.PublicSite.t('Not used'));
+                    text('aiDataAnalysisUsed', abstract.aiDataAnalysisUsed ? window.PublicSite.t('Yes') : window.PublicSite.t('No'));
+                    text('plagiarismPolicyConfirmed', abstract.plagiarismPolicyConfirmed ? window.PublicSite.t('Yes') : window.PublicSite.t('No'));
                     const institutions = new Map((abstract.institutions || []).map((institution) => [institution.institutionNo, institution]));
                     fillRows('[data-review-authors]', (abstract.authors || []).map((author) => [
                         String(author.authorOrder)
                         , author.authorName
-                        , [author.isPresentingAuthor ? '<span class="member-status">Presenting</span>' : '', author.isCorrespondingAuthor ? '<span class="member-status">Corresponding</span>' : ''].filter(Boolean).join(', ') || '<span class="member-status">Author</span>'
+                        , [author.isPresentingAuthor ? window.PublicSite.t('Presenting Author') : '', author.isCorrespondingAuthor ? window.PublicSite.t('Corresponding author') : ''].filter(Boolean).join(', ') || window.PublicSite.t('Author')
                         , [institutions.get(author.institutionNo)?.institutionName, institutions.get(author.institutionNo)?.country].filter(Boolean).join(', ')
                         , institutions.get(author.institutionNo)?.department
                         , author.email
@@ -1306,7 +1306,7 @@
                     if (loading instanceof HTMLElement) loading.hidden = true;
                     if (content instanceof HTMLElement) content.hidden = false;
                     if (editLink instanceof HTMLAnchorElement && ['draft', 'submitted'].includes(abstract.status)) {
-                        editLink.href = `/mypage/abstract/write?seq=${abstract.seq}`;
+                        editLink.href = window.PublicSite.pageUrl(`/abstract-write?seq=${abstract.seq}`);
                         editLink.hidden = false;
                     }
                     // 삭제 기능은 목록에 노출하지 않고 임시저장 상태의 상세 화면에서만 제공
@@ -1320,7 +1320,7 @@
                 })
                 .catch((error) => {
                     if (loading instanceof HTMLElement) {
-                        loading.textContent = error instanceof Error ? error.message : 'Abstract submission could not be loaded.';
+                        loading.textContent = error instanceof Error ? error.message : window.PublicSite.t('Abstract submission could not be loaded.');
                         loading.classList.add('co-danger');
                     }
                 });
@@ -1465,7 +1465,7 @@
                 const name = document.createElement('strong');
                 const description = document.createElement('small');
                 name.textContent = option.optionName;
-                description.textContent = `${option.optionDescription || ''}${option.optionDescription ? ' · ' : ''}Quantity: ${option.quantity}`;
+                description.textContent = `${option.optionDescription || ''}${option.optionDescription ? ' · ' : ''}${window.PublicSite.t('Quantity: {quantity}', {quantity: option.quantity})}`;
                 details.append(name, description);
                 row.append(details);
                 return row;
@@ -1524,7 +1524,7 @@
                 categoryList.replaceChildren(category);
                 if (paymentMethod instanceof HTMLElement) {
                     const method = document.createElement('span');
-                    method.textContent = 'Credit Card';
+                    method.textContent = window.PublicSite.t('Credit Card');
                     paymentMethod.replaceChildren(method);
                 }
             } else {
@@ -1553,8 +1553,8 @@
                 agreements.querySelectorAll('input').forEach((input) => input.disabled = true);
             }
             if (submitButton instanceof HTMLButtonElement) {
-                submitButton.textContent = paid ? 'Registration Completed'
-                    : editable ? 'Save & Continue to Payment' : 'Continue to Payment';
+                submitButton.textContent = paid ? window.PublicSite.t('Registration Completed')
+                    : editable ? window.PublicSite.t('Save & Continue to Payment') : window.PublicSite.t('Continue to Payment');
                 const total = editable ? calculatedTotal() : Number(registration.totalAmount);
                 submitButton.disabled = paid || !formData.registrationOpen
                     || (editable && !selectedCategory())
@@ -1590,11 +1590,11 @@
         const requestJson = async (url, options = {}) => {
             const response = await fetch(url, options);
             if (response.status === 401) {
-                window.location.assign('/login');
-                throw new Error('Login is required.');
+                window.location.assign(window.PublicSite.pageUrl('/login'));
+                throw new Error(window.PublicSite.t('Login is required.'));
             }
-            const body = await response.text();
-            if (!response.ok) throw new Error(body || 'The request could not be completed.');
+            const body = await window.PublicSite.responseMessage(response);
+            if (!response.ok) throw new Error(body || window.PublicSite.t('The request could not be completed.'));
             return body ? JSON.parse(body) : null;
         };
         const openPaymentWindow = () => {
@@ -1604,10 +1604,10 @@
             const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
             const popup = window.open('', `registrationPayment-${Date.now()}`, `popup=yes,width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
             if (!popup) return null;
-            popup.document.title = 'Online Registration Payment';
+            popup.document.title = window.PublicSite.t('Online Registration Payment');
             popup.document.body.replaceChildren();
             const message = popup.document.createElement('p');
-            message.textContent = 'Preparing payment...';
+            message.textContent = window.PublicSite.t('Preparing payment...');
             message.style.cssText = 'margin:40px;font:16px sans-serif;text-align:center;color:#334155';
             popup.document.body.append(message);
             return popup;
@@ -1625,14 +1625,14 @@
                 script.dataset.loaded = 'true';
                 resolve();
             }, {once: true});
-            script.addEventListener('error', () => reject(new Error('The payment module could not be loaded.')), {once: true});
+            script.addEventListener('error', () => reject(new Error(window.PublicSite.t('The payment module could not be loaded.'))), {once: true});
             if (!existing) popup.document.head.append(script);
         });
         // This callback only means the browser PG module returned. The server must verify and
         // persist the final payment result before the registration can be treated as paid.
         const startPayment = async (session, popup) => {
             if (session.provider !== 'paygate' || !popup || popup.closed) {
-                throw new Error('The configured payment method is not supported.');
+                throw new Error(window.PublicSite.t('The configured payment method is not supported.'));
             }
             const paymentForm = popup.document.createElement('form');
             const paymentScreen = popup.document.createElement('div');
@@ -1649,19 +1649,19 @@
             paymentForm.method = 'post';
             paymentScreen.id = session.screenElementId;
             await loadScript(session.scriptUrl, popup);
-            if (typeof popup.doTransaction !== 'function') throw new Error('The payment module is not ready.');
+            if (typeof popup.doTransaction !== 'function') throw new Error(window.PublicSite.t('The payment module is not ready.'));
             await new Promise((resolve, reject) => {
                 const previous = popup.getPGIOresult;
                 const closedCheck = window.setInterval(() => {
                     if (!popup.closed) return;
                     window.clearInterval(closedCheck);
                     window.clearTimeout(timeout);
-                    reject(new Error('The payment window was closed.'));
+                    reject(new Error(window.PublicSite.t('The payment window was closed.')));
                 }, 500);
                 const timeout = window.setTimeout(() => {
                     window.clearInterval(closedCheck);
                     if (!popup.closed) popup.getPGIOresult = previous;
-                    reject(new Error('The payment response timed out.'));
+                    reject(new Error(window.PublicSite.t('The payment response timed out.')));
                 }, 10 * 60 * 1000);
                 popup.getPGIOresult = () => {
                     window.clearInterval(closedCheck);
@@ -1690,13 +1690,13 @@
             if (cancelDialog instanceof HTMLDialogElement) cancelDialog.close();
             if (cancelButton instanceof HTMLButtonElement) cancelButton.disabled = true;
             try {
-                await requestJson('/api/public/pre-registrations/cancel', {
+                await requestJson(window.PublicSite.apiUrl('/api/public/pre-registrations/cancel'), {
                     method: 'POST', headers: {'Accept': 'application/json', ...csrfHeaders()}
                 });
-                window.alert('Your registration has been cancelled.');
+                window.alert(window.PublicSite.t('Your registration has been cancelled.'));
                 window.location.reload();
             } catch (error) {
-                const message = error instanceof Error ? error.message : 'The registration could not be cancelled.';
+                const message = error instanceof Error ? error.message : window.PublicSite.t('The registration could not be cancelled.');
                 setStatus(message, true);
                 window.alert(message);
                 if (cancelButton instanceof HTMLButtonElement) cancelButton.disabled = false;
@@ -1719,12 +1719,12 @@
             refreshRefundTotal();
         });
         submitRefundButton?.addEventListener('click', () => {
-            window.alert('Cancellation request submission will be connected in the next step.');
+            window.alert(window.PublicSite.t('Cancellation request submission will be connected in the next step.'));
         });
 
-        requestJson('/api/public/pre-registrations/form')
+        requestJson(window.PublicSite.apiUrl('/api/public/pre-registrations/form'))
             .then((data) => data && renderForm(data))
-            .catch((error) => setStatus(error instanceof Error ? error.message : 'Registration form could not be loaded.', true));
+            .catch((error) => setStatus(error instanceof Error ? error.message : window.PublicSite.t('Registration form could not be loaded.'), true));
 
         publicRegistrationForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -1736,7 +1736,7 @@
                 : Number(calculatedTotal()) > 0;
             const paymentPopup = paymentRequired ? openPaymentWindow() : null;
             if (paymentRequired && !paymentPopup) {
-                const message = 'Please allow pop-ups to open the payment window.';
+                const message = window.PublicSite.t('Please allow pop-ups to open the payment window.');
                 setStatus(message, true);
                 window.alert(message);
                 return;
@@ -1744,7 +1744,7 @@
             const originalText = submitButton?.textContent;
             if (submitButton instanceof HTMLButtonElement) {
                 submitButton.disabled = true;
-                submitButton.textContent = currentRegistration && !editableRegistration ? 'Opening Payment...' : 'Saving...';
+                submitButton.textContent = currentRegistration && !editableRegistration ? window.PublicSite.t('Opening Payment...') : window.PublicSite.t('Saving...');
             }
             if (cancelButton instanceof HTMLButtonElement) cancelButton.disabled = true;
             try {
@@ -1775,26 +1775,26 @@
                 }
                 if (currentRegistration?.paymentStatus === 'PAID') {
                     paymentPopup?.close();
-                    window.alert(`Registration ${currentRegistration.registrationNumber} is complete.`);
-                    window.location.assign('/mypage/registration');
+                    window.alert(window.PublicSite.t('Registration {number} is complete.', {number: currentRegistration.registrationNumber}));
+                    window.location.assign(window.PublicSite.pageUrl('/mypage-registration'));
                     return;
                 }
-                if (submitButton instanceof HTMLButtonElement) submitButton.textContent = 'Opening Payment...';
-                const checkout = await requestJson('/api/public/pre-registrations/checkout', {
+                if (submitButton instanceof HTMLButtonElement) submitButton.textContent = window.PublicSite.t('Opening Payment...');
+                const checkout = await requestJson(window.PublicSite.apiUrl('/api/public/pre-registrations/checkout'), {
                     method: 'POST', headers: {'Accept': 'application/json', ...csrfHeaders()}
                 });
                 await startPayment(checkout, paymentPopup);
                 paymentPopup?.close();
-                window.alert('The payment response was received. Payment status will be updated after server verification.');
-                window.location.assign('/mypage/registration');
+                window.alert(window.PublicSite.t('The payment response was received. Payment status will be updated after server verification.'));
+                window.location.assign(window.PublicSite.pageUrl('/mypage-registration'));
             } catch (error) {
                 paymentPopup?.close();
-                const message = error instanceof Error ? error.message : 'Online registration could not be completed.';
+                const message = error instanceof Error ? error.message : window.PublicSite.t('Online registration could not be completed.');
                 setStatus(message, true);
                 window.alert(message);
                 if (submitButton instanceof HTMLButtonElement) {
                     submitButton.disabled = false;
-                    submitButton.textContent = originalText || (currentRegistration ? 'Continue to Payment' : 'Proceed to Payment');
+                    submitButton.textContent = originalText || (currentRegistration ? window.PublicSite.t('Continue to Payment') : window.PublicSite.t('Proceed to Payment'));
                 }
                 if (cancelButton instanceof HTMLButtonElement && currentRegistration
                     && ['UNPAID', 'FAILED'].includes(currentRegistration.paymentStatus)) cancelButton.disabled = false;

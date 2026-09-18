@@ -1,5 +1,7 @@
 package com.bjworld21.congress.controller;
 
+import com.bjworld21.congress.publicsite.PublicApiRequest;
+
 import com.bjworld21.congress.dto.SponsorPageResponse;
 import com.bjworld21.congress.dto.SponsorResponse;
 import com.bjworld21.congress.dto.SponsorTypeResponse;
@@ -139,10 +141,11 @@ public class SponsorController {
         }
     }
 
-    @GetMapping("/sponsors/{seq}/logo")
+    @GetMapping("/public/{conferenceSeq}/sponsors/{seq}/logo")
+    @com.bjworld21.congress.config.IpAccessExempt
     public ResponseEntity<?> logo(@PathVariable Long seq) {
         try {
-            Resource resource = sponsorService.getLogo(conferenceSettingsService.getLatestConferenceSeq(), seq);
+            Resource resource = sponsorService.getLogo(PublicApiRequest.context().conferenceSeq(), seq);
             return ResponseEntity.ok()
                     .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
                     .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))

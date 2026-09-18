@@ -1,6 +1,7 @@
 package com.bjworld21.congress.service;
 
 import com.bjworld21.congress.config.PersonalDataProperties;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.repository.MemberEmailVerificationRepository;
 import com.bjworld21.congress.repository.MemberRepository;
 import jakarta.servlet.http.HttpSession;
@@ -60,7 +61,7 @@ public class MemberEmailVerificationService {
             throw new IllegalArgumentException("Invalid email address");
         }
         mail.checkAvailable();
-        long conferenceSeq = conferences.getLatestConferenceSeq();
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         // SMTP is outside the DB transaction; only the current browser's issuance is serialized.
         synchronized (WebUtils.getSessionMutex(session)) {
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
@@ -70,15 +71,15 @@ public class MemberEmailVerificationService {
                     && takeLimit("send-minute:" + conferenceSeq + ":" + email, now, 60, 1)));
             if (!allowed) throw new TooManyRequestsException();
 
-            session.removeAttribute(SESSION_KEY);
-            session.removeAttribute(VERIFIED_KEY);
-            session.removeAttribute(ATTEMPTS_KEY);
+            session.removeAttribute(SESSION_KEY + conferenceSeq);
+            session.removeAttribute(VERIFIED_KEY + conferenceSeq);
+            session.removeAttribute(ATTEMPTS_KEY + conferenceSeq);
             String code = String.format(Locale.ROOT, "%06d", RANDOM.nextInt(1_000_000));
             String hash = encoder.encode(code);
             // Do not check membership here: existing and new addresses receive the same response.
-            mail.sendCode(email, conferences.getSettings(conferenceSeq).getEventName(), code, 10);
+            mail.sendCode(email, conferences.getSettings(conferenceSeq).getEventName(), code, 10, PublicApiRequest.context().language());
             Instant expiresAt = clock.instant().plusSeconds(600);
-            session.setAttribute(SESSION_KEY, new Challenge(conferenceSeq, email, hash, expiresAt));
+            session.setAttribute(SESSION_KEY + conferenceSeq, new Challenge(conferenceSeq, email, hash, expiresAt));
             return new SendResult("A verification code has been sent. Please check your inbox and spam folder.", 600, 60);
         }
     }
@@ -86,35 +87,35 @@ public class MemberEmailVerificationService {
     public VerifyResult verifyCode(String address, String code, String ip, HttpSession session) {
         if (session == null) throw new InvalidCodeException("Please request a new verification code.");
         String email = address == null ? "" : address.trim().toLowerCase(Locale.ROOT);
-        long conferenceSeq = conferences.getLatestConferenceSeq();
+        long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         synchronized (WebUtils.getSessionMutex(session)) {
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
             boolean allowed = Boolean.TRUE.equals(transactions.execute(status -> takeLimit("verify-ip:" + ip, now, 3600, 60)));
             if (!allowed) throw new VerificationRateLimitException();
-            if (!(session.getAttribute(SESSION_KEY) instanceof Challenge challenge)
+            if (!(session.getAttribute(SESSION_KEY + conferenceSeq) instanceof Challenge challenge)
                     || challenge.conferenceSeq() != conferenceSeq || !challenge.email().equals(email)) {
                 throw new InvalidCodeException("Please request a new verification code for this email address.");
             }
             if (!challenge.expiresAt().isAfter(clock.instant())) {
-                session.removeAttribute(SESSION_KEY);
+                session.removeAttribute(SESSION_KEY + conferenceSeq);
                 throw new InvalidCodeException("The code has expired. Please request a new code.");
             }
-            int attempts = session.getAttribute(ATTEMPTS_KEY) instanceof Integer count ? count : 0;
+            int attempts = session.getAttribute(ATTEMPTS_KEY + conferenceSeq) instanceof Integer count ? count : 0;
             if (code == null || !code.matches("[0-9]{6}") || !encoder.matches(code, challenge.codeHash())) {
                 attempts++;
-                session.setAttribute(ATTEMPTS_KEY, attempts);
+                session.setAttribute(ATTEMPTS_KEY + conferenceSeq, attempts);
                 if (attempts >= 5) {
-                    session.removeAttribute(SESSION_KEY);
+                    session.removeAttribute(SESSION_KEY + conferenceSeq);
                     throw new InvalidCodeException("Too many incorrect codes. Please request a new code.");
                 }
                 throw new IncorrectCodeException("The code is incorrect. " + (5 - attempts) + " attempts remaining.");
             }
             // Account existence is revealed only after proving possession of the emailed code.
             boolean existing = members.findByEmail(conferenceSeq, email, personalData.requireDbEncString()) != null;
-            session.removeAttribute(SESSION_KEY);
-            session.removeAttribute(ATTEMPTS_KEY);
-            session.removeAttribute(VERIFIED_KEY);
-            if (!existing) session.setAttribute(VERIFIED_KEY, new VerifiedEmail(conferenceSeq, email, clock.instant().plusSeconds(1800)));
+            session.removeAttribute(SESSION_KEY + conferenceSeq);
+            session.removeAttribute(ATTEMPTS_KEY + conferenceSeq);
+            session.removeAttribute(VERIFIED_KEY + conferenceSeq);
+            if (!existing) session.setAttribute(VERIFIED_KEY + conferenceSeq, new VerifiedEmail(conferenceSeq, email, clock.instant().plusSeconds(1800)));
             return new VerifyResult(existing
                     ? "This email address is already registered. Please log in or reset your password."
                     : "Email verified. Please complete your registration within 30 minutes.", existing, existing ? 0 : 1800);
@@ -124,7 +125,7 @@ public class MemberEmailVerificationService {
     public <T> T completeRegistration(long conferenceSeq, String address, HttpSession session, java.util.function.Supplier<T> create) {
         if (session == null) throw new InvalidCodeException("Please verify your email before signing up.");
         synchronized (WebUtils.getSessionMutex(session)) {
-            if (!(session.getAttribute(VERIFIED_KEY) instanceof VerifiedEmail proof)
+            if (!(session.getAttribute(VERIFIED_KEY + conferenceSeq) instanceof VerifiedEmail proof)
                     || proof.conferenceSeq() != conferenceSeq
                     || !proof.email().equals(address.trim().toLowerCase(Locale.ROOT))
                     || !proof.expiresAt().isAfter(clock.instant())) {
@@ -132,7 +133,7 @@ public class MemberEmailVerificationService {
             }
             // Keep proof for retryable form errors; consume it only after successful registration.
             T result = create.get();
-            session.removeAttribute(VERIFIED_KEY);
+            session.removeAttribute(VERIFIED_KEY + conferenceSeq);
             return result;
         }
     }

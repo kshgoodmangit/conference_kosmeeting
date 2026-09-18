@@ -69,7 +69,7 @@ class AnalyticsTest {
         when(conferences.getLatestConferenceSeq()).thenReturn(1L);
         var secret=new PersonalDataProperties();secret.setDbEncString("unit-test-secret");
         var request=new MockHttpServletRequest();request.addHeader("User-Agent","Mozilla/5.0 (iPhone) AppleWebKit Safari/604.1");
-        request.addHeader("X-Conference-Seq","999");
+        request.addHeader("X-Conference-Seq","999"); request.setAttribute(com.bjworld21.congress.publicsite.PublicSiteContext.ATTRIBUTE, com.bjworld21.congress.publicsite.PublicSiteTestContext.context(1, "en"));
         when(ip.resolve(request)).thenReturn("127.0.0.1");
         var collector=new AnalyticsCollector(repo,service,geo,ip,conferences,secret);
         String id=UUID.randomUUID().toString();

@@ -1,22 +1,22 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
 <!-- Generic public page shell. contentTemplate selects a live-data fragment; without it,
      sanitized contentHtml from Menu Management is rendered as the page body. -->
 <head th:replace="~{public/fragments :: head}"></head>
-<body>
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <header th:replace="~{public/fragments :: header}"></header>
 
 <main>
     <section class="page-menu d-none d-lg-block" th:if="${sectionMenu.children != null and !sectionMenu.children.isEmpty()}">
         <div class="container">
-            <nav class="page-menu-nav" aria-label="Page navigation">
-                <a class="page-menu-home" href="/" aria-label="Home">
+            <nav class="page-menu-nav" aria-label="Page navigation" th:aria-label="#{public.ui.page.navigation.cc5793}">
+                <a class="page-menu-home" href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}" aria-label="Home" th:aria-label="#{public.ui.home.70f8bb}">
                     <img src="/public/img/icon-home.svg" alt="">
                 </a>
                 <th:block th:each="menu : ${sectionMenu.children}">
                     <a class="page-menu-link"
                        th:if="${menu.navigationVisible != false and (memberPage != true or menu.menuKey == pageMenuCurrentKey)}"
-                       th:href="${(menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath}"
+                       th:href="${siteContext != null ? siteContext.pageUrl((menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath) : ((menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath)}"
                        th:classappend="${menu.menuKey == pageMenuCurrentKey} ? ' is-current'"
                        th:text="${menu.menuName}">Submenu</a>
                 </th:block>
@@ -30,9 +30,9 @@
 
         <ul class="breadcrumb">
             <li>
-                <a href="/">
+                <a href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}">
                     <img src="/public/img/icon-home.svg" alt="">
-                    <span>HOME</span>
+                    <span><th:block th:text="#{public.ui.home.773196}">HOME</th:block></span>
                 </a>
             </li>
             <th:block th:each="crumb : ${breadcrumbs}">
@@ -41,7 +41,7 @@
                 </li>
                 <li>
                     <a th:if="${crumb.menuKey != currentMenu.menuKey}"
-                       th:href="${crumb.routePath}"
+                       th:href="${siteContext != null ? siteContext.pageUrl(crumb.routePath) : (crumb.routePath)}"
                        th:text="${crumb.menuName}">Section</a>
                     <span th:if="${crumb.menuKey == currentMenu.menuKey}" th:text="${crumb.menuName}">Page</span>
                 </li>
@@ -60,9 +60,9 @@
         <div class="container" th:if="${contentTemplate == null and contentHtml.isEmpty()}">
             <div class="empty-content">
                 <span aria-hidden="true">✦</span>
-                <h3>Content is being prepared.</h3>
-                <p>This page is ready for publishing. <br>Add content in Admin → Menu Management to display it here.</p>
-                <a href="/">Return to conference home</a>
+                <h3><th:block th:text="#{public.ui.content.is.being.prepared.75fa59}">Content is being prepared.</th:block></h3>
+                <p><th:block th:text="#{public.ui.this.page.is.ready.for.publishing.fc4b4e}">This page is ready for publishing.</th:block> <br><th:block th:text="#{public.ui.add.content.in.admin.menu.management.9d8d06}">Add content in Admin → Menu Management to display it here.</th:block></p>
+                <a href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}"><th:block th:text="#{public.ui.return.to.conference.home.81971f}">Return to conference home</th:block></a>
             </div>
         </div>
     </section>

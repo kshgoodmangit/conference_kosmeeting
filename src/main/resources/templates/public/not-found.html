@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{public/fragments :: head}"></head>
-<body>
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <header th:replace="~{public/fragments :: header}"></header>
 <main class="not-found-page">
     <div class="site-shell not-found-inner">
         <p class="error-code">404</p>
-        <h1>We could not find that page.</h1>
-        <p>The address may have changed, or the menu may no longer be available.</p>
+        <h1><th:block th:text="#{public.ui.we.could.not.find.that.page.f5a0cc}">We could not find that page.</th:block></h1>
+        <p><th:block th:text="#{public.ui.the.address.may.have.changed.or.2b833d}">The address may have changed, or the menu may no longer be available.</th:block></p>
         <code th:text="${requestedPath}">/requested-page</code>
-        <a class="button button-primary" href="/">Go to conference home</a>
+        <a class="button button-primary" href="/" th:href="${siteContext != null ? siteContext.pageUrl('/') : '/'}"><th:block th:text="#{public.ui.go.to.conference.home.386de2}">Go to conference home</th:block></a>
     </div>
 </main>
 <footer th:replace="~{public/fragments :: footer}"></footer>

@@ -41,20 +41,20 @@ class PublicPreRegistrationControllerTest {
         ));
         mockMvc = MockMvcBuilders.standaloneSetup(
                 new PublicPreRegistrationController(service, conferences)
-        ).build();
+        ).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
     }
 
     @Test
     void rejectsAnonymousRequests() throws Exception {
-        mockMvc.perform(get("/api/public/pre-registrations/form"))
+        mockMvc.perform(get("/api/public/1/pre-registrations/form"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/api/public/pre-registrations")
+        mockMvc.perform(post("/api/public/1/pre-registrations")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(put("/api/public/pre-registrations")
+        mockMvc.perform(put("/api/public/1/pre-registrations")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/api/public/pre-registrations/cancel"))
+        mockMvc.perform(post("/api/public/1/pre-registrations/cancel"))
                 .andExpect(status().isUnauthorized());
         verify(service, never()).form(any(), any());
         verify(service, never()).create(any(), any(), any());
@@ -64,9 +64,8 @@ class PublicPreRegistrationControllerTest {
 
     @Test
     void createsForTheLoggedInMember() throws Exception {
-        mockMvc.perform(post("/api/public/pre-registrations")
-                        .sessionAttr("memberSeq", 7L)
-                        .sessionAttr("memberConferenceSeq", 1L)
+        mockMvc.perform(post("/api/public/1/pre-registrations")
+                        .sessionAttr("publicMember.1", new PublicMemberSession(7L, 1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorySeq\":3,\"privacyAgreed\":true,\"termsAgreed\":true}"))
                 .andExpect(status().isCreated());
@@ -76,9 +75,8 @@ class PublicPreRegistrationControllerTest {
 
     @Test
     void loadsTheFormForTheLoggedInMember() throws Exception {
-        mockMvc.perform(get("/api/public/pre-registrations/form")
-                        .sessionAttr("memberSeq", 7L)
-                        .sessionAttr("memberConferenceSeq", 1L))
+        mockMvc.perform(get("/api/public/1/pre-registrations/form")
+                        .sessionAttr("publicMember.1", new PublicMemberSession(7L, 1L)))
                 .andExpect(status().isOk());
 
         verify(service).form(1L, 7L);
@@ -86,9 +84,8 @@ class PublicPreRegistrationControllerTest {
 
     @Test
     void updatesForTheLoggedInMember() throws Exception {
-        mockMvc.perform(put("/api/public/pre-registrations")
-                        .sessionAttr("memberSeq", 7L)
-                        .sessionAttr("memberConferenceSeq", 1L)
+        mockMvc.perform(put("/api/public/1/pre-registrations")
+                        .sessionAttr("publicMember.1", new PublicMemberSession(7L, 1L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"categorySeq\":3,\"options\":[]}"))
                 .andExpect(status().isOk());
@@ -98,9 +95,8 @@ class PublicPreRegistrationControllerTest {
 
     @Test
     void cancelsForTheLoggedInMember() throws Exception {
-        mockMvc.perform(post("/api/public/pre-registrations/cancel")
-                        .sessionAttr("memberSeq", 7L)
-                        .sessionAttr("memberConferenceSeq", 1L))
+        mockMvc.perform(post("/api/public/1/pre-registrations/cancel")
+                        .sessionAttr("publicMember.1", new PublicMemberSession(7L, 1L)))
                 .andExpect(status().isNoContent());
 
         verify(service).cancel(1L, 7L);
@@ -114,12 +110,20 @@ class PublicPreRegistrationControllerTest {
         resolver.setCharacterEncoding("UTF-8");
         SpringTemplateEngine engine = new SpringTemplateEngine();
         engine.setTemplateResolver(resolver);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("public-ui");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+        engine.setTemplateEngineMessageSource(messages);
+        var site = new com.bjworld21.congress.publicsite.PublicSiteContext(1L, "apdrc8", "en", java.util.List.of("en", "ko"), "/apdrc8/en", "/api/public/1");
 
-        String html = engine.process("public/pages/online-registration", new Context());
+        Context context = new Context(java.util.Locale.ENGLISH);
+        context.setVariable("siteContext", site);
+        String html = engine.process("public/pages/online-registration", context);
 
         assertThat(html).contains(
                 "id=\"public-registration-form\"",
-                "/api/public/pre-registrations",
+                "/api/public/1/pre-registrations",
                 "id=\"registration-category\"",
                 "data-registration-categories",
                 "name=\"paymentMethod\"",

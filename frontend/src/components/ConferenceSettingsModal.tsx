@@ -17,6 +17,9 @@ import { RegistrationOptionPanel } from './RegistrationOptionPanel';
 
 export interface ConferenceSettings {
     seq?: number | null;
+    sitePath?: string | null;
+    defaultLanguage?: string | null;
+    supportedLanguages?: string[];
     eventName?: string | null;
     eventStartDate?: string | null;
     eventEndDate?: string | null;
@@ -92,6 +95,10 @@ const normalizeCodeInput = (value: string) => value
 export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }: ConferenceSettingsModalProps) => {
     const confirm = useConfirm();
     const onNotifyRef = useRef(onNotify);
+    const [sitePath, setSitePath] = useState(settings?.sitePath ?? '');
+    const [supportedLanguages, setSupportedLanguages] = useState(settings?.supportedLanguages?.length ? settings.supportedLanguages : ['ko', 'en']);
+    const [defaultLanguage, setDefaultLanguage] = useState(settings?.defaultLanguage ?? 'en');
+    const [newLanguage, setNewLanguage] = useState('');
     const [eventName, setEventName] = useState(settings?.eventName ?? '');
     const [eventStartDate, setEventStartDate] = useState(settings?.eventStartDate ?? '');
     const [eventEndDate, setEventEndDate] = useState(settings?.eventEndDate ?? '');
@@ -194,6 +201,11 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
             onNotify('error', '학회명을 입력해 주세요.');
             return;
         }
+        if (!sitePath.trim() || !supportedLanguages.length || !supportedLanguages.includes(defaultLanguage)) {
+            setActiveTab('settings');
+            onNotify('error', '학회 경로, 지원 언어와 기본 언어를 확인해 주세요.');
+            return;
+        }
         if (feeRows.length === 0) {
             setActiveTab('fees');
             onNotify('error', '등록 구분을 한 개 이상 입력해 주세요.');
@@ -219,6 +231,7 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
                     method: isUpdating ? 'PUT' : 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        sitePath: sitePath.trim(), defaultLanguage, supportedLanguages,
                         eventName: eventName.trim(),
                         eventStartDate: eventStartDate || null,
                         eventEndDate: eventEndDate || null,
@@ -303,6 +316,41 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
                                 <input value={venueAddress} onChange={(event) => setVenueAddress(event.target.value)} className={`${inputClassName} pl-9`} placeholder="행사장 주소" maxLength={500} />
                             </div>
                         </Field>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="학회 경로" required>
+                            <input value={sitePath} onChange={event => setSitePath(event.target.value.toLowerCase())} className={inputClassName} placeholder="apdrc8" maxLength={100} pattern="[a-z0-9]+((-|_)[a-z0-9]+)*" required />
+                            <p className="mt-1 text-xs font-normal text-slate-500 dark:text-slate-400">여러 학회 운영 시 사용자 주소의 첫 경로로 사용합니다. 영문 소문자, 숫자, 하이픈(-), 밑줄(_)을 사용할 수 있습니다.</p>
+                        </Field>
+                        <Field label="기본 언어" required>
+                            <select value={defaultLanguage} onChange={event => setDefaultLanguage(event.target.value)} className={inputClassName}>
+                                {supportedLanguages.map(code => <option key={code} value={code}>{languageLabel(code)}</option>)}
+                            </select>
+                        </Field>
+                        <div className="space-y-3 sm:col-span-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">지원 언어</span>
+                            <div className="flex flex-wrap gap-3">{Array.from(new Set(['ko', 'en', ...supportedLanguages])).map(code => <label key={code} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                                <input type="checkbox" checked={supportedLanguages.includes(code)} className="h-5 w-5" onChange={event => {
+                                    const next = event.target.checked ? [...supportedLanguages, code] : supportedLanguages.filter(value => value !== code);
+                                    if (!next.length) { onNotify('error', '지원 언어는 한 개 이상 필요합니다.'); return; }
+                                    setSupportedLanguages(next);
+                                    if (!next.includes(defaultLanguage)) setDefaultLanguage(next[0]);
+                                }} />{languageLabel(code)}
+                            </label>)}</div>
+                            <div className="flex gap-2">
+                                <input aria-label="추가할 언어 코드" value={newLanguage} onChange={event => setNewLanguage(event.target.value)} placeholder="추가 언어 코드 (예: ja, zh-Hans)" maxLength={35} className={inputClassName} />
+                                <button type="button" className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900" onClick={() => {
+                                    try {
+                                        if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(newLanguage.trim())) throw new Error();
+                                        const code = Intl.getCanonicalLocales(newLanguage.trim())[0];
+                                        setSupportedLanguages(previous => Array.from(new Set([...previous, code])));
+                                        setNewLanguage('');
+                                    } catch { onNotify('error', '올바른 언어 코드를 입력해 주세요.'); }
+                                }}>언어 추가</button>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">언어가 하나면 언어 경로를 생략하고, 두 개 이상이면 /ko/, /en/처럼 구분합니다. 추가 언어의 메뉴 본문은 별도로 작성해 주세요.</p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -477,3 +525,5 @@ const FeeInput = ({ currency, symbol, value, disabled, label, onChange }: FeeInp
         </div>
     </label>
 );
+
+function languageLabel(code: string) { return code === 'ko' ? '국문 (ko)' : code === 'en' ? '영문 (en)' : code; }

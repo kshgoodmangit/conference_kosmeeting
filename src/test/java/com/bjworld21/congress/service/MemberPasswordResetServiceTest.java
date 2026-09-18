@@ -36,11 +36,14 @@ class MemberPasswordResetServiceTest {
     private final MemberPasswordResetProperties properties = new MemberPasswordResetProperties();
     private MemberPasswordResetService service;
 
+    @org.junit.jupiter.api.AfterEach
+    void clearContext() { org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes(); }
+
     @BeforeEach
     void setUp() {
         var personalData = new PersonalDataProperties();
         personalData.setDbEncString("test-only-key");
-        when(conferences.getLatestConferenceSeq()).thenReturn(7L);
+        com.bjworld21.congress.publicsite.PublicSiteTestContext.bind(7L);
         when(conferences.getSettings(7L)).thenReturn(ConferenceSettingsResponse.builder().eventName("APDRC8").build());
         when(transactionManager.getTransaction(any())).thenAnswer(invocation -> new SimpleTransactionStatus());
         when(tokens.takeLimit(anyString(), any(), anyInt())).thenReturn(1);
@@ -54,16 +57,18 @@ class MemberPasswordResetServiceTest {
                 .thenReturn(Member.builder().seq(11L).password("existing-bcrypt").build());
         service.requestReset(" Member@Example.com ", "192.0.2.1");
         verify(tokens, never()).lockMemberByEmail(anyLong(), anyString(), anyString());
-        verify(mail, never()).sendResetLink(anyString(), anyString(), anyString(), anyLong());
+        verify(mail, never()).sendResetLink(anyString(), anyString(), anyString(), anyLong(), anyString());
+        // The request has ended before the asynchronous email task runs.
+        org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
         runQueuedTask();
 
         var stored = ArgumentCaptor.forClass(MemberPasswordResetToken.class);
         var link = ArgumentCaptor.forClass(String.class);
         verify(tokens).insert(stored.capture());
-        verify(mail).sendResetLink(eq("member@example.com"), eq("APDRC8"), link.capture(), eq(30L));
+        verify(mail).sendResetLink(eq("member@example.com"), eq("APDRC8"), link.capture(), eq(30L), eq("en"));
         String raw = link.getValue().split("#token=")[1];
         assertThat(raw).matches("[A-Za-z0-9_-]{43}");
-        assertThat(link.getValue()).startsWith("http://localhost:8080/reset-password#token=");
+        assertThat(link.getValue()).startsWith("http://localhost:8080/apdrc8/en/reset-password#token=");
         assertThat(stored.getValue().getTokenHash()).isEqualTo(MemberCredentialFingerprint.hash(raw)).isNotEqualTo(raw);
         assertThat(stored.getValue().getExpiresAt()).isEqualTo(NOW.plusMinutes(30));
         assertThat(stored.getValue().getCredentialFingerprint()).isEqualTo(MemberCredentialFingerprint.hash("existing-bcrypt"));
@@ -76,7 +81,7 @@ class MemberPasswordResetServiceTest {
         service.requestReset("unknown@example.com", "192.0.2.1");
         runQueuedTask();
         verify(tokens, never()).insert(any());
-        verify(mail, never()).sendResetLink(anyString(), anyString(), anyString(), anyLong());
+        verify(mail, never()).sendResetLink(anyString(), anyString(), anyString(), anyLong(), anyString());
     }
 
     @Test
@@ -94,7 +99,7 @@ class MemberPasswordResetServiceTest {
         when(tokens.lockMemberByEmail(anyLong(), anyString(), anyString()))
                 .thenReturn(Member.builder().seq(11L).password("existing").build());
         doThrow(new jakarta.mail.MessagingException("simulated failure")).when(mail)
-                .sendResetLink(anyString(), anyString(), anyString(), anyLong());
+                .sendResetLink(anyString(), anyString(), anyString(), anyLong(), anyString());
         service.requestReset("member@example.com", "192.0.2.1");
         runQueuedTask();
         var stored = ArgumentCaptor.forClass(MemberPasswordResetToken.class);
@@ -215,7 +220,7 @@ class MemberPasswordResetServiceTest {
 
     @Test
     void currentConferenceAlwaysScopesTokenLookup() {
-        when(conferences.getLatestConferenceSeq()).thenReturn(8L);
+        com.bjworld21.congress.publicsite.PublicSiteTestContext.bind(8L);
         assertThatThrownBy(() -> service.validateToken(RAW_TOKEN, "192.0.2.1"))
                 .isInstanceOf(MemberPasswordResetService.InvalidTokenException.class);
         verify(tokens).find(8L, HASH);

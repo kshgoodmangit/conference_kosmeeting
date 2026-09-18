@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Conferences · 학회 안내</title>
+    <link rel="stylesheet" href="/public/css/bootstrap.css">
+</head>
+<body>
+<main class="container py-5">
+    <h1>Conferences <small>학회 안내</small></h1>
+    <p>Select a conference. 방문할 학회를 선택해 주세요.</p>
+    <ul class="list-group" th:if="${!conferences.isEmpty()}">
+        <li class="list-group-item" th:each="conference : ${conferences}">
+            <a th:href="@{/{sitePath}/(sitePath=${conference.sitePath})}" th:text="${conference.eventName}">Conference</a>
+        </li>
+    </ul>
+    <p th:if="${conferences.isEmpty()}">No conferences are available. 등록된 학회가 없습니다.</p>
+</main>
+</body>
+</html>

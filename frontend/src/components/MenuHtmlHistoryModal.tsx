@@ -33,6 +33,7 @@ export interface RestoredMenuHtml {
     htmlRevisionNo: number;
 }
 interface Props {
+    language: string;
     menuSeq: number;
     menuName: string;
     canRestore: () => boolean;
@@ -59,7 +60,7 @@ async function readResponse<T>(response: Response): Promise<T> {
     return response.json() as Promise<T>;
 }
 
-export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, onRestored, onNotify }: Props) {
+export function MenuHtmlHistoryModal({ menuSeq, menuName, language, canRestore, onClose, onRestored, onNotify }: Props) {
     const confirm = useConfirm();
     const dialogRef = useRef<HTMLDivElement>(null);
     const callbacks = useRef({ onClose, onRestored, onNotify, canRestore });
@@ -89,7 +90,7 @@ export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, o
         const abort = new AbortController();
         void (async () => {
             try {
-                const data = await readResponse<HistoryPage>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories?page=${page}&size=20`, { signal: abort.signal }));
+                const data = await readResponse<HistoryPage>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories?language=${encodeURIComponent(language)}&page=${page}&size=20`, { signal: abort.signal }));
                 if (abort.signal.aborted) return;
                 setResult(data);
                 setSelectedSeq(data.items[0]?.seq ?? null);
@@ -104,14 +105,14 @@ export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, o
             }
         })();
         return () => abort.abort();
-    }, [menuSeq, page, retry]);
+    }, [menuSeq, language, page, retry]);
 
     useEffect(() => {
         if (selectedSeq == null) return;
         const abort = new AbortController();
         void (async () => {
             try {
-                const data = await readResponse<HistoryDetail>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories/${selectedSeq}`, { signal: abort.signal }));
+                const data = await readResponse<HistoryDetail>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories/${selectedSeq}?language=${encodeURIComponent(language)}`, { signal: abort.signal }));
                 if (!abort.signal.aborted) setDetail(data);
             } catch (error) {
                 if (!abort.signal.aborted) callbacks.current.onNotify('error', error instanceof Error ? error.message : '이력 내용을 불러오지 못했습니다.');
@@ -120,7 +121,7 @@ export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, o
             }
         })();
         return () => abort.abort();
-    }, [menuSeq, selectedSeq, retry]);
+    }, [menuSeq, language, selectedSeq, retry]);
 
     const close = () => { if (!busyRef.current) callbacks.current.onClose(); };
     const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -146,7 +147,7 @@ export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, o
                 tone: 'danger'
             });
             if (!accepted || !callbacks.current.canRestore()) return;
-            const restored = await readResponse<RestoredMenuHtml>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories/${detail.history.seq}/restore`, {
+            const restored = await readResponse<RestoredMenuHtml>(await fetch(`/api/admin/menu-settings/${menuSeq}/html-histories/${detail.history.seq}/restore?language=${encodeURIComponent(language)}`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changeMemo: memo })
             }));
             callbacks.current.onNotify('success', `메뉴 HTML을 반영했습니다. 현재 v${restored.htmlRevisionNo}입니다.`);
@@ -168,7 +169,7 @@ export function MenuHtmlHistoryModal({ menuSeq, menuName, canRestore, onClose, o
     return <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/60" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
         <DraggableModal ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="menu-history-title" tabIndex={-1} onKeyDown={keyDown} className="flex h-full w-full max-w-none flex-col overflow-hidden bg-white text-slate-900 shadow-2xl outline-none dark:bg-slate-950 dark:text-slate-50">
             <div data-modal-drag-handle className="flex shrink-0 cursor-move select-none touch-none items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-                <div><h2 id="menu-history-title" className="flex items-center gap-2 text-base font-bold"><History className="h-4 w-4" />메뉴 HTML 변경 이력</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{menuName} · HTML만 복원하며 이미지·파일은 복원하지 않습니다.</p></div>
+                <div><h2 id="menu-history-title" className="flex items-center gap-2 text-base font-bold"><History className="h-4 w-4" />메뉴 HTML 변경 이력</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{menuName} · {language} · HTML만 복원하며 이미지·파일은 복원하지 않습니다.</p></div>
                 <button type="button" onClick={close} disabled={restoring} aria-label="이력 닫기" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800"><X className="h-5 w-5" /></button>
             </div>
             <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)]">

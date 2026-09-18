@@ -1,7 +1,7 @@
 (() => {
     'use strict';
     if (window.congressCookieConsent || location.pathname.startsWith('/admin')) return;
-    const KEY = 'conference.cookieConsent';
+    const KEY = window.PublicSite.storageKey('cookieConsent');
     const VERSION = 1;
     const banner = document.getElementById('cookie-banner');
     const dialog = document.getElementById('cookie-preferences');
@@ -34,15 +34,15 @@
             store.removeItem(oldKey);
         } catch { /* Do not enable analytics if migration cannot persist consent. */ }
     };
-    migrate('localStorage', 'congress.cookieConsent', KEY, valid);
+    // Consent is independent for each conference; do not copy another site's choice.
     let choice = read();
     if (choice?.analytics && !browserOptOut()) {
-        migrate('localStorage', 'congress.analytics.visitor', 'conference.analytics.visitor');
-        migrate('sessionStorage', 'congress.analytics.session', 'conference.analytics.session');
+        migrate('localStorage', 'congress.analytics.visitor', window.PublicSite.storageKey('analytics.visitor'));
+        migrate('sessionStorage', 'congress.analytics.session', window.PublicSite.storageKey('analytics.session'));
     }
     const clearAnalytics = () => {
-        try { localStorage.removeItem('conference.analytics.visitor'); } catch { /* Storage unavailable. */ }
-        try { sessionStorage.removeItem('conference.analytics.session'); } catch { /* Storage unavailable. */ }
+        try { localStorage.removeItem(window.PublicSite.storageKey('analytics.visitor')); } catch { /* Storage unavailable. */ }
+        try { sessionStorage.removeItem(window.PublicSite.storageKey('analytics.session')); } catch { /* Storage unavailable. */ }
         try { localStorage.removeItem('congress.analytics.visitor'); } catch { /* Legacy storage unavailable. */ }
         try { sessionStorage.removeItem('congress.analytics.session'); } catch { /* Legacy storage unavailable. */ }
     };
@@ -81,7 +81,7 @@
         update();
         // Preserve the viewport when moving focus to the footer settings button.
         if (banner.contains(document.activeElement)) settings[0]?.focus({ preventScroll: true });
-        status.textContent = persisted ? 'Cookie preferences saved.' : 'Cookie preferences applied for this page. Your browser could not save them for future visits.';
+        status.textContent = persisted ? window.PublicSite.t('Cookie preferences saved.') : window.PublicSite.t('Cookie preferences applied for this page. Your browser could not save them for future visits.');
     };
     settings.forEach(button => {
         button.hidden = false;

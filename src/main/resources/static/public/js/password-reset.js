@@ -21,11 +21,11 @@
                 body: JSON.stringify(data)
             });
             if (response.status === 403 && response.headers.get('X-CSRF-ERROR') === 'true') {
-                throw new Error('Your session has expired. Please reload this page and try again.');
+                throw new Error(window.PublicSite.t('Your session has expired. Please reload this page and try again.'));
             }
-            const text = await response.text();
+            const text = await window.PublicSite.responseMessage(response);
             if (!response.ok) {
-                const error = new Error(text || 'The request could not be completed. Please try again.');
+                const error = new Error(text || window.PublicSite.t('The request could not be completed. Please try again.'));
                 error.status = response.status;
                 throw error;
             }
@@ -35,8 +35,8 @@
         }
     };
     const errorMessage = error => error.name === 'AbortError'
-        ? 'The request timed out. Please check your email or try again later.'
-        : error instanceof TypeError ? 'Unable to connect. Please check your connection and try again.' : error.message;
+        ? window.PublicSite.t('The request timed out. Please check your email or try again later.')
+        : error instanceof TypeError ? window.PublicSite.t('Unable to connect. Please check your connection and try again.') : error.message;
 
     if (requestForm instanceof HTMLFormElement) {
         const email = requestForm.querySelector('#recovery-email');
@@ -50,7 +50,7 @@
             if (busy || Date.now() < nextRequestAt || !requestForm.reportValidity()) return;
             busy = true;
             submit.disabled = true;
-            submit.textContent = 'Sending...';
+            submit.textContent = window.PublicSite.t('Sending...');
             requestForm.setAttribute('aria-busy', 'true');
             try {
                 const message = await post(requestForm, requestForm.action, {email: email.value});
@@ -61,7 +61,7 @@
             } finally {
                 busy = false;
                 requestForm.removeAttribute('aria-busy');
-                submit.textContent = 'Send Reset Link';
+                submit.textContent = window.PublicSite.t('Send Reset Link');
                 submit.disabled = Date.now() < nextRequestAt;
                 if (submit.disabled) setTimeout(() => { submit.disabled = false; }, nextRequestAt - Date.now());
             }
@@ -88,9 +88,9 @@
             showStatus(status, message, true);
         };
         if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
-            invalidLink('This reset link is invalid or has expired. Please request a new link.');
+            invalidLink(window.PublicSite.t('This reset link is invalid or has expired. Please request a new link.'));
         } else {
-            post(resetForm, '/api/public/members/password-reset/validate', {token})
+            post(resetForm, window.PublicSite.apiUrl('/api/public/members/password-reset/validate'), {token})
                 .then(() => {
                     ready = true;
                     fields.disabled = false;
@@ -108,13 +108,13 @@
             event.preventDefault();
             if (!ready || busy) return;
             password.setCustomValidity(password.value !== password.value.trim()
-                ? 'Do not use spaces at the beginning or end.'
-                : password.value.length < 8 || password.value.length > 16 ? 'Use 8-16 characters.' : '');
-            confirmation.setCustomValidity(password.value !== confirmation.value ? 'Passwords do not match.' : '');
+                ? window.PublicSite.t('Do not use spaces at the beginning or end.')
+                : password.value.length < 8 || password.value.length > 16 ? window.PublicSite.t('Use 8-16 characters.') : '');
+            confirmation.setCustomValidity(password.value !== confirmation.value ? window.PublicSite.t('Passwords do not match.') : '');
             if (!resetForm.reportValidity()) return;
             busy = true;
             submit.disabled = true;
-            submit.textContent = 'Saving...';
+            submit.textContent = window.PublicSite.t('Saving...');
             resetForm.setAttribute('aria-busy', 'true');
             try {
                 await post(resetForm, resetForm.action, {token, password: password.value, passwordConfirm: confirmation.value});
@@ -125,14 +125,14 @@
                 confirmation.value = '';
                 fields.disabled = true;
                 fields.hidden = true;
-                showStatus(status, 'Your password has been reset. Please use Back to Login to sign in with your new password.');
+                showStatus(status, window.PublicSite.t('Your password has been reset. Please use Back to Login to sign in with your new password.'));
             } catch (error) {
                 if (error.status === 400) invalidLink(errorMessage(error));
                 else showStatus(status, errorMessage(error), true);
             } finally {
                 busy = false;
                 submit.disabled = !ready;
-                submit.textContent = 'Save New Password';
+                submit.textContent = window.PublicSite.t('Save New Password');
                 resetForm.removeAttribute('aria-busy');
             }
         });

@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.security.ClientIpResolver;
 import com.bjworld21.congress.service.MemberEmailVerificationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/public/members/email-verification")
+@RequestMapping("/api/public/{conferenceSeq}/members/email-verification")
 @IpAccessExempt
 public class PublicMemberEmailVerificationController {
     private final MemberEmailVerificationService service;

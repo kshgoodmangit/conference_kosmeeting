@@ -44,11 +44,11 @@ class PublicPopupControllerTest {
     }
 
     @BeforeEach
-    void setup() { mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build(); }
+    void setup() { mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build(); }
 
     @Test
     void guestCanSaveAnHttpOnlyCookieUntilKoreanMidnight() throws Exception {
-        mvc.perform(post("/api/popups/dismiss-today").secure(true).with(csrf()))
+        mvc.perform(post("/api/public/7/popups/dismiss-today").secure(true).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(cookie().value("conference_popups_hidden_7", "2026-09-15"))
                 .andExpect(cookie().maxAge("conference_popups_hidden_7", 30))
@@ -61,7 +61,7 @@ class PublicPopupControllerTest {
 
     @Test
     void preferenceMutationRequiresCsrf() throws Exception {
-        mvc.perform(post("/api/popups/dismiss-today"))
+        mvc.perform(post("/api/public/7/popups/dismiss-today"))
                 .andExpect(status().isForbidden()).andExpect(header().doesNotExist("Set-Cookie"));
     }
 }

@@ -30,13 +30,19 @@ public class MemberPasswordResetMailService {
 
     public void sendResetLink(String email, String eventName, String link, long minutes)
             throws MessagingException, UnsupportedEncodingException {
+        sendResetLink(email, eventName, link, minutes, "en");
+    }
+
+    public void sendResetLink(String email, String eventName, String link, long minutes, String language)
+            throws MessagingException, UnsupportedEncodingException {
         checkAvailable();
         String safeName = eventName == null || eventName.isBlank() ? "Conference" : eventName.replaceAll("[\\r\\n]", " ");
         var message = sender.createMimeMessage();
         var helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED, StandardCharsets.UTF_8.name());
         helper.setFrom(properties.getFromAddress(), safeName);
         helper.setTo(email);
-        helper.setSubject("[" + safeName + "] Reset your password");
+        boolean korean = "ko".equals(language);
+        helper.setSubject("[" + safeName + "] " + (korean ? "비밀번호 재설정" : "Reset your password"));
         String plain = "Reset your " + safeName + " password\n\nOpen this link to choose a new password:\n"
                 + link + "\n\nThis link expires in " + minutes + " minutes and can be used once."
                 + "\nIf you did not request this, you can ignore this email. Your password has not changed.";
@@ -51,6 +57,15 @@ public class MemberPasswordResetMailService {
                   <p>If you did not request this, you can ignore this email. Your password has not changed.</p>
                 </div>
                 """.formatted(HtmlUtils.htmlEscape(safeName), HtmlUtils.htmlEscape(link), minutes, HtmlUtils.htmlEscape(link));
+        if (korean) {
+            plain = safeName + " 비밀번호 재설정\n\n아래 링크에서 새 비밀번호를 설정하세요.\n" + link
+                    + "\n\n이 링크는 " + minutes + "분 동안 유효하며 한 번만 사용할 수 있습니다."
+                    + "\n요청하지 않았다면 이 메일을 무시하셔도 됩니다. 비밀번호는 변경되지 않았습니다.";
+            html = "<div><h2>" + HtmlUtils.htmlEscape(safeName) + " 비밀번호 재설정</h2><p><a href=\""
+                    + HtmlUtils.htmlEscape(link) + "\">비밀번호 재설정</a></p><p>이 링크는 " + minutes
+                    + "분 동안 유효하며 한 번만 사용할 수 있습니다.</p>"
+                    + "<p>요청하지 않았다면 이 메일을 무시하셔도 됩니다. 비밀번호는 변경되지 않았습니다.</p></div>";
+        }
         helper.setText(plain, html);
         sender.send(message);
     }

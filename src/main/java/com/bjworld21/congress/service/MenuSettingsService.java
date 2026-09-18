@@ -23,6 +23,10 @@ import java.util.Set;
 public class MenuSettingsService {
     private final MenuSettingsRepository menuSettingsRepository;
     private final MenuHtmlHistoryService historyService;
+    private MenuTranslationService translationService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTranslationService(MenuTranslationService service) { this.translationService=service; }
 
     public MenuSettingsService(MenuSettingsRepository menuSettingsRepository, MenuHtmlHistoryService historyService) {
         this.menuSettingsRepository = menuSettingsRepository;
@@ -37,12 +41,30 @@ public class MenuSettingsService {
         return buildMenuTree(menuSettingsRepository.findActiveByScope(conferenceSeq, "user", LocalDate.now()), true);
     }
 
+    public List<MenuSettingsResponse> getMenuTree(Long conferenceSeq, String language) {
+        return buildMenuTree(translationService.localize(conferenceSeq, menuSettingsRepository.findAll(conferenceSeq), language), false);
+    }
+
+    public List<MenuSettingsResponse> getActiveUserMenuTree(Long conferenceSeq, String language) {
+        return buildMenuTree(translationService.localize(conferenceSeq,
+                menuSettingsRepository.findActiveByScope(conferenceSeq, "user", LocalDate.now()), language), true);
+    }
+
     private List<MenuSettingsResponse> buildMenuTree(List<MenuSettings> menus, boolean unwrapConfiguredRoot) {
         Map<String, MenuSettingsResponse> nodeMap = new LinkedHashMap<>();
         List<MenuSettingsResponse> roots = new ArrayList<>();
+        Map<String, Long> publicRoutes = new HashMap<>();
 
         for (MenuSettings menu : menus) {
             MenuSettingsResponse response = toResponse(menu);
+            if (unwrapConfiguredRoot && "user".equals(menu.getMenuScope()) && !"link".equals(menu.getMenuType())) {
+                String route = publicMenuRoute(menu);
+                if (route != null && publicRoutes.putIfAbsent(route, menu.getSeq()) != null) {
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Duplicate public menu route: " + route);
+                }
+                response.setRoutePath(route);
+            }
             response.setChildren(new ArrayList<>());
             nodeMap.put(nodeKey(menu.getMenuScope(), menu.getMenuKey()), response);
         }
@@ -56,7 +78,9 @@ public class MenuSettingsService {
 
             MenuSettingsResponse parent = nodeMap.get(nodeKey(menu.getMenuScope(), menu.getParentKey()));
             if (parent == null) {
-                roots.add(node);
+                // Public descendants of a disabled/expired ancestor must remain
+                // unreachable. The admin tree keeps orphan nodes editable.
+                if (!unwrapConfiguredRoot) roots.add(node);
             } else {
                 parent.getChildren().add(node);
             }
@@ -69,10 +93,29 @@ public class MenuSettingsService {
         return roots.stream()
                 .filter(menu -> "root".equals(menu.getMenuKey()))
                 .findFirst()
-                .map(MenuSettingsResponse::getChildren)
+                .map(root -> {
+                    // The configured root is removed from public navigation, so
+                    // retain its authentication requirement in each visible lineage.
+                    if (Boolean.TRUE.equals(root.getAuthRequired())) {
+                        root.getChildren().forEach(child -> child.setAuthRequired(true));
+                    }
+                    return root.getChildren();
+                })
                 .orElseGet(() -> roots.stream()
                         .filter(menu -> !"root".equals(menu.getMenuKey()))
                         .toList());
+    }
+
+    private String publicMenuRoute(MenuSettings menu) {
+        String route = normalizeOptional(menu.getRoutePath());
+        // Older rows stored the parent folder in routePath even though menuPath
+        // already identified the page. Use that stored page name for both public
+        // navigation and page lookup; never infer it from a hard-coded route map.
+        if (route != null && route.matches("/[a-z0-9-]+(?:/[a-z0-9-]+)+/?")
+                && normalizeOptional(menu.getMenuPath()) != null) {
+            return normalizeRoutePath("user", "full", normalizeOptional(menu.getMenuPath()), null, null);
+        }
+        return route;
     }
 
     @Transactional
@@ -99,6 +142,37 @@ public class MenuSettingsService {
             Long adminSeq,
             String changeMemo
     ) {
+        return create(conferenceSeq, menuScope, menuKey, parentKey, menuName, menuPath, menuType, pathType, routePath, boardSeq, linkUrl, targetType, authRequired, navigationVisible, menuHtml, sortOrder, useStartDate, useEndDate, enabled, adminSeq, changeMemo, null);
+    }
+
+    @Transactional
+    public MenuSettingsResponse create(
+            Long conferenceSeq,
+            String menuScope,
+            String menuKey,
+            String parentKey,
+            String menuName,
+            String menuPath,
+            String menuType,
+            String pathType,
+            String routePath,
+            Long boardSeq,
+            String linkUrl,
+            String targetType,
+            Boolean authRequired,
+            Boolean navigationVisible,
+            String menuHtml,
+            Integer sortOrder,
+            LocalDate useStartDate,
+            LocalDate useEndDate,
+            Boolean enabled,
+            Long adminSeq,
+            String changeMemo,
+            String language
+    ) {
+        boolean localized = translationService != null && "user".equals(menuScope);
+        if (localized && language == null) language = "en";
+        if (localized) translationService.requireLanguage(conferenceSeq, language);
         String normalizedScope = normalizeScope(menuScope);
         String normalizedKey = normalizeRequired(menuKey, "메뉴 키는 필수입니다.");
         String normalizedParentKey = normalizeOptional(parentKey);
@@ -125,6 +199,7 @@ public class MenuSettingsService {
         int depth = resolveStoredDepth(parent);
         validateMaxDepth(depth);
         String normalizedRoutePath = normalizeRoutePath(normalizedScope, normalizedPathType, normalizedMenuPath, routePath, normalizedLinkUrl);
+        if (localized) translationService.validatePagePath(conferenceSeq, normalizedRoutePath);
         validateMenuTypeDependencies(normalizedMenuType, boardSeq, normalizedLinkUrl);
         validateRoutePathDuplicate(conferenceSeq, normalizedScope, normalizedRoutePath, null);
 
@@ -133,7 +208,7 @@ public class MenuSettingsService {
                 .menuScope(normalizedScope)
                 .menuKey(normalizedKey)
                 .parentKey(normalizedParentKey)
-                .menuName(normalizedName)
+                .menuName(localized && !"en".equals(language) ? normalizedKey : normalizedName)
                 .menuPath(normalizedMenuPath != null ? normalizedMenuPath : normalizedKey)
                 .menuType(normalizedMenuType)
                 .pathType(normalizedPathType)
@@ -144,8 +219,8 @@ public class MenuSettingsService {
                 .targetType(normalizedTargetType)
                 .authRequired(authRequired != null ? authRequired : Boolean.FALSE)
                 .navigationVisible(navigationVisible != null ? navigationVisible : Boolean.TRUE)
-                .menuHtml(normalizedMenuHtml)
-                .htmlRevisionNo(1L)
+                .menuHtml(localized ? null : normalizedMenuHtml)
+                .htmlRevisionNo(localized ? 0L : 1L)
                 .sortOrder(sortOrder != null ? sortOrder : 0)
                 .useStartDate(useStartDate)
                 .useEndDate(useEndDate)
@@ -153,7 +228,10 @@ public class MenuSettingsService {
                 .build();
 
         menuSettingsRepository.insert(menu);
-        historyService.record(menu, "INITIAL", null, changeMemo, adminSeq);
+        if (localized) {
+            translationService.save(conferenceSeq, menu.getSeq(), language, menuName, menuHtml, true, changeMemo, adminSeq);
+            translationService.localize(conferenceSeq, List.of(menu), language);
+        } else historyService.record(menu, "INITIAL", null, changeMemo, adminSeq);
         return toResponse(menu);
     }
 
@@ -179,18 +257,47 @@ public class MenuSettingsService {
             String changeMemo,
             boolean menuHtmlChanged
     ) {
+        return update(conferenceSeq, seq, menuName, menuPath, menuType, pathType, routePath, boardSeq, linkUrl, targetType, authRequired, navigationVisible, menuHtml, useStartDate, useEndDate, enabled, adminSeq, changeMemo, menuHtmlChanged, null);
+    }
+
+    @Transactional
+    public MenuSettingsResponse update(
+            Long conferenceSeq,
+            Long seq,
+            String menuName,
+            String menuPath,
+            String menuType,
+            String pathType,
+            String routePath,
+            Long boardSeq,
+            String linkUrl,
+            String targetType,
+            Boolean authRequired,
+            Boolean navigationVisible,
+            String menuHtml,
+            LocalDate useStartDate,
+            LocalDate useEndDate,
+            Boolean enabled,
+            Long adminSeq,
+            String changeMemo,
+            boolean menuHtmlChanged,
+            String language
+    ) {
         MenuSettings menu = menuSettingsRepository.findBySeqForUpdate(conferenceSeq, seq);
         if (menu == null) {
             throw new IllegalArgumentException("존재하지 않는 메뉴입니다.");
         }
 
-        String normalizedName = normalizeRequired(menuName, "메뉴명은 필수입니다.");
+        boolean localized = translationService != null && "user".equals(menu.getMenuScope());
+        if (localized && language == null) language = "en";
+        if (localized) translationService.requireLanguage(conferenceSeq, language);
+        String normalizedName = localized ? menu.getMenuName() : normalizeRequired(menuName, "메뉴명은 필수입니다.");
         String normalizedMenuPath = normalizeOptional(menuPath);
         String normalizedMenuType = normalizeMenuType(menuType);
         String normalizedPathType = resolvePathType(normalizedMenuType);
         String normalizedTargetType = normalizeTargetType(targetType);
         String normalizedLinkUrl = normalizeLinkUrl(linkUrl);
-        String normalizedMenuHtml = menuHtmlChanged ? normalizeOptional(menuHtml) : menu.getMenuHtml();
+        String normalizedMenuHtml = !localized && menuHtmlChanged ? normalizeOptional(menuHtml) : menu.getMenuHtml();
         boolean htmlChanged = !Objects.equals(normalizeOptional(menu.getMenuHtml()), normalizeOptional(normalizedMenuHtml));
         MenuHtmlHistoryService.normalizeMemo(changeMemo);
         validateUsePeriod(useStartDate, useEndDate);
@@ -202,6 +309,7 @@ public class MenuSettingsService {
         int depth = resolveStoredDepth(parent);
         validateMaxDepth(depth);
         String normalizedRoutePath = normalizeRoutePath(menu.getMenuScope(), normalizedPathType, normalizedMenuPath, routePath, normalizedLinkUrl);
+        if (localized) translationService.validatePagePath(conferenceSeq, normalizedRoutePath);
         validateRoutePathDuplicate(conferenceSeq, menu.getMenuScope(), normalizedRoutePath, menu.getSeq());
 
         menu.setMenuName(normalizedName);
@@ -224,7 +332,10 @@ public class MenuSettingsService {
         menu.setUseEndDate(useEndDate);
         menu.setEnabled(enabled != null ? enabled : Boolean.FALSE);
         menuSettingsRepository.update(menu);
-
+        if (localized) {
+            translationService.save(conferenceSeq, seq, language, menuName, menuHtml, menuHtmlChanged, changeMemo, adminSeq);
+            translationService.localize(conferenceSeq, List.of(menu), language);
+        }
         return toResponse(menu);
     }
 
@@ -259,9 +370,10 @@ public class MenuSettingsService {
             throw new IllegalArgumentException("하위 메뉴가 있는 메뉴는 삭제할 수 없습니다.");
         }
 
-        if (historyService.hasHistory(seq)) {
+        if (historyService.hasHistory(seq) || (translationService != null && translationService.hasHistory(seq))) {
             throw new IllegalArgumentException("HTML 이력이 있는 메뉴는 삭제할 수 없습니다. 사용 여부를 해제해 주세요.");
         }
+        if (translationService != null) translationService.deleteForMenu(seq);
         menuSettingsRepository.deleteBySeq(conferenceSeq, seq);
     }
 
@@ -449,6 +561,13 @@ public class MenuSettingsService {
             normalizedRoutePath = "/" + normalizedRoutePath;
         }
 
+        if ("user".equals(menuScope) && !"/".equals(normalizedRoutePath)
+                && !normalizedRoutePath.matches("/[a-z0-9]+(?:-[a-z0-9]+)*")) {
+            throw new IllegalArgumentException("사용자 페이지 경로는 /page-name 형식으로 입력해 주세요. 학회와 언어 경로는 자동으로 붙습니다.");
+        }
+        if ("user".equals(menuScope) && (normalizedRoutePath.matches("/[a-z]{2}(?:-[A-Za-z0-9]{2,8})*")
+                || Set.of("/admin", "/api", "/public", "/assets", "/vendor", "/commoncode", "/error", "/actuator", "/webjars").contains(normalizedRoutePath)))
+            throw new IllegalArgumentException("시스템 예약 경로는 메뉴 주소로 사용할 수 없습니다.");
         return normalizedRoutePath;
     }
 
@@ -529,6 +648,8 @@ public class MenuSettingsService {
     private MenuSettingsResponse toResponse(MenuSettings menu) {
         return MenuSettingsResponse.builder()
                 .seq(menu.getSeq())
+                .languageCode(menu.getLanguageCode())
+                .translationReady(menu.getTranslationReady())
                 .menuScope(menu.getMenuScope())
                 .menuKey(menu.getMenuKey())
                 .parentKey(menu.getParentKey())

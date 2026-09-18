@@ -19,8 +19,8 @@ public class AnalyticsTestDataService {
     private final Map<Long,Map<String,Object>> jobs=new ConcurrentHashMap<>();
     private final Set<Long> running=ConcurrentHashMap.newKeySet();
     private final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(getClass());
-    static final String[] PATHS={"/","/registration/online-registration","/abstract/abstract-submission",
-            "/program/scientific-program","/program/invited-speakers","/information/notice","/information/faq","/sponsors/sponsor"};
+    static final String[] PATHS={"/","/online-registration","/abstract-submission",
+            "/scientific-program","/invited-speakers","/notice","/faq","/sponsor"};
     static final String[] TITLES={"학술대회 홈","사전등록","초록 제출 안내","학술 프로그램","초청연자","공지사항","자주 묻는 질문","후원 안내"};
     static final String[] COUNTRIES={"KR","KR","KR","KR","KR","KR","US","JP","SG","GB","DE","AU","CN","CA","FR","IN"};
     @Autowired

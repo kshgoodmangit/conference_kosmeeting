@@ -14,6 +14,9 @@ import java.time.LocalDateTime;
 @Builder
 public class ConferenceSettingsResponse {
     private Long seq;
+    private String sitePath;
+    private String defaultLanguage;
+    private java.util.List<String> supportedLanguages;
     private String eventName;
     private LocalDate eventStartDate;
     private LocalDate eventEndDate;

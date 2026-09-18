@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class MenuSettings {
+    private String languageCode;
+    private Boolean translationReady;
     private Long seq;
     private Long conferenceSeq;
     private String menuScope;

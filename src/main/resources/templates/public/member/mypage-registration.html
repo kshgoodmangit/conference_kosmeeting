@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 <div class="member-page" th:fragment="content">
     <div class="container">
-        <h2 class="bbtitle fnb mb-5">My Page</h2>
-        <nav class="member-tabs" aria-label="My Page">
-            <a href="/mypage">My Page Home</a>
-            <a href="/mypage/abstract" aria-current="page">Abstract Submission</a>
-            <a class="is-active" href="/mypage/registration">Registration</a>
+        <h2 class="bbtitle fnb mb-5"><th:block th:text="#{public.ui.my.page.feff30}">My Page</th:block></h2>
+        <nav class="member-tabs" aria-label="My Page" th:aria-label="#{public.ui.my.page.feff30}">
+            <a href="/mypage" th:href="${siteContext != null ? siteContext.pageUrl('/mypage') : '/mypage'}"><th:block th:text="#{public.ui.my.page.home.61ac54}">My Page Home</th:block></a>
+            <a href="/mypage-abstract" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-abstract') : '/mypage-abstract'}" aria-current="page"><th:block th:text="#{public.ui.abstract.submission.8cdd8f}">Abstract Submission</th:block></a>
+            <a class="is-active" href="/mypage-registration" th:href="${siteContext != null ? siteContext.pageUrl('/mypage-registration') : '/mypage-registration'}"><th:block th:text="#{public.ui.registration.b233e7}">Registration</th:block></a>
         </nav>
 
         <section class="member-section member-section--spaced">

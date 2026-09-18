@@ -14,6 +14,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class MenuSettingsResponse {
+    private String languageCode;
+    private Boolean translationReady;
     private Long seq;
     private String menuScope;
     private String menuKey;

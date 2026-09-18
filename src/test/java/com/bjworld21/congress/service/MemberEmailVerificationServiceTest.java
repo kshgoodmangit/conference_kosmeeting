@@ -26,11 +26,14 @@ class MemberEmailVerificationServiceTest {
     private final Instant now = Instant.parse("2026-09-16T00:00:00Z");
     private MemberEmailVerificationService service;
 
+    @org.junit.jupiter.api.AfterEach
+    void clearContext() { org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes(); }
+
     @BeforeEach
     void setup() {
         var properties = new PersonalDataProperties();
         properties.setDbEncString("test-only-key");
-        when(conferences.getLatestConferenceSeq()).thenReturn(7L);
+        com.bjworld21.congress.publicsite.PublicSiteTestContext.bind(7L);
         when(conferences.getSettings(7L)).thenReturn(ConferenceSettingsResponse.builder().eventName("APDRC8").build());
         when(repository.takeLimit(anyString(), any(), any(), anyInt())).thenReturn(1);
         when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
@@ -43,9 +46,9 @@ class MemberEmailVerificationServiceTest {
         var session = new MockHttpSession();
         var result = service.sendCode(" Member@Example.com ", "192.0.2.1", session);
         var code = ArgumentCaptor.forClass(String.class);
-        verify(mail).sendCode(eq("member@example.com"), eq("APDRC8"), code.capture(), eq(10L));
+        verify(mail).sendCode(eq("member@example.com"), eq("APDRC8"), code.capture(), eq(10L), eq("en"));
         assertThat(code.getValue()).matches("[0-9]{6}");
-        var challenge = (MemberEmailVerificationService.Challenge) session.getAttribute(MemberEmailVerificationService.SESSION_KEY);
+        var challenge = (MemberEmailVerificationService.Challenge) session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7);
         assertThat(challenge.email()).isEqualTo("member@example.com");
         assertThat(challenge.conferenceSeq()).isEqualTo(7);
         assertThat(challenge.expiresAt()).isEqualTo(now.plusSeconds(600));
@@ -63,11 +66,11 @@ class MemberEmailVerificationServiceTest {
     @Test
     void failedSmtpInvalidatesPreviousCodeAndDoesNotMarkNewCodeSent() throws Exception {
         var session = new MockHttpSession();
-        session.setAttribute(MemberEmailVerificationService.SESSION_KEY, "old-challenge");
-        doThrow(new IllegalStateException("smtp rejected")).when(mail).sendCode(anyString(), anyString(), anyString(), anyLong());
+        session.setAttribute(MemberEmailVerificationService.SESSION_KEY + 7, "old-challenge");
+        doThrow(new IllegalStateException("smtp rejected")).when(mail).sendCode(anyString(), anyString(), anyString(), anyLong(), anyString());
         assertThatThrownBy(() -> service.sendCode("member@example.com", "192.0.2.1", session))
                 .isInstanceOf(IllegalStateException.class);
-        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY)).isNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7)).isNull();
         verify(transactions).commit(any());
     }
 
@@ -77,8 +80,8 @@ class MemberEmailVerificationServiceTest {
         var session = new MockHttpSession();
         assertThatThrownBy(() -> service.sendCode("member@example.com", "192.0.2.1", session))
                 .isInstanceOf(MemberEmailVerificationService.TooManyRequestsException.class);
-        verify(mail, never()).sendCode(anyString(), anyString(), anyString(), anyLong());
-        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY)).isNull();
+        verify(mail, never()).sendCode(anyString(), anyString(), anyString(), anyLong(), anyString());
+        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7)).isNull();
         verify(transactions).commit(any());
     }
 
@@ -93,18 +96,33 @@ class MemberEmailVerificationServiceTest {
     void resendingReplacesSessionChallenge() throws Exception {
         var session = new MockHttpSession();
         service.sendCode("first@example.com", "192.0.2.1", session);
-        Object first = session.getAttribute(MemberEmailVerificationService.SESSION_KEY);
+        Object first = session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7);
         service.sendCode("second@example.com", "192.0.2.1", session);
-        var second = (MemberEmailVerificationService.Challenge) session.getAttribute(MemberEmailVerificationService.SESSION_KEY);
+        var second = (MemberEmailVerificationService.Challenge) session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7);
         assertThat(second).isNotSameAs(first);
         assertThat(second.email()).isEqualTo("second@example.com");
     }
 
     private MockHttpSession challenge(Instant expiry) {
         var session = new MockHttpSession();
-        session.setAttribute(MemberEmailVerificationService.SESSION_KEY,
+        session.setAttribute(MemberEmailVerificationService.SESSION_KEY + 7,
                 new MemberEmailVerificationService.Challenge(7L, "member@example.com", encoder.encode("123456"), expiry));
         return session;
+    }
+
+    @Test
+    void independentConferenceChallengesAndProofsCoexistInOneBrowser() throws Exception {
+        var session = challenge(now.plusSeconds(600));
+        service.verifyCode("member@example.com", "123456", "192.0.2.1", session);
+        com.bjworld21.congress.publicsite.PublicSiteTestContext.bind(8L);
+        when(conferences.getSettings(8L)).thenReturn(ConferenceSettingsResponse.builder().eventName("APDRC9").build());
+        service.sendCode("second@example.com", "192.0.2.1", session);
+        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY + 7)).isNotNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 8)).isNotNull();
+        assertThatThrownBy(() -> service.completeRegistration(8, "member@example.com", session, () -> "invalid"))
+                .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
+        assertThat(service.completeRegistration(7, "member@example.com", session, () -> "created")).isEqualTo("created");
+        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 8)).isNotNull();
     }
 
     @Test
@@ -113,7 +131,7 @@ class MemberEmailVerificationServiceTest {
         var result = service.verifyCode(" MEMBER@example.com ", "123456", "192.0.2.1", session);
         assertThat(result.existingMember()).isFalse();
         assertThat(result.expiresInSeconds()).isEqualTo(1800);
-        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY)).isNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.SESSION_KEY + 7)).isNull();
         assertThat(service.completeRegistration(7L, "MEMBER@example.com", session, () -> "created")).isEqualTo("created");
         assertThatThrownBy(() -> service.completeRegistration(7L, "member@example.com", session, () -> "duplicate"))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
@@ -129,7 +147,7 @@ class MemberEmailVerificationServiceTest {
                 .isInstanceOf(MemberEmailVerificationService.IncorrectCodeException.class);
         verifyNoInteractions(members);
         assertThat(service.verifyCode("member@example.com", "123456", "192.0.2.1", session).existingMember()).isTrue();
-        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY)).isNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY + 7)).isNull();
         assertThatThrownBy(() -> service.completeRegistration(7L, "member@example.com", session, () -> "created"))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
     }
@@ -157,7 +175,7 @@ class MemberEmailVerificationServiceTest {
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
         assertThatThrownBy(() -> service.verifyCode("member@example.com", "123456", "192.0.2.1", null))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
-        when(conferences.getLatestConferenceSeq()).thenReturn(8L);
+        com.bjworld21.congress.publicsite.PublicSiteTestContext.bind(8L);
         assertThatThrownBy(() -> service.verifyCode("member@example.com", "123456", "192.0.2.1", challenge(now.plusSeconds(600))))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
         verifyNoInteractions(members);
@@ -174,7 +192,7 @@ class MemberEmailVerificationServiceTest {
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
         assertThatThrownBy(() -> service.completeRegistration(7L, "member@example.com", null, create))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
-        session.setAttribute(MemberEmailVerificationService.VERIFIED_KEY,
+        session.setAttribute(MemberEmailVerificationService.VERIFIED_KEY + 7,
                 new MemberEmailVerificationService.VerifiedEmail(7L, "member@example.com", now));
         assertThatThrownBy(() -> service.completeRegistration(7L, "member@example.com", session, create))
                 .isInstanceOf(MemberEmailVerificationService.InvalidCodeException.class);
@@ -186,9 +204,9 @@ class MemberEmailVerificationServiceTest {
         service.verifyCode("member@example.com", "123456", "192.0.2.1", session);
         assertThatThrownBy(() -> service.completeRegistration(7L, "member@example.com", session,
                 () -> { throw new IllegalArgumentException("Invalid name"); })).hasMessage("Invalid name");
-        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY)).isNotNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY + 7)).isNotNull();
         service.sendCode("member@example.com", "192.0.2.1", session);
-        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY)).isNull();
+        assertThat(session.getAttribute(MemberEmailVerificationService.VERIFIED_KEY + 7)).isNull();
     }
 
     @Test

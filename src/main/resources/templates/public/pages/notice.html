@@ -1,6 +1,6 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
 	<div class="notice" th:fragment="content">
 		<div class="container">
 			<table class="w-100 bdtable mb5 aos-init aos-animate"
@@ -20,9 +20,9 @@
 								  th:text="${noticePage.totalCount - ((noticePage.page - 1) * noticePage.size) - noticeStat.index}">
 							</span>
 						</td>
-						<td class="title"><a th:href="@{/information/noticedetail/{seq}(seq=${notice.seq})}" th:text="${notice.title}">Notice title</a>
+						<td class="title"><a th:href="${siteContext.pageUrl('/notice-detail?seq=' + notice.seq)}" th:text="${notice.title}">Notice title</a>
 							<ul class="bdt-info un-style d-block d-lg-none">
-								<li th:text="'Date : ' + ${#temporals.format(noticeDate, 'yyyy-MM-dd')}">Date : 2026-08-28</li>
+								<li th:text="${(language == 'ko' ? '등록일 : ' : 'Date : ') + #temporals.format(noticeDate, 'yyyy-MM-dd')}">Date : 2026-08-28</li>
 							</ul></td>
 
 						<td class="text-center d-none d-lg-table-cell">
@@ -33,26 +33,26 @@
 
 					</tr>
 					<tr th:if="${#lists.isEmpty(noticePage.items)}">
-						<td class="text-center" colspan="5">No notices have been posted.</td>
+						<td class="text-center" colspan="5"><th:block th:text="#{public.ui.no.notices.have.been.posted.875e68}">No notices have been posted.</th:block></td>
 					</tr>
 				</tbody>
 			</table>
-			<nav class="pagination d-flex justify-content-center" aria-label="Notice pagination" th:if="${noticePage.totalPages > 1}">
+			<nav class="pagination d-flex justify-content-center" aria-label="Notice pagination" th:aria-label="#{public.ui.notice.pagination.05b164}" th:if="${noticePage.totalPages > 1}">
 				<ul class="un-style d-flex align-items-center">
 					<li class="pg-arw" th:classappend="${noticePage.page == 1 ? ' d-none' : ''}">
-						<a th:if="${noticePage.page > 1}" th:href="@{/information/notice(page=1)}" aria-label="First page"><img src="/public/img/nav-first.svg"></a>
+						<a th:if="${noticePage.page > 1}" th:href="@{${siteContext.pageUrl('/notice')}(page=1)}" aria-label="First page" th:aria-label="#{public.ui.first.page.49d74b}"><img src="/public/img/nav-first.svg"></a>
 					</li>
 					<li class="pg-arw" th:classappend="${noticePage.page == 1 ? ' d-none' : ''}">
-						<a th:if="${noticePage.page > 1}" th:href="@{/information/notice(page=${noticePage.page - 1})}" aria-label="Previous page"><img src="/public/img/nav-prev.svg"></a>
+						<a th:if="${noticePage.page > 1}" th:href="@{${siteContext.pageUrl('/notice')}(page=${noticePage.page - 1})}" aria-label="Previous page" th:aria-label="#{public.ui.previous.page.81f547}"><img src="/public/img/nav-prev.svg"></a>
 					</li>
 					<li th:each="pageNum : ${#numbers.sequence(1, noticePage.totalPages)}" th:classappend="${pageNum == noticePage.page ? ' active' : ''}">
-						<a th:href="@{/information/notice(page=${pageNum})}" th:text="${pageNum}">1</a>
+						<a th:href="@{${siteContext.pageUrl('/notice')}(page=${pageNum})}" th:text="${pageNum}">1</a>
 					</li>
 					<li class="pg-arw" th:classappend="${noticePage.page == noticePage.totalPages ? ' d-none' : ''}">
-						<a th:if="${noticePage.page < noticePage.totalPages}" th:href="@{/information/notice(page=${noticePage.page + 1})}" aria-label="Next page"><img src="/public/img/nav-next.svg"></a>
+						<a th:if="${noticePage.page < noticePage.totalPages}" th:href="@{${siteContext.pageUrl('/notice')}(page=${noticePage.page + 1})}" aria-label="Next page" th:aria-label="#{public.ui.next.page.4bfc19}"><img src="/public/img/nav-next.svg"></a>
 					</li>
 					<li class="pg-arw" th:classappend="${noticePage.page == noticePage.totalPages ? ' d-none' : ''}">
-						<a th:if="${noticePage.page < noticePage.totalPages}" th:href="@{/information/notice(page=${noticePage.totalPages})}" aria-label="Last page"><img src="/public/img/nav-last.svg"></a>
+						<a th:if="${noticePage.page < noticePage.totalPages}" th:href="@{${siteContext.pageUrl('/notice')}(page=${noticePage.totalPages})}" aria-label="Last page" th:aria-label="#{public.ui.last.page.b01f16}"><img src="/public/img/nav-last.svg"></a>
 					</li>
 				</ul>
 			</nav>

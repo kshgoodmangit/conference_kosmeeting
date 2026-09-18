@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.dto.MemberListResponse;
 import com.bjworld21.congress.dto.MemberRegisterRequest;
 import com.bjworld21.congress.dto.MemberRegisterResponse;
@@ -20,7 +21,7 @@ import java.util.regex.Pattern;
 
 /** Handles the two public sign-up forms and the signed-in member profile form. */
 @RestController
-@RequestMapping("/api/public/members")
+@RequestMapping("/api/public/{conferenceSeq}/members")
 @IpAccessExempt
 public class PublicMemberRegistrationController {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -94,7 +95,7 @@ public class PublicMemberRegistrationController {
                     .newsletter(Boolean.TRUE.equals(newsletter))
                     .build();
 
-            long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
+            long conferenceSeq = PublicApiRequest.context().conferenceSeq();
             MemberRegisterResponse response = emailVerification.completeRegistration(conferenceSeq, normalizedEmail,
                     servletRequest.getSession(false), () -> memberService.register(conferenceSeq, request));
             return ResponseEntity.ok(response);
@@ -123,7 +124,7 @@ public class PublicMemberRegistrationController {
     ) {
         PublicMemberSession member = PublicMemberSession.resolve(
                 session,
-                () -> conferenceSettingsService.getLatestConferenceSeq()
+                () -> PublicApiRequest.context().conferenceSeq()
         );
         if (member == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login is required");

@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<body>
+<html lang="en" th:lang="${language ?: 'en'}" xmlns:th="http://www.thymeleaf.org">
+<body th:attr="data-site-base=${siteBasePath},data-api-base=${apiBasePath},data-language=${language},data-conference-seq=${conferenceSeq}">
     <div class="join-section" th:fragment="content">
         <div class="container">
             <section class="public-form">
-            <form id="domestic-join-form" class="join-form" action="/api/public/members/register" method="post" novalidate data-success-url="/login"
-                  th:attr="data-success-url=${loginMenu != null ? loginMenu.routePath : '/login'}">
+            <form id="domestic-join-form" class="join-form" action="/api/public/members/register" th:action="${siteContext != null ? siteContext.apiUrl('/api/public/members/register') : '/api/public/members/register'}" method="post" novalidate data-success-url="/login"
+                  th:attr="data-success-url=${siteContext.pageUrl(loginMenu != null ? loginMenu.routePath : '/login')}">
                 <input type="hidden" name="memberType" value="domestic">
                 <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
                 <div class="process-confirm mb5">
-                    <h6 class="mb-0 cs-title"><img class="img-position mr-2" src="/public/img/confirm-icon.png"> English only · leading/trailing spaces auto-trimmed · <span class="co-danger">*</span> required</h6>
+                    <h6 class="mb-0 cs-title"><img class="img-position mr-2" src="/public/img/confirm-icon.png"> <th:block th:text="#{public.ui.english.only.leading.trailing.spaces.auto.179f7a}">English only · leading/trailing spaces auto-trimmed ·</th:block> <span class="co-danger">*</span> <th:block th:text="#{public.ui.required.1a77d4}">required</th:block></h6>
                 </div>
 
                 <section class="sign-section">
@@ -18,74 +18,74 @@
                         <div>
                             <div class="join-email-verification" data-email-verification>
                                 <div class="join-verification-email">
-                                    <label for="domestic-email" class="mb-3">EMAIL <span class="co-danger">*</span></label>
+                                    <label for="domestic-email" class="mb-3"><th:block th:text="#{public.ui.email.564269}">EMAIL</th:block> <span class="co-danger">*</span></label>
                                 <div class="join-verification-row">
                                     <input id="domestic-email" type="email" name="email" maxlength="255"
                                            autocomplete="email" placeholder="your.email@example.com" required
                                            aria-describedby="domestic-email-hint" data-verification-email>
-                                    <button type="button" class="join-verification-button" data-send-email-code disabled>Send code</button>
+                                    <button type="button" class="join-verification-button" data-send-email-code disabled><th:block th:text="#{public.ui.send.code.313503}">Send code</th:block></button>
                                 </div>
-                                <p id="domestic-email-hint" class="join-verification-hint">Use an email address you can access. We'll send a 6-digit verification code.</p>
+                                <p id="domestic-email-hint" class="join-verification-hint"><th:block th:text="#{public.ui.use.an.email.address.you.can.df050e}">Use an email address you can access. We'll send a 6-digit verification code.</th:block></p>
                                 </div>
                                 <div class="join-verification-code">
-                                    <label for="domestic-email-code" class="mb-3">VERIFICATION CODE</label>
+                                    <label for="domestic-email-code" class="mb-3"><th:block th:text="#{public.ui.verification.code.f4689f}">VERIFICATION CODE</th:block></label>
                                     <div class="join-verification-row">
                                         <input id="domestic-email-code" type="text" inputmode="numeric" autocomplete="one-time-code"
-                                               maxlength="6" placeholder="6-digit code" data-email-code disabled
+                                               maxlength="6" placeholder="6-digit code" th:placeholder="#{public.ui.6.digit.code.0c52ea}" data-email-code disabled
                                                aria-describedby="domestic-code-hint">
-                                        <button type="button" class="join-verification-button join-verification-button-secondary" data-verify-email-code disabled>Verify</button>
+                                        <button type="button" class="join-verification-button join-verification-button-secondary" data-verify-email-code disabled><th:block th:text="#{public.ui.verify.dda6ac}">Verify</th:block></button>
                                     </div>
-                                    <p id="domestic-code-hint" class="join-verification-hint">Click Send code first. You can enter the code once it has been sent.</p>
+                                    <p id="domestic-code-hint" class="join-verification-hint"><th:block th:text="#{public.ui.click.send.code.first.you.can.342e69}">Click Send code first. You can enter the code once it has been sent.</th:block></p>
                                 </div>
                                 <p class="join-verification-status" data-email-verification-status role="status" tabindex="-1" hidden></p>
-                                <p class="join-verification-hint" data-email-existing-member-links hidden><a href="/login" th:href="${loginMenu != null ? loginMenu.routePath : '/login'}">Log in</a> · <a href="/forgot-password">Forgot your password?</a></p>
+                                <p class="join-verification-hint" data-email-existing-member-links hidden><a href="/login" th:href="${siteContext != null ? siteContext.pageUrl(loginMenu != null ? loginMenu.routePath : '/login') : (loginMenu != null ? loginMenu.routePath : '/login')}"><th:block th:text="#{public.ui.log.in.f7c400}">Log in</th:block></a> · <a href="/forgot-password" th:href="${siteContext != null ? siteContext.pageUrl('/forgot-password') : '/forgot-password'}"><th:block th:text="#{public.ui.forgot.your.password.a2f060}">Forgot your password?</th:block></a></p>
                             </div>
                         </div>
 
                         <div class="d-grid grid-item-2" style="gap: 1rem;">
                             <div>
-                                <label for="domestic-first-name" class="mb-3">FIRST NAME <span class="co-danger">*</span></label>
-                                <input id="domestic-first-name" type="text" name="firstName" autocomplete="given-name" placeholder="First name" required>
+                                <label for="domestic-first-name" class="mb-3"><th:block th:text="#{public.ui.first.name.b1280f}">FIRST NAME</th:block> <span class="co-danger">*</span></label>
+                                <input id="domestic-first-name" type="text" name="firstName" autocomplete="given-name" placeholder="First name" th:placeholder="#{public.ui.first.name.7e568a}" required>
                             </div>
                             <div>
-                                <label for="domestic-last-name" class="mb-3">LAST NAME <span class="co-danger">*</span></label>
-                                <input id="domestic-last-name" type="text" name="lastName" autocomplete="family-name" placeholder="Last name" required>
+                                <label for="domestic-last-name" class="mb-3"><th:block th:text="#{public.ui.last.name.e4e546}">LAST NAME</th:block> <span class="co-danger">*</span></label>
+                                <input id="domestic-last-name" type="text" name="lastName" autocomplete="family-name" placeholder="Last name" th:placeholder="#{public.ui.last.name.adec36}" required>
                             </div>
                         </div>
 
                         <div>
-                            <label for="domestic-institution" class="mb-3">INSTITUTION <span class="co-danger">*</span></label>
-                            <input id="domestic-institution" type="text" name="institution" autocomplete="organization" placeholder="Institution" required>
+                            <label for="domestic-institution" class="mb-3"><th:block th:text="#{public.ui.institution.284e27}">INSTITUTION</th:block> <span class="co-danger">*</span></label>
+                            <input id="domestic-institution" type="text" name="institution" autocomplete="organization" placeholder="Institution" th:placeholder="#{public.ui.institution.429f94}" required>
                         </div>
 
                         <div class="d-grid grid-item-2" style="gap: 1rem;">
                             <div>
-                                <label for="domestic-department" class="mb-3">DEPARTMENT</label>
-                                <input id="domestic-department" type="text" name="department" placeholder="Department">
+                                <label for="domestic-department" class="mb-3"><th:block th:text="#{public.ui.department.c28870}">DEPARTMENT</th:block></label>
+                                <input id="domestic-department" type="text" name="department" placeholder="Department" th:placeholder="#{public.ui.department.db4010}">
                             </div>
                             <div>
-                                <label for="domestic-position" class="mb-3">POSITION</label>
-                                <input id="domestic-position" type="text" name="positionTitle" autocomplete="organization-title" placeholder="Position">
+                                <label for="domestic-position" class="mb-3"><th:block th:text="#{public.ui.position.d0b031}">POSITION</th:block></label>
+                                <input id="domestic-position" type="text" name="positionTitle" autocomplete="organization-title" placeholder="Position" th:placeholder="#{public.ui.position.cf1c85}">
                             </div>
                         </div>
 
                         <div class="d-grid grid-item-2" style="gap: 1rem;">
                             <div>
-                                <label for="domestic-password" class="mb-3">PASSWORD <span class="co-danger">*</span></label>
-                                <input id="domestic-password" type="password" name="password" minlength="8" maxlength="16" autocomplete="new-password" placeholder="8-16 characters" required>
+                                <label for="domestic-password" class="mb-3"><th:block th:text="#{public.ui.password.112bb7}">PASSWORD</th:block> <span class="co-danger">*</span></label>
+                                <input id="domestic-password" type="password" name="password" minlength="8" maxlength="16" autocomplete="new-password" placeholder="8-16 characters" th:placeholder="#{public.ui.8.16.characters.7fcb40}" required>
                             </div>
                             <div>
-                                <label for="domestic-password-confirm" class="mb-3">CONFIRM PASSWORD <span class="co-danger">*</span></label>
-                                <input id="domestic-password-confirm" type="password" name="passwordConfirm" minlength="8" maxlength="16" autocomplete="new-password" placeholder="Confirm password" required>
+                                <label for="domestic-password-confirm" class="mb-3"><th:block th:text="#{public.ui.confirm.password.36b2f6}">CONFIRM PASSWORD</th:block> <span class="co-danger">*</span></label>
+                                <input id="domestic-password-confirm" type="password" name="passwordConfirm" minlength="8" maxlength="16" autocomplete="new-password" placeholder="Confirm password" th:placeholder="#{public.ui.confirm.password.4a7c56}" required>
                             </div>
                         </div>
 
                         <div>
                             <div>
-                                <label for="domestic-mobile-country-code" class="mb-3">MOBILE NUMBER <span class="co-danger">*</span></label>
+                                <label for="domestic-mobile-country-code" class="mb-3"><th:block th:text="#{public.ui.mobile.number.910101}">MOBILE NUMBER</th:block> <span class="co-danger">*</span></label>
                                 <div class="d-md-flex" style="gap: 1rem;">
                                     <input id="domestic-mobile-country-code" type="tel" name="mobileCountryCode" value="+82" readonly class="mb-2 mb-md-0" required style="flex: 0 0 10%;">
-                                    <input id="domestic-mobile-phone-number" type="tel" name="mobilePhoneNumber" maxlength="24" autocomplete="tel-national" pattern="[0-9\(\) \-]+" placeholder="Mobile number" required style="flex: 1;">
+                                    <input id="domestic-mobile-phone-number" type="tel" name="mobilePhoneNumber" maxlength="24" autocomplete="tel-national" pattern="[0-9\(\) \-]+" placeholder="Mobile number" th:placeholder="#{public.ui.mobile.number.8e5c12}" required style="flex: 1;">
                                 </div>
                             </div>
                         </div>
@@ -93,27 +93,27 @@
                         <div class="agree-section">
                             <div class="agreeContent">
                                 <div class="mb-4">
-                                    <h6 class="cs-content fnb mb3">Purposes</h6>
-                                    <p class="cs-content mb-0">The APDRC8 website collects and uses personal information to manage user accounts, process abstract submissions and conference registration, and provide important conference-related notices and updates.</p>
+                                    <h6 class="cs-content fnb mb3"><th:block th:text="#{public.ui.purposes.9f4de4}">Purposes</th:block></h6>
+                                    <p class="cs-content mb-0"><th:block th:text="#{public.ui.the.apdrc8.website.collects.and.uses.b324ec}">The APDRC8 website collects and uses personal information to manage user accounts, process abstract submissions and conference registration, and provide important conference-related notices and updates.</th:block></p>
                                 </div>
                                 <div class="mb-4">
-                                    <h6 class="cs-content fnb mb3">Items of Personal Information Collected</h6>
-                                    <p class="cs-content mb-0">APDRC8 may collect personal information required for account registration, abstract submission, and conference registration, including your name, country, ID (e-mail address), password, affiliation, department, position, and mobile phone number.</p>
+                                    <h6 class="cs-content fnb mb3"><th:block th:text="#{public.ui.items.of.personal.information.collected.059e75}">Items of Personal Information Collected</th:block></h6>
+                                    <p class="cs-content mb-0"><th:block th:text="#{public.ui.apdrc8.may.collect.personal.information.required.87f65e}">APDRC8 may collect personal information required for account registration, abstract submission, and conference registration, including your name, country, ID (e-mail address), password, affiliation, department, position, and mobile phone number.</th:block></p>
                                 </div>
                                 <div class="mb-4">
-                                    <h6 class="cs-content fnb mb3">Retention and Use of Personal Information</h6>
-                                    <p class="cs-content mb-0">APDRC8 will retain and use your personal information only for as long as necessary to provide conference-related services and fulfill applicable administrative or legal obligations. Personal information will be deleted when the purpose of collection has been fulfilled, unless a longer retention period is required by applicable law.</p>
+                                    <h6 class="cs-content fnb mb3"><th:block th:text="#{public.ui.retention.and.use.of.personal.information.c21d87}">Retention and Use of Personal Information</th:block></h6>
+                                    <p class="cs-content mb-0"><th:block th:text="#{public.ui.apdrc8.will.retain.and.use.your.a4adc0}">APDRC8 will retain and use your personal information only for as long as necessary to provide conference-related services and fulfill applicable administrative or legal obligations. Personal information will be deleted when the purpose of collection has been fulfilled, unless a longer retention period is required by applicable law.</th:block></p>
                                 </div>
                             </div>
                             <label for="domestic-privacy-consent">
                                 <input id="domestic-privacy-consent" type="checkbox" name="privacyConsent" value="true" class="mr-3" required>
-                                I agree to the collection and use of my personal information.
+                                <th:block th:text="#{public.ui.i.agree.to.the.collection.and.f1c1c5}">I agree to the collection and use of my personal information.</th:block>
                             </label>
                         </div>
 
                         <div class="text-left">
-                            <button id="domestic-join-submit" class="btn mb2" type="submit" disabled>Sign Up</button>
-                            <span class="cs-content co-569">Already have an account? <a href="/login" th:href="${loginMenu != null ? loginMenu.routePath : '/login'}">Log in</a></span>
+                            <button id="domestic-join-submit" class="btn mb2" type="submit" disabled><th:block th:text="#{public.ui.sign.up.2ba402}">Sign Up</th:block></button>
+                            <span class="cs-content co-569"><th:block th:text="#{public.ui.already.have.an.account.855903}">Already have an account?</th:block> <a href="/login" th:href="${siteContext != null ? siteContext.pageUrl(loginMenu != null ? loginMenu.routePath : '/login') : (loginMenu != null ? loginMenu.routePath : '/login')}"><th:block th:text="#{public.ui.log.in.f7c400}">Log in</th:block></a></span>
                         </div>
                     </div>
                 </section>

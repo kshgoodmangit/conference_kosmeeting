@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/members")
+@RequestMapping("/api/admin/members")
 public class MemberRegistrationController {
     private final MemberService memberService;
     private final ConferenceSettingsService conferenceSettingsService;
@@ -27,6 +27,7 @@ public class MemberRegistrationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(
+            @org.springframework.web.bind.annotation.RequestHeader("X-Conference-Seq") Long conferenceSeq,
             @RequestParam String memberType,
             @RequestParam String email,
             @RequestParam String password,
@@ -55,7 +56,7 @@ public class MemberRegistrationController {
                     .build();
 
             MemberRegisterResponse response = memberService.register(
-                    conferenceSettingsService.getLatestConferenceSeq(),
+                    conferenceSeq,
                     request
             );
             return ResponseEntity.ok(response);

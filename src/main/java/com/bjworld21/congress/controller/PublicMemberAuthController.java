@@ -1,6 +1,7 @@
 package com.bjworld21.congress.controller;
 
 import com.bjworld21.congress.config.IpAccessExempt;
+import com.bjworld21.congress.publicsite.PublicApiRequest;
 import com.bjworld21.congress.config.PersonalDataProperties;
 import com.bjworld21.congress.entity.Member;
 import com.bjworld21.congress.repository.MemberRepository;
@@ -24,7 +25,7 @@ import java.io.IOException;
 /** Member login/session endpoints used by the public login form and shared header. */
 @IpAccessExempt
 @RestController
-@RequestMapping("/api/public/members")
+@RequestMapping("/api/public/{conferenceSeq}/members")
 public class PublicMemberAuthController {
     private static final String LOGIN_FAILED = "Invalid email or password";
 
@@ -54,7 +55,7 @@ public class PublicMemberAuthController {
     ) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         String normalizedPassword = password.trim();
-        Long conferenceSeq = conferenceSettingsService.getLatestConferenceSeq();
+        Long conferenceSeq = PublicApiRequest.context().conferenceSeq();
         Member member = normalizedEmail.isEmpty() || normalizedPassword.isEmpty()
                 ? null
                 : memberRepository.findByEmail(
@@ -71,10 +72,7 @@ public class PublicMemberAuthController {
         if (request.isRequestedSessionIdValid()) {
             request.changeSessionId();
         }
-        // Public controllers use these two session attributes as the member ownership boundary.
-        session.setAttribute("memberSeq", member.getSeq());
-        session.setAttribute("memberConferenceSeq", conferenceSeq);
-        session.setAttribute(MemberCredentialFingerprint.SESSION_ATTRIBUTE,
+        PublicMemberSession.signIn(session, conferenceSeq, member.getSeq(),
                 MemberCredentialFingerprint.hash(member.getPassword()));
         return ResponseEntity.noContent().build();
     }
@@ -83,7 +81,7 @@ public class PublicMemberAuthController {
     public ResponseEntity<Void> session(HttpServletRequest request) {
         PublicMemberSession memberSession = PublicMemberSession.resolve(
                 request.getSession(false),
-                () -> conferenceSettingsService.getLatestConferenceSeq()
+                () -> PublicApiRequest.context().conferenceSeq()
         );
         return memberSession != null
                 ? ResponseEntity.noContent().build()
@@ -92,7 +90,7 @@ public class PublicMemberAuthController {
 
     @PostMapping("/logout")
     public void logout(HttpSession session, HttpServletResponse response) throws IOException {
-        session.invalidate();
-        response.sendRedirect("/");
+        PublicMemberSession.signOut(session, PublicApiRequest.context().conferenceSeq());
+        response.sendRedirect(PublicApiRequest.context().pageUrl("/"));
     }
 }
