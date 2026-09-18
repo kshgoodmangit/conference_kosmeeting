@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="online-registration-section" th:fragment="content">
+    <div class="container">
+        <section class="public-form">
+            <form id="public-registration-form" action="/api/public/pre-registrations" method="post" novalidate>
+                <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                <div class="bottom-line mb4">
+                    <h4 class="bbtitle fnb mb2">Registration</h4>
+                    <p class="mb-0 pp-content section-warning fnm">
+                        <img class="mr-2" src="/public/img/registration/warn-icon.png" alt="">Registration is confirmed only after payment.
+                    </p>
+                </div>
+
+                <div class="registration-status" data-registration-status role="status" hidden></div>
+
+                <section class="abstract-form-section" aria-labelledby="registration-type-title">
+                    <h5 id="registration-type-title" class="cl-title fnb mb-4">1. Registration Type</h5>
+                    <table class="w-100 type-02 abstract-form-table">
+                        <colgroup>
+                            <col class="abstract-label-column">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                        <tr>
+                            <th scope="row">Category <span class="co-danger">*</span></th>
+                            <td>
+                                <div id="registration-category" class="abstract-choice-list"
+                                     data-registration-categories role="radiogroup"
+                                     aria-label="Registration category"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Fee</th>
+                            <td><span id="registration-fee"></span></td>
+                        </tr>
+                        <tr data-registration-options-row hidden>
+                            <th scope="row">Additional Options</th>
+                            <td><div class="registration-option-list" data-registration-options></div></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="registrant-information-title">
+                    <h5 id="registrant-information-title" class="cl-title fnb mb-4">2. Registrant Information</h5>
+                    <table class="w-100 type-02 abstract-form-table">
+                        <colgroup>
+                            <col class="abstract-label-column">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                        <tr>
+                            <th scope="row">Name <span class="co-danger">*</span></th>
+                            <td><span data-registration-member="name"></span></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Affiliation <span class="co-danger">*</span></th>
+                            <td><span data-registration-member="institution"></span></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Country <span class="co-danger">*</span></th>
+                            <td><span data-registration-member="country"></span></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">E-mail <span class="co-danger">*</span></th>
+                            <td><span data-registration-member="email"></span></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Mobile <span class="co-danger">*</span></th>
+                            <td><span data-registration-member="mobile"></span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <p class="pp-content mt-3 mb-0">To change registrant information, please update your profile in My Page.</p>
+                </section>
+
+                <section class="abstract-form-section mb6" aria-labelledby="registration-payment-title">
+                    <h5 id="registration-payment-title" class="cl-title fnb mb-4">3. Payment</h5>
+                    <table class="w-100 type-02 abstract-form-table">
+                        <colgroup>
+                            <col class="abstract-label-column">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                        <tr>
+                            <th scope="row">Payment Method <span class="co-danger">*</span></th>
+                            <td>
+                                <div id="registration-payment-method" class="abstract-choice-list" role="radiogroup" aria-label="Payment method">
+                                    <label><input type="radio" name="paymentMethod" value="CARD" checked required> Credit Card</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Amount <span class="co-danger">*</span></th>
+                            <td><span id="registration-amount"></span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <div class="registration-agreements" data-registration-agreements>
+                    <label><input name="privacyAgreed" type="checkbox" required> I agree to the collection and use of personal information.</label>
+                    <label><input name="termsAgreed" type="checkbox" required> I agree to the online registration and cancellation policy.</label>
+                </div>
+
+                <div class="registration-actions text-center public-form-actions">
+                    <button class="public-save-button abstract-action-link" type="button" data-cancel-registration hidden>Cancel Registration</button>
+                    <button class="public-save-button abstract-action-link" type="button" data-request-registration-refund hidden>Request Cancellation</button>
+                    <button class="public-submit-button abstract-action-link" type="submit" disabled>Proceed to Payment</button><br>
+                    <span class="pp-content line-2 d-block mt-3">After payment, status &amp; receipt are available in My Page.</span>
+                </div>
+            </form>
+
+            <dialog class="registration-cancel-dialog" aria-labelledby="registration-cancel-title"
+                    aria-describedby="registration-cancel-description" data-registration-cancel-dialog>
+                <h2 id="registration-cancel-title">Cancel Registration</h2>
+                <p id="registration-cancel-description">Your unpaid registration will be permanently cancelled.</p>
+                <form method="dialog">
+                    <button class="member-button member-button--outline member-button--compact" value="cancel">Keep Registration</button>
+                    <button class="member-button member-button--soft member-button--compact" type="button"
+                            data-confirm-registration-cancel>Cancel Registration</button>
+                </form>
+            </dialog>
+
+            <dialog class="registration-cancel-dialog registration-refund-dialog"
+                    aria-labelledby="registration-refund-title"
+                    aria-describedby="registration-refund-description" data-registration-refund-dialog>
+                <h2 id="registration-refund-title">Cancellation / Refund Request</h2>
+                <p id="registration-refund-description">Select the registration items you want to cancel.</p>
+
+                <fieldset class="registration-refund-fieldset">
+                    <legend>Items to Cancel</legend>
+                    <div class="registration-refund-items" data-registration-refund-items></div>
+                </fieldset>
+
+                <label class="registration-refund-reason">
+                    <span>Reason <small>(Optional)</small></span>
+                    <textarea rows="3" maxlength="500" placeholder="Please enter the reason for cancellation."></textarea>
+                </label>
+
+                <div class="registration-refund-total">
+                    <span>Expected Refund Amount</span>
+                    <strong data-registration-refund-total>-</strong>
+                </div>
+                <p class="registration-refund-notice">Submitting a request does not immediately cancel your payment.</p>
+
+                <form method="dialog">
+                    <button class="member-button member-button--outline member-button--compact" value="cancel">Close</button>
+                    <button class="member-button member-button--soft member-button--compact" type="button"
+                            data-submit-registration-refund disabled>Submit Request</button>
+                </form>
+            </dialog>
+        </section>
+    </div>
+</div>
+</body>
+</html>

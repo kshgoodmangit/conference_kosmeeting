@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="member-page" th:fragment="content">
+    <div class="container">
+        <h2 class="bbtitle fnb mb-5">My Page</h2>
+        <nav class="member-tabs" aria-label="My Page">
+            <a href="/mypage">My Page Home</a>
+            <a href="/mypage/abstract" aria-current="page">Abstract Submission</a>
+            <a class="is-active" href="/mypage/registration">Registration</a>
+        </nav>
+
+        <section class="member-section member-section--spaced">
+            <th:block th:fragment="content">
+                <th:block th:replace="~{public/pages/online-registration :: content}"></th:block>
+            </th:block>
+        </section>
+    </div>
+</div>
+</body>
+</html>

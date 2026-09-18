@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="member-page" th:fragment="content">
+        <div class="container">
+            <h2 class="bbtitle fnb mb-5">My Page</h2>
+
+            <nav class="member-tabs" aria-label="My Page">
+                <a class="is-active" href="/mypage" aria-current="page">My Page Home</a>
+                <a href="/mypage/abstract">Abstract Submission</a>
+                <a href="/mypage/registration">Registration</a>
+            </nav>
+
+            <section class="member-section">
+                <div class="text-center mb5">
+                    <h5 class="fnsb cl-title mb-2">Personal Information</h5>
+                    <p class="pp-content mb-0">Update the information you provided at sign-up.</p>
+                </div>
+
+                <div class="public-form">
+                    <form id="mypage-profile-form" action="/api/public/members/profile" method="post">
+                        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <table class="w-100 type-02 abstract-form-table mb6">
+                            <colgroup>
+                                <col style="width: 20%">
+                                <col>
+                            </colgroup>
+                            <tbody>
+                                <tr th:if="${mypageMember.memberType == 'international'}">
+                                    <th><label for="profile-country">Country <span class="co-danger">*</span></label></th>
+                                    <td>
+                                        <select id="profile-country" name="country" autocomplete="country-name" required
+                                                data-country-select data-country-code-target="#profile-mobile-country-code"
+                                                data-country-code-display="#profile-mobile-country-code-display"
+                                                th:attr="data-selected-country=${mypageMember.country}">
+                                            <option value="">Select a country.</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr th:if="${mypageMember.memberType != 'international'}">
+                                    <th scope="row">Country</th>
+                                    <td>Republic of Korea</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">ID (E-mail)</th>
+                                    <td>
+                                        <span id="profile-email" th:text="${mypageMember.email}"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Name <span class="co-danger">*</span></th>
+                                    <td>
+                                        <div class="abstract-name-fields">
+                                            <div>
+                                                <label class="d-block mb-2" for="profile-first-name">First Name <span class="co-danger">*</span></label>
+                                                <input id="profile-first-name" type="text" name="firstName" autocomplete="given-name"
+                                                       th:value="${mypageMember.firstName}" required>
+                                            </div>
+                                            <div>
+                                                <label class="d-block mb-2" for="profile-last-name">Last Name <span class="co-danger">*</span></label>
+                                                <input id="profile-last-name" type="text" name="lastName" autocomplete="family-name"
+                                                       th:value="${mypageMember.lastName}" required>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="profile-institution">Institution <span class="co-danger">*</span></label></th>
+                                    <td>
+                                        <input id="profile-institution" type="text" name="institution" autocomplete="organization"
+                                               placeholder="Institution" th:value="${mypageMember.institution}" required>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="profile-department">Department</label></th>
+                                    <td><input id="profile-department" type="text" name="department" placeholder="Department" th:value="${mypageMember.department}"></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="profile-position">Position</label></th>
+                                    <td><input id="profile-position" type="text" name="positionTitle" autocomplete="organization-title" placeholder="Position" th:value="${mypageMember.positionTitle}"></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Password</th>
+                                    <td><a class="member-login-recovery" href="/mypage/password">Change Password</a></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="profile-mobile-phone-number">Mobile Number <span class="co-danger">*</span></label></th>
+                                    <td th:with="mobile=${mypageMember.mobile ?: ''}, hasPrefix=${#strings.startsWith(mobile, '+') and #strings.contains(mobile, ' ')}, dialCode=${mypageMember.memberType == 'domestic' ? '+82' : (hasPrefix ? #strings.substringBefore(mobile, ' ') : '')}">
+                                        <div class="member-profile-phone">
+                                            <span id="profile-mobile-country-code-display" aria-label="Country calling code" th:text="${#strings.isEmpty(dialCode) ? '-' : dialCode}"></span>
+                                            <input id="profile-mobile-country-code" type="hidden" name="mobileCountryCode" th:value="${dialCode}">
+                                            <input id="profile-mobile-phone-number" type="tel" name="mobilePhoneNumber" maxlength="24"
+                                                   autocomplete="tel-national" pattern="[0-9() -]+" placeholder="Mobile number" required
+                                                   th:value="${hasPrefix ? #strings.substringAfter(mobile, ' ') : mobile}">
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Newsletter</th>
+                                    <td>
+                                        <label for="profile-newsletter">
+                                            <input id="profile-newsletter" type="checkbox" name="newsletter" value="true"
+                                                   th:checked="${mypageMember.newsletter}">
+                                            Receive conference news and updates.
+                                        </label>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p class="member-recovery-status" data-profile-status role="status" aria-live="polite" tabindex="-1" hidden></p>
+                        <div class="public-form-actions">
+                            <button class="public-save-button" type="submit"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt="">Save</button>
+                            <a class="public-submit-button" href="/mypage">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

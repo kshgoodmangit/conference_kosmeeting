@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="abstract-submission-section" th:fragment="content">
+    <div class="container">
+        <section class="public-form" th:fragment="form">
+            <form id="public-abstract-form" action="/api/public/abstracts" method="post">
+                <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                <div class="bottom-line mb4">
+                    <h4 class="bbtitle fnb mb-4" data-abstract-form-title>Abstract Submission Form</h4>
+                    <p class="mb-0 pp-content">Fields marked <span class="co-danger">*</span> are required.</p>
+                </div>
+
+                <section class="abstract-form-section" aria-labelledby="ai-section-title">
+                    <h5 id="ai-section-title" class="cl-title fnb mb-4">1. Use of Artificial Intelligence</h5>
+                    <table class="w-100 type-02 abstract-form-table">
+                        <colgroup><col class="abstract-label-column"><col></colgroup>
+                        <tbody>
+                        <tr>
+                            <th scope="row">AI Usage <span class="co-danger">*</span></th>
+                            <td><div class="abstract-choice-list">
+                                <label><input type="radio" name="aiUsage" value="true" required> Yes</label>
+                                <label><input type="radio" name="aiUsage" value="false" checked required> No</label>
+                            </div></td>
+                        </tr>
+                        <tr data-ai-details hidden>
+                            <th scope="row">AI Tools Used <span class="co-danger">*</span></th>
+                            <td>
+                                <div class="abstract-choice-list" data-ai-tools></div>
+                                <div class="abstract-other-fields" data-other-ai-tool hidden>
+                                    <input type="text" name="otherAiToolName" maxlength="255" placeholder="Other tool name" aria-label="Other AI tool name">
+                                    <input type="text" name="otherAiProviderName" maxlength="255" placeholder="Provider name" aria-label="Other AI provider name">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr data-ai-details hidden>
+                            <th scope="row"><label for="ai-version">Version Information <span class="co-danger">*</span></label></th>
+                            <td><input id="ai-version" type="text" name="aiVersionInfo" maxlength="1000" placeholder="e.g. GPT-4o"></td>
+                        </tr>
+                        <tr data-ai-details hidden>
+                            <th scope="row">Scope of AI Use <span class="co-danger">*</span></th>
+                            <td>
+                                <div class="abstract-choice-list" data-ai-scopes></div>
+                                <div class="abstract-other-fields" data-other-ai-scope hidden>
+                                    <input type="text" name="otherAiScopeText" maxlength="500" placeholder="Describe the other use" aria-label="Other AI usage scope">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr data-ai-details hidden>
+                            <th scope="row">Data analysis</th>
+                            <td><label><input type="checkbox" name="aiDataAnalysisUsed"> AI was used for data analysis or interpretation of results</label></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Compliance Confirmation <span class="co-danger">*</span></th>
+                            <td><label><input type="checkbox" name="plagiarismPolicyConfirmed" required> I confirm accuracy, no plagiarism, and policy compliance.</label></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="authors-section-title">
+                    <h5 id="authors-section-title" class="cl-title fnb mb-4">2. Authors</h5>
+                    <div class="abstract-subsection">
+                        <div class="abstract-subsection-heading">
+                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/institutions-icon.png" alt="">2-1. Institutions</strong> - register institutions before assigning authors.</p>
+                        </div>
+                        <div class="abstract-table-scroll">
+                            <table class="w-100 type-04">
+                                <colgroup><col class="institution-number-column"><col><col><col class="institution-country-column"><col class="institution-action-column"></colgroup>
+                                <thead><tr><th scope="col">No.</th><th scope="col">Department</th><th scope="col">Affiliation</th><th scope="col">Country</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+                                <tbody data-institution-list></tbody>
+                            </table>
+                        </div>
+                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-institution><img src="/public/img/member/mypage-plus-circle.svg"> Add Institution</button></div>
+                    </div>
+
+                    <div class="abstract-subsection">
+                        <div class="abstract-subsection-heading">
+                            <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/author-icon.png" alt="">2-2. Author List</strong> - select at least one presenting author.</p>
+                        </div>
+                        <div data-author-list></div>
+                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-author><img src="/public/img/member/mypage-plus-circle.svg"> Add Co-Author</button></div>
+                    </div>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="information-section-title">
+                    <h5 id="information-section-title" class="cl-title fnb mb-4">3. Abstract Information</h5>
+                    <table class="w-100 type-02 abstract-form-table">
+                        <colgroup><col class="abstract-label-column"><col></colgroup>
+                        <tbody>
+                        <tr><th scope="row">Abstract No.</th><td><input type="text" value="Generated after saving" data-submission-no disabled></td></tr>
+                        <tr><th scope="row"><label for="presentation-type">Presentation Type <span class="co-danger">*</span></label></th><td><select id="presentation-type" name="presentationTypeCode" required><option value="">Loading...</option></select></td></tr>
+                        <tr><th scope="row"><label for="abstract-category">Category <span class="co-danger">*</span></label></th><td><select id="abstract-category" name="categoryCode" required><option value="">Loading...</option></select></td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="content-section-title">
+                    <div class="public-content-heading">
+                        <h5 id="content-section-title" class="cl-title fnb mb-0">4. Abstract Content</h5>
+                        <span><strong data-word-count>0</strong> / 300 words · English only</span>
+                    </div>
+                    <div class="public-content-fields">
+                        <label for="abstract-title">Title <span class="co-danger">*</span></label>
+                        <input id="abstract-title" type="text" name="title" maxlength="500" placeholder="Abstract title" required>
+                        <label for="abstract-objective">Objective <span class="co-danger">*</span></label>
+                        <textarea id="abstract-objective" name="objectiveText" rows="4" maxlength="1000" placeholder="Objective" required></textarea>
+                        <label for="abstract-methods">Methods <span class="co-danger">*</span></label>
+                        <textarea id="abstract-methods" name="methodsText" rows="4" maxlength="1000" placeholder="Methods" required></textarea>
+                        <label for="abstract-results">Results <span class="co-danger">*</span></label>
+                        <textarea id="abstract-results" name="resultsText" rows="4" maxlength="1000" placeholder="Results" required></textarea>
+                        <label for="abstract-conclusion">Conclusion <span class="co-danger">*</span></label>
+                        <textarea id="abstract-conclusion" name="conclusionsText" rows="4" maxlength="1000" placeholder="Conclusion" required></textarea>
+                    </div>
+                </section>
+
+                <p class="abstract-form-status" data-abstract-status role="status" aria-live="polite" hidden></p>
+                <div class="public-form-actions">
+                    <button class="public-save-button" type="submit" data-status="draft"><img class="mr-2 img-position" src="/public/img/temporary-icon.png" alt="">Temporary Save</button>
+                    <button class="public-submit-button" type="submit" data-status="submitted">Submit</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <template id="abstract-institution-template" th:fragment="institution-template">
+        <tr>
+            <th scope="row" data-institution-number></th>
+            <td><input type="text" name="institutionDepartment" maxlength="1000" placeholder="Department"></td>
+            <td><input type="text" name="institutionName" placeholder="University/Institute" required></td>
+            <td><select name="institutionCountry" aria-label="Institution country" required><option value="">Select a country</option></select></td>
+            <td><button class="abstract-icon-button" type="button" data-remove-institution aria-label="Remove institution">×</button></td>
+        </tr>
+    </template>
+
+    <template id="abstract-author-template" th:fragment="author-template">
+        <article class="abstract-author-card">
+            <header class="abstract-author-header">
+                <span data-author-order></span>
+                <strong data-author-role>Author</strong>
+                <div class="abstract-summary-actions">
+                    <button type="button" data-move-author="up" aria-label="Move author up">↑</button>
+                    <button type="button" data-move-author="down" aria-label="Move author down">↓</button>
+                    <button type="button" data-remove-author aria-label="Remove author">×</button>
+                </div>
+            </header>
+            <div class="abstract-author-body">
+                <div class="abstract-field-row"><label>Name <span class="co-danger">*</span></label><input type="text" name="authorName" placeholder="Full name" required></div>
+                <div class="abstract-field-row"><label>Affiliation <span class="co-danger">*</span></label><select name="authorInstitutionNo" required></select></div>
+                <div class="abstract-field-row"><span class="abstract-field-label">Role <span class="co-danger">*</span></span><div class="abstract-choice-list"><label><input type="checkbox" name="isPresentingAuthor"> Presenting author</label><label><input type="checkbox" name="isCorrespondingAuthor"> Corresponding author</label></div></div>
+                <div class="abstract-field-row"><label>E-mail</label><input type="email" name="authorEmail" placeholder="name@example.com"></div>
+                <div class="abstract-field-row"><label>Country</label><select name="authorCountry"><option value="">Select a country</option></select></div>
+                <div class="abstract-field-row"><label>Office</label><div class="abstract-phone-fields"><input type="text" name="officeCountryCode" maxlength="1000" placeholder="Country code" aria-label="Office country code" readonly><input type="tel" name="officePhoneNumber" maxlength="1000" placeholder="Phone number" aria-label="Office phone number"></div></div>
+                <div class="abstract-field-row"><label>Mobile</label><div class="abstract-phone-fields"><input type="text" name="mobileCountryCode" maxlength="1000" placeholder="Country code" aria-label="Mobile country code" readonly><input type="tel" name="mobilePhoneNumber" maxlength="1000" placeholder="Phone number" aria-label="Mobile phone number"></div></div>
+            </div>
+        </article>
+    </template>
+</div>
+</body>
+</html>

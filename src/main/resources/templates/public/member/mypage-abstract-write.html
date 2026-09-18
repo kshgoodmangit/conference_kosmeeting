@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="member-page" th:fragment="content">
+    <div class="container">
+        <h2 class="bbtitle fnb mb-5">My Page</h2>
+        <nav class="member-tabs" aria-label="My Page">
+            <a href="/mypage">My Page Home</a>
+            <a class="is-active" href="/mypage/abstract" aria-current="page">Abstract Submission</a>
+            <a href="/mypage/registration">Registration</a>
+        </nav>
+
+        <section class="member-section member-section--spaced">
+            <th:block th:replace="~{public/pages/abstract-submission :: form}"></th:block>
+            <th:block th:replace="~{public/pages/abstract-submission :: institution-template}"></th:block>
+            <th:block th:replace="~{public/pages/abstract-submission :: author-template}"></th:block>
+        </section>
+    </div>
+</div>
+</body>
+</html>

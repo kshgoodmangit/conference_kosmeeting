@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="member-page" th:fragment="content">
+    <div class="container">
+        <h2 class="bbtitle fnb mb-5">My Page</h2>
+        <nav class="member-tabs" aria-label="My Page">
+            <a href="/mypage">My Page Home</a>
+            <a class="is-active" href="/mypage/abstract" aria-current="page">Abstract Submission</a>
+            <a href="/mypage/registration">Registration</a>
+        </nav>
+
+        <section id="public-abstract-review" class="member-section member-section--spaced public-form mb7">
+            <div class="text-center mb5">
+                <h5 class="fnsb cl-title mb-2">Abstract Preview</h5>
+                <p class="mb-0 pp-content">Read-only · this is how your abstract was submitted</p>
+                <p class="mb-0 pp-content" data-review-loading>Loading your abstract...</p>
+            </div>
+
+            <div data-review-content hidden>
+                <section class="abstract-form-section" aria-labelledby="review-ai-title">
+                    <h4 id="review-ai-title" class="cm-title fnb mb-4">Use of Artificial Intelligence</h4>
+                    <table class="w-100 type-05 abstract-form-table">
+                        <colgroup>
+                            <col class="abstract-label-column">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <th scope="row">AI Usage</th>
+                                <td data-review-field="aiUsage">-</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">AI Tools Used</th>
+                                <td data-review-field="aiTools">-</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Version Information</th>
+                                <td data-review-field="aiVersionInfo">-</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Scope of AI Use</th>
+                                <td data-review-field="aiScopes">-</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Special rule: Data analysis</th>
+                                <td data-review-field="aiDataAnalysisUsed">-</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Compliance Confirmation</th>
+                                <td data-review-field="plagiarismPolicyConfirmed">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="review-authors-title">
+                    <h4 id="review-authors-title" class="cm-title fnb mb-4">Author Information</h4>
+                    <div class="abstract-table-scroll">
+                        <table class="w-100 type-04">
+                            <colgroup>
+                                <col style="width: 5%">
+                                <col style="width: 13%">
+                                <col style="width: 12%">
+                                <col style="width: auto">
+                                <col style="width: 15%">
+                                <col style="width: 20%">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Order</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Role</th>
+                                    <th scope="col">Institution</th>
+                                    <th scope="col">Position</th>
+                                    <th scope="col">E-mail</th>
+                                </tr>
+                            </thead>
+                            <tbody data-review-authors></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="review-information-title">
+                    <h4 id="review-information-title" class="cm-title fnb mb-4">Abstract Information</h4>
+                    <table class="w-100 type-05 abstract-form-table">
+                        <colgroup><col class="abstract-label-column"><col></colgroup>
+                        <tbody>
+                            <tr><th scope="row">Abstract No.</th><td data-review-field="submissionNo">-</td></tr>
+                            <tr><th scope="row">Status</th><td><span data-review-field="status">-</span></td></tr>
+                            <tr><th scope="row">Presentation Type</th><td data-review-field="presentationType">-</td></tr>
+                            <tr><th scope="row">Categories</th><td data-review-field="category">-</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="review-content-title">
+                    <h4 id="review-content-title" class="cm-title fnb mb-4">Abstract Content</h4>
+                    <table class="w-100 type-05 abstract-review-content">
+                        <colgroup><col class="abstract-label-column"><col></colgroup>
+                        <tbody>
+                            <tr><th scope="row">Title</th><td data-review-field="title">-</td></tr>
+                            <tr><th scope="row">Objective</th><td><span data-review-field="objectiveText">-</span></td></tr>
+                            <tr><th scope="row">Methods</th><td data-review-field="methodsText">-</td></tr>
+                            <tr><th scope="row">Results</th><td data-review-field="resultsText">-</td></tr>
+                            <tr><th scope="row">Conclusion</th><td data-review-field="conclusionsText">-</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="abstract-form-section" aria-labelledby="presentation-material-title" data-presentation-materials hidden>
+                    <h4 id="presentation-material-title" class="cm-title fnb mb-4">Presentation Materials</h4>
+                    <p class="pp-content mb-4">Accepted abstracts can upload PDF, PPT, or PPTX files during the presentation material submission period. Up to 5 files, 100MB each.</p>
+                    <form data-presentation-upload-form>
+                        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <div class="member-row-actions mb-4">
+                            <label class="member-button member-button--outline member-button--compact" for="presentation-material-file">Select File</label>
+                            <input id="presentation-material-file" name="file" type="file" accept=".pdf,.ppt,.pptx" required hidden>
+                            <button class="member-button member-button--accent member-button--compact" type="submit">Upload</button>
+                        </div>
+                        <p class="text-center pp-content mb-4" data-presentation-file-name>No file selected.</p>
+                    </form>
+                    <div class="registration-status" data-presentation-status role="status" aria-live="polite" hidden></div>
+                    <div class="abstract-table-scroll">
+                        <table class="w-100 type-04">
+                            <colgroup>
+                                <col style="width: auto">
+                                <col style="width: 10%">
+                                <col style="width: 20%">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col">File</th>
+                                    <th scope="col">Size</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody data-presentation-attachments></tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="public-form-actions">
+                <a class="public-save-button abstract-action-link" data-review-edit hidden>Edit</a>
+                <button class="public-save-button abstract-action-link" type="button" data-delete-abstract hidden>Delete Draft</button>
+                <a class="public-submit-button abstract-action-link" href="/mypage/abstract">Close</a>
+            </div>
+            <p class="text-center mt-3 mb-0 pp-content"><span class="co-danger">*</span> Read-only view. Drafts can be deleted during the submission period.</p>
+        </section>
+
+        <dialog class="registration-cancel-dialog" aria-labelledby="abstract-delete-title"
+                aria-describedby="abstract-delete-description" data-abstract-delete-dialog>
+            <h2 id="abstract-delete-title">Delete Draft Abstract</h2>
+            <p id="abstract-delete-description">This draft and its entered content will be permanently deleted.</p>
+            <form method="dialog">
+                <button class="member-button member-button--outline member-button--compact" value="cancel">Cancel</button>
+                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-abstract-delete>Delete</button>
+            </form>
+        </dialog>
+
+        <dialog class="registration-cancel-dialog" aria-labelledby="presentation-delete-title"
+                aria-describedby="presentation-delete-description" data-presentation-delete-dialog>
+            <h2 id="presentation-delete-title">Delete Presentation Material</h2>
+            <p id="presentation-delete-description">The selected file will be permanently deleted.</p>
+            <form method="dialog">
+                <button class="member-button member-button--outline member-button--compact" value="cancel">Cancel</button>
+                <button class="member-button member-button--soft member-button--compact" type="button" data-confirm-presentation-delete>Delete</button>
+            </form>
+        </dialog>
+    </div>
+</div>
+</body>
+</html>

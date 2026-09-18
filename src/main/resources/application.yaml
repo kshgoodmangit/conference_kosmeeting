@@ -1,0 +1,130 @@
+spring:
+  application:
+    name: bjworld21_cms_congress
+  datasource:
+    url: jdbc:mysql://114.203.210.122:3306/congress_apdrc8?useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: apdrc8
+    password: ${DATABASE_PWD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 101MB
+  thymeleaf:
+    cache: false
+    prefix: file:src/main/resources/templates/
+
+server:
+  servlet:
+    session:
+      timeout: 60m
+
+mybatis:
+  type-aliases-package: com.bjworld21.congress.entity
+  mapper-locations: classpath:/mappers/*.xml
+
+app:
+  admin-access-request:
+    cooldown-minutes: 10
+    daily-limit: 3
+  web-risk:
+    enabled: ${WEB_RISK_ENABLED:true}
+    api-key: ${WEB_RISK_API_KEY:AIzaSyDzjYwTMdKVTOH19kwL83i3GZtKumxd5jY}
+  analytics:
+    country-database: ${GEOLITE2_COUNTRY_DATABASE:Z:\dev\upload\bjworld21_cms_congress\geolite\GeoLite2-Country.mmdb}
+  test-data:
+    # 임시 일별 대시보드 샘플 생성 대상 학회. 운영 반영 전 환경변수로 명시적으로 지정합니다.
+    daily-conference-seq: ${TEST_DATA_DAILY_CONFERENCE_SEQ:1}
+  personal-data:
+    db-enc-string: ${DB_ENC_STRING}
+  license:
+    # true: 학회 추가 허용 / false: 추가 버튼 숨김 및 생성 API 차단 (변경 후 서버 재시작)
+    conference-creation-enabled: true
+    # true: 초록 유사도 측정 기능 사용 / false: 기능 비활성화 (변경 후 서버 재시작)
+    abstract-similarity-enabled: ${ABSTRACT_SIMILARITY_ENABLED:true}
+    # true: 행사 현황판 대시보드 기능 사용 / false: 기능 비활성화 (변경 후 서버 재시작)
+    event-dashboard-enabled: ${EVENT_DASHBOARD_ENABLED:true}
+    # true: 사용자 접속 현황판 사용 / false: 메뉴 및 전용 API 비활성화
+    user-analytics-dashboard-enabled: ${USER_ANALYTICS_DASHBOARD_ENABLED:true}
+  admin-ip-access:
+    enabled: true
+    trusted-proxies: []
+  abstract-review:
+    # false이면 심사자 API와 화면에서 회원·저자·기관 식별정보를 숨깁니다.
+    show-author-information: false
+  abstract-title-similarity:
+    # AI 임베딩과 무관한 제출 제목 문자열 비교 기준입니다.
+    warning-threshold: 85
+    max-matches: 5
+  abstract-similarity:
+    dimension: 384
+    top-k: 10
+    # 업무 대상: 종합 80점 이상 또는 한 항목 90점 이상. 매우 높음 구간은 각각 90/95점입니다.
+    review-target:
+      overall-threshold: 80
+      section-threshold: 90
+      critical-overall-threshold: 90
+      critical-section-threshold: 95
+    weights:
+      title: 10
+      objective: 20
+      methods: 20
+      results: 30
+      conclusions: 20
+    server:
+      base-url: ${ABSTRACT_SIMILARITY_SERVER_BASE_URL:http://27.117.198.130:8001}
+      health-path: /health
+      embeddings-path: /embeddings
+      connect-timeout-seconds: 3
+      read-timeout-seconds: 30
+  upload:
+    base-directory: Z:/dev/upload/bjworld21_cms_congress
+  member-password-reset:
+    enabled: ${MEMBER_PASSWORD_RESET_ENABLED:true}
+    public-base-url: ${MEMBER_PASSWORD_RESET_PUBLIC_BASE_URL:http://localhost:8080}
+    token-ttl: 30m
+  maintenance-request:
+    mail:
+      enabled: ${MAINTENANCE_REQUEST_MAIL_ENABLED:true}
+      host: ${MAINTENANCE_REQUEST_MAIL_HOST:smtp.gmail.com}
+      port: ${MAINTENANCE_REQUEST_MAIL_PORT:587}
+      username: ${MAINTENANCE_REQUEST_MAIL_USERNAME:bjworld21master@gmail.com}
+      password: ${MAINTENANCE_REQUEST_MAIL_PASSWORD:iiktpyiffipkezqa}
+      from-address: ${MAINTENANCE_REQUEST_MAIL_FROM_ADDRESS:bjworld21master@gmail.com}
+      from-name: ${MAINTENANCE_REQUEST_MAIL_FROM_NAME:학술대회 유지보수 요청}
+      subject-prefix: ${MAINTENANCE_REQUEST_MAIL_SUBJECT_PREFIX:[유지보수 요청]}
+      auth-enabled: ${MAINTENANCE_REQUEST_MAIL_AUTH_ENABLED:true}
+      starttls-enabled: ${MAINTENANCE_REQUEST_MAIL_STARTTLS_ENABLED:true}
+      connection-timeout-millis: ${MAINTENANCE_REQUEST_MAIL_CONNECTION_TIMEOUT_MILLIS:5000}
+      read-timeout-millis: ${MAINTENANCE_REQUEST_MAIL_READ_TIMEOUT_MILLIS:10000}
+      write-timeout-millis: ${MAINTENANCE_REQUEST_MAIL_WRITE_TIMEOUT_MILLIS:10000}
+  promotional-mail:
+    enabled: false
+    provider: none
+    public-base-url: ${MAIL_PUBLIC_BASE_URL:}
+    max-attachment-total-bytes: 10485760
+    max-attachment-count: 5
+    max-content-image-bytes: 5242880
+  payment:
+    # PG사를 변경할 때 provider 값과 해당 providers 하위 설정만 교체합니다.
+    enabled: ${PAYMENT_ENABLED:true}
+    provider: ${PAYMENT_PROVIDER:paygate}
+    providers:
+      paygate:
+        production-script-url: ${PAYGATE_PRODUCTION_SCRIPT_URL:https://api.paygate.net/ajax/common/OpenPayAPI.js}
+        routes:
+          # 아래 MID는 PayGate 매뉴얼의 공용 테스트 예시입니다. 운영에서는 발급받은 MID로 반드시 덮어씁니다.
+          domestic-card:
+            merchant-id: ${PAYGATE_DOMESTIC_MID:paygatekr}
+            pay-method: ${PAYGATE_DOMESTIC_PAY_METHOD:card}
+            currency: KRW
+            language: KR
+            parameters:
+              cardquota: "00"
+          international-card:
+            merchant-id: ${PAYGATE_INTERNATIONAL_MID:apdrc8i}
+            pay-method: ${PAYGATE_INTERNATIONAL_PAY_METHOD:104}
+            currency: USD
+            language: US
+            parameters:
+              cardquota: "00"

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">Conference</title>
+    <meta name="description" th:content="${pageDescription}">
+    <meta name="robots" th:content="${secureAccountPage == true ? 'noindex,nofollow' : 'index,follow'}" content="index,follow">
+    <meta th:if="${secureAccountPage == true}" name="referrer" content="no-referrer">
+    <link rel="canonical" th:href="${canonicalUrl}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" th:content="${eventName}">
+    <meta property="og:title" th:content="${pageTitle}">
+    <meta property="og:description" th:content="${pageDescription}">
+    <meta property="og:url" th:content="${canonicalUrl}">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link  rel="stylesheet" href="/public/css/icomoon/styles.min.css" type="text/css">
+    <link rel="stylesheet" href="/public/css/user.css">
+    <link rel="stylesheet" href="/public/css/bootstrap.css">
+    <link rel="stylesheet" href="/public/css/responsive.css">
+    <link rel="stylesheet" href="/public/css/cookie-consent.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" />
+
+    <script th:if="${secureAccountPage != true}" src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script th:if="${secureAccountPage != true}" src="/public/js/slick/slick.js"></script>
+    <link href="/public/js/slick/slick.css" rel="stylesheet" type="text/css">
+
+    <link rel="stylesheet" href="/public/js/select2/select2.css">
+    <script th:if="${secureAccountPage != true}" src="/public/js/select2/select2.min.js"></script>
+
+    <script src="/public/js/user.js" defer></script>
+    <script th:if="${secureAccountPage == true}" src="/public/js/password-reset.js" defer></script>
+    <script th:if="${passwordChangePage == true}" src="/public/js/password-change.js" defer></script>
+    <script src="/public/js/cookie-consent.js" defer></script>
+    <script th:if="${secureAccountPage != true}" src="/public/js/analytics.js" defer></script>
+    <!--
+    <link rel="stylesheet" href="/public/css/conference.css">
+    <script src="/public/js/conference.js" defer></script>
+    -->
+</head>
+<body>
+<header class="header" th:fragment="header">
+    <div class="header-top">
+        <a class="brand" href="/" aria-label="APDRC8 home">
+            <img src="/public/img/logo-mark.svg" alt="" class="brand-mark">
+        </a>
+
+        <div class="header-actions">
+            <a class="header-button header-button-outline" th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${loginMenu.routePath}">
+                <img src="/public/img/icon-login.svg" alt="">
+                <span>LOGIN</span>
+            </a>
+            <a class="header-button header-button-primary" th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${joinMenu.routePath}">
+                <img src="/public/img/icon-user.svg" alt="">
+                <span>SIGN UP</span>
+            </a>
+
+            <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" method="post">
+                <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button class="header-button header-button-outline" type="submit">
+                    <img src="/public/img/icon-login.svg" alt="">
+                    <span>LOGOUT</span>
+                </button>
+            </form>
+            <a class="header-button header-button-primary" th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${myPageMenu.routePath}">
+                <img src="/public/img/icon-user.svg" alt="">
+                <span>MY PAGE</span>
+            </a>
+        </div>
+    </div>
+
+    <ul class="header-menu un-style">
+        <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}">
+            <!-- 하위 메뉴가 있으면 첫 번째 하위 메뉴로 이동 -->
+                <a th:if="${menu.children != null and !menu.children.isEmpty()}"
+                   th:with="firstChild=${menu.children[0]}"
+                   th:href="${(firstChild.pathType == 'external' or firstChild.menuType == 'link')
+                                ? firstChild.linkUrl
+                                : firstChild.routePath}"
+                   th:text="${menu.menuName}">
+                    APDRC8
+                </a>
+
+            <ul class="un-style header-sub-menu" th:if="${menu.children != null and !menu.children.isEmpty()}">
+                <li th:each="child : ${menu.children}" th:if="${child.navigationVisible != false}">
+                    <a th:href="${(child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath}"
+                       th:text="${child.menuName}">Welcome Message</a>
+                </li>
+            </ul>
+        </li>
+    </ul>
+
+    <div class="header-mobile">
+        <input type="checkbox" id="mobileMenuOpen" class="mobile-menu-open">
+        <div class="mobile-header-top">
+            <a class="mobile-brand" href="/" aria-label="APDRC8 home">
+                <img src="/public/img/logo-mark.svg" alt="">
+            </a>
+            <label for="mobileMenuOpen" class="mobile-menu-button" aria-label="Open menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </label>
+        </div>
+
+        <div class="mobile-menu-panel">
+            <div class="mobile-menu-head">
+                <div class="mobile-util">
+                    <a href="/">HOME</a>
+                    <a th:if="${memberLoggedIn != true and loginMenu != null}" th:href="${loginMenu.routePath}">LOGIN</a>
+                    <a th:if="${memberLoggedIn != true and joinMenu != null}" th:href="${joinMenu.routePath}">SIGN UP</a>
+                    <form class="member-logout-form" th:if="${memberLoggedIn == true}" action="/api/public/members/logout" method="post">
+                        <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <button type="submit">LOGOUT</button>
+                    </form>
+                    <a th:if="${memberLoggedIn == true and myPageMenu != null}" th:href="${myPageMenu.routePath}">MY PAGE</a>
+                </div>
+                <label for="mobileMenuOpen" class="mobile-menu-close" aria-label="Close menu"></label>
+            </div>
+
+            <ul class="mobile-menu-list un-style">
+                <li th:each="menu : ${navigationMenus}" th:if="${menu.navigationVisible != false}">
+                    <a th:href="${(menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath}"
+                    	   th:text="${menu.menuName}">APDRC8</a>
+
+                    <ul class="un-style header-sub-menu" th:if="${menu.children != null and !menu.children.isEmpty()}">
+                        <li th:each="child : ${menu.children}" th:if="${child.navigationVisible != false}">
+                            <a th:href="${(child.pathType == 'external' or child.menuType == 'link') ? child.linkUrl : child.routePath}"
+                               th:text="${child.menuName}">Welcome Message</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+<section class="quick-menu" th:fragment="quickmenu" th:classappend="${showPopupQuickMenu == true} ? 'quick-menu-with-popup'">
+    <strong>QUICK<br>MENU</strong>
+    <ul class="un-style">
+        <li>
+            <a href="/registration/online-registration">
+                <span class="quick-icon quick-icon-register" aria-hidden="true"></span>
+                <span>Register<br>Now</span>
+            </a>
+        </li>
+        <li>
+            <a href="/abstract/abstract-submission">
+                <span class="quick-icon quick-icon-abstract" aria-hidden="true"></span>
+                <span>Submit<br>Abstract</span>
+            </a>
+        </li>
+        <li>
+            <a href="/program/scientific-program">
+                <span class="quick-icon quick-icon-program" aria-hidden="true"></span>
+                <span>View<br>Program</span>
+            </a>
+        </li>
+        <li th:if="${showPopupQuickMenu == true}">
+            <button type="button" data-popup-open aria-haspopup="dialog" aria-label="Open popups">
+                <span class="quick-icon quick-icon-popup" aria-hidden="true"></span>
+                <span>Popup</span>
+            </button>
+        </li>
+    </ul>
+    <p th:if="${showPopupQuickMenu == true}" class="quick-menu-status" data-popup-status role="status" hidden></p>
+</section>
+
+<footer id="footer" th:fragment="footer">
+    <div class="footer-links">
+        <a href="/privacy-policy">Privacy Policy</a>
+        <button type="button" class="cookie-settings-link" data-cookie-settings hidden>Cookie Settings</button>
+    </div>
+
+    <div class="footer-info">
+        <div class="d-flex align-items-center footer-logo">
+            <a href="https://www.ksmcb.or.kr/" target="_blank"><img style="max-width: 7rem;" src="/public/img/footer-logo.svg" alt=""></a>
+            <a href="https://kgenetics.or.kr/" target="_blank"><img style="max-width: 7rem;" src="/public/img/footer-logo2.svg" alt=""></a>
+            <img style="max-width: 21.5rem;" src="/public/img/footer-logo3.svg" alt="">
+        </div>
+
+        <div class="footer-meta">
+            <ul class="un-style d-lg-flex mb-4">
+                <li><strong>E-mail</strong> <span><a href="mailto:apdrc8@planbear.co.kr">apdrc8@planbear.co.kr</a></span></li>
+                <li><strong>Tel</strong> <span>+82-2-568-4490</span></li>
+                <li><strong>Fax</strong> <span>+82-2-558-0131</span></li>
+            </ul>
+            <ul class="un-style d-lg-flex">
+                <li><strong>Organized by</strong> <span>Korean Society for Molecular and Cellular Biology (KSMCB)<br>The Genetics Society of Korea</span></li>
+                <li><strong>Congress Secretariat</strong> <span>APDRC8 Secretariat</span></li>
+            </ul>
+            <p class="copyright">© 2027 8th Asia Pacific Drosophila Research Conference (APDRC8). All Rights Reserved.</p>
+        </div>
+    </div>
+    <section id="cookie-banner" class="cookie-banner" aria-labelledby="cookie-banner-title" hidden>
+        <div class="cookie-banner-inner">
+            <div class="cookie-banner-copy">
+                <h2 id="cookie-banner-title">Your cookie preferences</h2>
+                <p>We use essential cookies and browser storage to keep this conference website working. With your permission, we also use analytics storage to understand visits and improve the website. You can change your choice at any time in Cookie Settings. <a href="/privacy-policy">Privacy Policy</a></p>
+            </div>
+            <div class="cookie-actions">
+                <button type="button" class="cookie-button" data-cookie-settings>Settings</button>
+                <button type="button" class="cookie-button" data-cookie-choice="essential">Essential Only</button>
+                <button type="button" class="cookie-button cookie-button-primary" data-cookie-choice="all">Accept All</button>
+            </div>
+        </div>
+    </section>
+    <div id="cookie-banner-spacer" aria-hidden="true"></div>
+    <dialog id="cookie-preferences" class="cookie-preferences" aria-labelledby="cookie-preferences-title" aria-describedby="cookie-preferences-description">
+        <div class="cookie-dialog-header">
+            <h2 id="cookie-preferences-title">Cookie Settings</h2>
+            <button type="button" class="cookie-close" id="cookie-preferences-close" aria-label="Close cookie settings" autofocus>&times;</button>
+        </div>
+        <p id="cookie-preferences-description">Choose how this conference website uses cookies and browser storage. Your choice is remembered in this browser for six months.</p>
+        <div class="cookie-category">
+            <div class="cookie-category-heading"><h3>Essential</h3><span class="cookie-required">Always active</span></div>
+            <p>Required for sign-in, security, registration, abstract submission and remembering your cookie choice. These cannot be turned off here.</p>
+        </div>
+        <div class="cookie-category">
+            <label class="cookie-category-heading" for="cookie-analytics"><span>Analytics</span><input type="checkbox" id="cookie-analytics" aria-describedby="cookie-analytics-description"></label>
+            <p id="cookie-analytics-description">Helps us measure visits, pages viewed and time spent on the website. Optional visitor and session identifiers are stored in your browser only when you allow analytics.</p>
+            <p id="cookie-browser-preference" class="cookie-browser-preference" hidden>Your browser requests no tracking. Analytics will remain off while this preference is enabled.</p>
+        </div>
+        <p class="cookie-policy-note">Read our <a href="/privacy-policy">Privacy Policy</a> for more information. Change or withdraw your choice at any time using Cookie Settings in the footer.</p>
+        <div class="cookie-actions">
+            <button type="button" class="cookie-button" data-cookie-choice="essential">Essential Only</button>
+            <button type="button" class="cookie-button cookie-button-primary" id="cookie-preferences-save">Save Preferences</button>
+        </div>
+    </dialog>
+    <p id="cookie-status" class="cookie-status" role="status" aria-live="polite"></p>
+</footer>
+</body>
+</html>

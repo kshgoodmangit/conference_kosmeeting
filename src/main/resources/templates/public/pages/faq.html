@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+	<div class="faq-page" th:fragment="content">
+		<div class="container">
+			<nav class="faq-category-tabs" aria-label="FAQ categories">
+				<a th:href="@{/information/faq}"
+				   th:classappend="${selectedFaqCategory == null or selectedFaqCategory.isEmpty()} ? ' is-active'">ALL</a>
+				<a th:each="category : ${faqCategories}"
+				   th:href="@{/information/faq(category=${category.categoryCode})}"
+				   th:classappend="${category.categoryCode == selectedFaqCategory} ? ' is-active'"
+				   th:text="${category.categoryName}">General</a>
+			</nav>
+
+			<div class="faq-list" th:if="${faqPage != null and !#lists.isEmpty(faqPage.items)}">
+				<details class="faq-item" th:each="faq, faqStat : ${faqPage.items}">
+					<summary>
+						<span class="faq-number" th:text="|Q${((faqPage.page - 1) * faqPage.size) + faqStat.count}.|">Q1.</span>
+						<span class="faq-title">
+							<span th:if="${faq.categoryName != null and !faq.categoryName.isBlank()}"
+								  th:text="|[${faq.categoryName}] |">[General] </span>
+							<span th:text="${faq.title}">When and where will APDRC8 2027 take place?</span>
+						</span>
+					</summary>
+					<div class="faq-answer" th:utext="${faq.content}">
+						APDRC8 2027 will be held in Seoul, Republic of Korea.
+					</div>
+				</details>
+			</div>
+
+			<div class="empty-content" th:if="${faqPage == null or #lists.isEmpty(faqPage.items)}">
+				<h3>No FAQs have been posted.</h3>
+			</div>
+
+			<nav class="pagination d-flex justify-content-center" aria-label="FAQ pagination"
+				 th:if="${faqPage != null and faqPage.totalPages > 1}">
+				<ul class="un-style d-flex align-items-center">
+					<li class="pg-arw" th:classappend="${faqPage.page == 1 ? ' d-none' : ''}">
+						<a th:if="${faqPage.page > 1}" th:href="@{/information/faq(page=1, category=${selectedFaqCategory})}" aria-label="First page"><img src="/public/img/nav-first.svg" alt=""></a>
+					</li>
+					<li class="pg-arw" th:classappend="${faqPage.page == 1 ? ' d-none' : ''}">
+						<a th:if="${faqPage.page > 1}" th:href="@{/information/faq(page=${faqPage.page - 1}, category=${selectedFaqCategory})}" aria-label="Previous page"><img src="/public/img/nav-prev.svg" alt=""></a>
+					</li>
+					<li th:each="pageNum : ${#numbers.sequence(1, faqPage.totalPages)}" th:classappend="${pageNum == faqPage.page ? ' active' : ''}">
+						<a th:href="@{/information/faq(page=${pageNum}, category=${selectedFaqCategory})}" th:text="${pageNum}">1</a>
+					</li>
+					<li class="pg-arw" th:classappend="${faqPage.page == faqPage.totalPages ? ' d-none' : ''}">
+						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{/information/faq(page=${faqPage.page + 1}, category=${selectedFaqCategory})}" aria-label="Next page"><img src="/public/img/nav-next.svg" alt=""></a>
+					</li>
+					<li class="pg-arw" th:classappend="${faqPage.page == faqPage.totalPages ? ' d-none' : ''}">
+						<a th:if="${faqPage.page < faqPage.totalPages}" th:href="@{/information/faq(page=${faqPage.totalPages}, category=${selectedFaqCategory})}" aria-label="Last page"><img src="/public/img/nav-last.svg" alt=""></a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+    thead {
+        @apply text-slate-600 dark:text-slate-300;
+    }
+
+    thead th {
+        @apply font-semibold;
+    }
+
+    button,
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"] {
+        @apply cursor-pointer;
+    }
+
+    button:disabled,
+    button[aria-disabled="true"],
+    [role="button"][aria-disabled="true"],
+    input[type="button"]:disabled,
+    input[type="submit"]:disabled,
+    input[type="reset"]:disabled {
+        @apply cursor-not-allowed;
+    }
+}
+
+/* PayGate가 생성하는 인증 입력란은 항상 흰 배경을 사용하므로 앱의 다크모드
+   글자색을 상속하지 않도록 입력값과 커서 색상을 명시한다. */
+.paygate-payment-screen input[type="text"] {
+    color: #0f172a;
+    caret-color: #0f172a;
+}

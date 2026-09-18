@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="scientific-section" th:fragment="content">
+    <div class="container" th:if="${programData != null and programData.days != null and !programData.days.isEmpty()}">
+        <div class="scientific-tabs" role="tablist" aria-label="Scientific program days">
+            <button type="button" class="scientific-tab"
+                    th:each="day, dayStat : ${programData.days}"
+                    th:if="${day.enabled != false}"
+                    th:classappend="${dayStat.first} ? ' active'"
+                    th:data-day="${'scientific-day' + day.seq}" role="tab"
+                    th:attr="aria-selected=${dayStat.first}">
+                <span th:text="'DAY ' + ${day.dayNumber}">DAY 1</span>
+                <strong th:text="${day.theme ?: day.dayTitle ?: #temporals.format(day.eventDate, 'MMM d')}">Theme</strong>
+            </button>
+        </div>
+
+        <div class="scientific-day-panel"
+             th:each="day, dayStat : ${programData.days}"
+             th:if="${day.enabled != false}"
+             th:classappend="${dayStat.first} ? ' active'"
+             th:id="${'scientific-day' + day.seq}">
+            <div class="scientific-day-title">
+                <strong th:text="'DAY ' + ${day.dayNumber}">DAY 1</strong>
+                <span th:text="${#strings.toUpperCase(programDateFormatter.format(day.eventDate))}">SUNDAY, 9 MAY 2027</span>
+                <em th:if="${(day.theme ?: day.dayTitle) != null}"
+                    th:text="${'Theme ' + #strings.toUpperCase(day.theme ?: day.dayTitle)}">Theme</em>
+            </div>
+            <div class="scientific-table-wrap">
+                <div class="scientific-children">
+                    <table class="scientific-table">
+                        <caption th:text="'Day ' + ${day.dayNumber} + ' scientific program'">Day 1 scientific program</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col"><span>Time</span></th>
+                                <th scope="col"><span>Program / Session</span></th>
+                                <th scope="col"><span>Speaker</span></th>
+                                <th scope="col"><span>Notes</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <th:block th:each="item : ${programData.items}"
+                                      th:if="${item.enabled != false and item.programDaySeq == day.seq and item.parentSeq == null}">
+                                <tr th:class="${item.rowStyle == 'HIGHLIGHT' ? 'scientific-highlight' : (item.rowStyle == 'MUTED' ? 'scientific-break' : (item.itemType == 'SESSION' ? 'scientific-session' : ''))}">
+                                    <th th:text="${#temporals.format(item.startTime, 'HH:mm')} + '-' + ${#temporals.format(item.endTime, 'HH:mm')}">10:00-10:30</th>
+                                    <td>
+                                        <strong th:text="${item.title}">Program title</strong>
+                                        <span th:if="${item.subtitle != null and !item.subtitle.isBlank()}" th:text="${item.subtitle}">Subtitle</span>
+                                    </td>
+                                    <td th:text="${item.speakerText ?: item.chairText ?: item.organizerText ?: '-'}">Speaker</td>
+                                    <td th:text="${item.notes ?: '-'}">Notes</td>
+                                </tr>
+                                <tr th:each="child : ${programData.items}"
+                                    th:if="${child.enabled != false and child.parentSeq == item.seq}"
+                                    th:class="${child.rowStyle == 'HIGHLIGHT' ? 'scientific-highlight' : (child.rowStyle == 'MUTED' ? 'scientific-break' : (child.itemType == 'SESSION' ? 'scientific-session' : ''))}">
+                                    <th th:text="${#temporals.format(child.startTime, 'HH:mm')} + '-' + ${#temporals.format(child.endTime, 'HH:mm')}">10:00-10:30</th>
+                                    <td>
+                                        <strong th:text="${child.title}">Program title</strong>
+                                        <span th:if="${child.subtitle != null and !child.subtitle.isBlank()}" th:text="${child.subtitle}">Subtitle</span>
+                                    </td>
+                                    <td th:text="${child.speakerText ?: child.chairText ?: child.organizerText ?: '-'}">Speaker</td>
+                                    <td th:text="${child.notes ?: '-'}">Notes</td>
+                                </tr>
+                            </th:block>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="scientific-footnote">* Program details, speakers, and room assignments are subject to change.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="container" th:if="${programData == null or programData.days == null or programData.days.isEmpty()}">
+        <div class="empty-content">
+            <span aria-hidden="true">✦</span>
+            <h3>Program is being prepared.</h3>
+            <p>등록된 프로그램 편성 정보가 없습니다.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

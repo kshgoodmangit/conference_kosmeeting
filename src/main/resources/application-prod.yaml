@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: bjworld21_cms_congress
+  datasource:
+    url: jdbc:mysql://localhost:3306/congress_apdrc8?useUnicode=true&characterEncoding=utf8&useSSL=false
+
+server:
+  port: 10001
+
+app:
+  upload:
+    base-directory: /home/cms_congress/upload

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="member-page" th:fragment="content">
+    <div class="container">
+        <h2 class="bbtitle fnb mb-5">My Page</h2>
+
+        <nav class="member-tabs" aria-label="My Page">
+            <a href="/mypage">My Page Home</a>
+            <a class="is-active" href="/mypage/abstract" aria-current="page">Abstract Submission</a>
+            <a href="/mypage/registration">Registration</a>
+        </nav>
+
+        <section class="member-section member-section--spaced" aria-labelledby="member-abstract-list-title">
+            <h3 id="member-abstract-list-title" class="mb-5">My Abstracts</h3>
+            <div class="table-scroll">
+                <table class="type-03 w-100">
+                    <caption class="position-absolute invisible">Your abstract submissions</caption>
+                    <colgroup><col style="width: 8%;"><col style="width: 18%;"><col><col style="width: 16%;"><col style="width: 22%;"></colgroup>
+                    <thead><tr><th scope="col" class="text-center">No.</th><th scope="col" class="px-4">Abstract No.</th><th scope="col" class="px-4">Title</th><th scope="col" class="text-center">Status</th><th scope="col" class="text-center">Review / Modify</th></tr></thead>
+                    <tbody>
+                    <tr th:each="abstract, row : ${mypageAbstracts}" th:with="status=${abstract.status == null ? '' : #strings.toLowerCase(abstract.status)}">
+                        <td class="text-center" th:text="${row.count}">1</td>
+                        <td class="px-4" th:text="${abstract.submissionNo ?: '-'}">APDRC8-Abstract-0001</td>
+                        <td class="px-4" th:text="${abstract.title}">Abstract title</td>
+                        <td class="text-center">
+                            <span class="member-status" th:classappend="${status == 'approved'} ? ' is-accepted'">
+                                <th:block th:if="${status == 'approved'}">Accepted</th:block>
+                                <th:block th:if="${status == 'submitted'}">Submission Completed</th:block>
+                                <th:block th:if="${status == 'under_review'}">Under Review</th:block>
+                                <th:block th:if="${status == 'rejected'}">Rejected</th:block>
+                                <th:block th:if="${status == 'draft'}">Draft</th:block>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="member-row-actions">
+                                <a class="member-button member-button--outline member-button--compact" th:href="|/mypage/abstract/review?seq=${abstract.seq}|">Review</a>
+                                <a class="member-button member-button--soft member-button--compact" th:if="${status == 'draft' or status == 'submitted'}" th:href="|/mypage/abstract/write?seq=${abstract.seq}|">Modify</a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${mypageAbstracts == null or mypageAbstracts.isEmpty()}"><td class="member-table-empty" colspan="5">No abstract has been submitted.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="member-note"><span>*</span> Draft deletion is available from Review. Completed submissions can only be modified until review starts.</p>
+            <div class="member-actions member-actions--end member-actions--overlap">
+                <a class="member-button member-button--accent" href="/mypage/abstract/write"><img src="/public/img/member/mypage-plus-circle.svg" alt=""><span>Submit Abstract</span></a>
+            </div>
+        </section>
+
+    </div>
+</div>
+</body>
+</html>

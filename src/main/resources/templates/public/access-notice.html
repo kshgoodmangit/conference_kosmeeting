@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <section class="access-notice-section" th:fragment="content">
+        <div class="container">
+            <div class="access-notice" aria-labelledby="access-notice-title">
+                <img class="access-notice-icon" th:src="${accessNotice == 'registration-closed' ? '/public/img/access-notice-icon2.svg' : '/public/img/access-notice-icon.svg'}" alt="">
+                <p class="access-notice-label"
+                   th:text="${accessNotice == 'registration-closed' ? 'ONLINE REGISTRATION' : 'ABSTRACT SUBMISSION'}">
+                    ABSTRACT SUBMISSION
+                </p>
+                <h2 id="access-notice-title"
+                    th:text="${accessNotice == 'registration-closed' ? 'Online registration is not currently open.' : 'Abstract submission is not currently open.'}">
+                    Abstract submission is not currently open.
+                </h2>
+                <p class="access-notice-description">
+                    <span th:text="${accessNotice == 'registration-closed' ? 'The registration period has not started or has already ended.' : 'The submission period has not started or has already ended.'}">
+                        The submission period has not started or has already ended.
+                    </span>
+                    <span th:text="${accessNotice == 'registration-closed' ? 'Please check Registration Guideline and Notice for the latest schedule and updates.' : 'Please check Important Dates and Notice for the latest schedule and updates.'}">
+                        Please check Important Dates and Notice for the latest schedule and updates.
+                    </span>
+                </p>
+                <a class="access-notice-home" href="/">Return to Home</a>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "compilerOptions": {
+    "noUnusedLocals": false // true에서 false로 변경
+  },
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

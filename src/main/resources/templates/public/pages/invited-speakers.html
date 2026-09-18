@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="speaker-section" th:fragment="content">
+        <div class="container">
+            <section class="speaker-group" th:each="type : ${speakersTypes}">
+                <h6 class="speaker-group-title" th:text="${type.codeName}">Plenary Lectures</h6>
+
+                <div class="speaker-list">
+                    <article class="speaker-card"
+                             th:each="speaker, speakerStat : ${speakersData.items.?[speakerTypeCode == #vars.type.seq]}">
+                        <div class="speaker-photo speaker-photo-man" aria-hidden="true">
+                            <img th:if="${speaker.profileImageUrl != null}"
+                                 th:src="@{/public/speakers/{seq}/image(seq=${speaker.seq})}"
+                                 th:alt="${speaker.displayName}">
+                        </div>
+                        <div class="speaker-info">
+                            <div class="speaker-topic">
+                                <span th:text="${'PL' + #numbers.formatInteger(speakerStat.count, 2)}">PL01</span>
+                            </div>
+                            <h3 th:text="${speaker.displayName}">John Doe</h3>
+                            <p th:text="${speaker.affiliation + (speaker.countryNameEn != null and speaker.countryNameEn != '' ? ', ' + speaker.countryNameEn : '')}">University of Example, USA</p>
+                            <summary class="speaker-cv"><img src="/public/img/program/cv-file.png" alt=""><span>CV</span><img src="/public/img/program/cv-down.png" alt=""></summary>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

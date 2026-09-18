@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: APDRC8
+  datasource:
+    url: jdbc:mysql://localhost:3306/congress_apdrc8?useUnicode=true&characterEncoding=utf8&useSSL=false
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+
+server:
+  port: 10001
+
+app:
+  upload:
+    base-directory: /home/cms_congress/upload
+  license:
+    # true: 학회 추가 허용 / false: 추가 버튼 숨김 및 생성 API 차단 (변경 후 서버 재시작)
+    conference-creation-enabled: false
+    # true: 초록 유사도 측정 기능 사용 / false: 기능 비활성화 (변경 후 서버 재시작)
+    abstract-similarity-enabled: false
+    # true: 행사 현황판 대시보드 기능 사용 / false: 기능 비활성화 (변경 후 서버 재시작)
+    event-dashboard-enabled: false
+    # true: 사용자 접속 현황판 사용 / false: 메뉴 및 전용 API 비활성화
+    user-analytics-dashboard-enabled: false

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/fragments :: head}"></head>
+<body>
+<header th:replace="~{public/fragments :: header}"></header>
+<main class="not-found-page">
+    <div class="site-shell not-found-inner">
+        <p class="error-code">404</p>
+        <h1>We could not find that page.</h1>
+        <p>The address may have changed, or the menu may no longer be available.</p>
+        <code th:text="${requestedPath}">/requested-page</code>
+        <a class="button button-primary" href="/">Go to conference home</a>
+    </div>
+</main>
+<footer th:replace="~{public/fragments :: footer}"></footer>
+</body>
+</html>

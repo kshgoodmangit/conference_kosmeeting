@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="join-section" th:fragment="content">
+        <div class="container">
+            <section class="public-form">
+            <form id="international-join-form"
+                  class="join-form"
+                  action="/api/public/members/register"
+                  method="post"
+                  novalidate
+                  data-success-url="/login"
+                  th:attr="data-success-url=${loginMenu != null ? loginMenu.routePath : '/login'}">
+                <input type="hidden" name="memberType" value="international">
+                <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                <div class="process-confirm mb5">
+                    <h6 class="mb-0 cs-title"><img class="img-position mr-2" src="/public/img/confirm-icon.png"> English only · leading/trailing spaces auto-trimmed · <span class="co-danger">*</span> required</h6>
+                </div>
+
+                <section class="sign-section">
+                    <div class="sign-content-fields">
+                        <div>
+                            <label for="international-country" class="mb-3">COUNTRY</label>
+                            <select id="international-country" name="country" autocomplete="country-name" required
+                                    data-country-select data-country-code-target="#international-mobile-country-code">
+                                <option value="">Select a country</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="join-email-verification" data-email-verification>
+                                <div class="join-verification-email">
+                                    <label for="international-email" class="mb-3">EMAIL <span class="co-danger">*</span></label>
+                                <div class="join-verification-row">
+                                    <input id="international-email" type="email" name="email" maxlength="255"
+                                           autocomplete="email" placeholder="your.email@example.com" required
+                                           aria-describedby="international-email-hint" data-verification-email>
+                                    <button type="button" class="join-verification-button" data-send-email-code disabled>Send code</button>
+                                </div>
+                                <p id="international-email-hint" class="join-verification-hint">Use an email address you can access. We'll send a 6-digit verification code.</p>
+                                </div>
+                                <div class="join-verification-code">
+                                    <label for="international-email-code" class="mb-3">VERIFICATION CODE</label>
+                                    <div class="join-verification-row">
+                                        <input id="international-email-code" type="text" inputmode="numeric" autocomplete="one-time-code"
+                                               maxlength="6" placeholder="6-digit code" data-email-code disabled
+                                               aria-describedby="international-code-hint">
+                                        <button type="button" class="join-verification-button join-verification-button-secondary" data-verify-email-code disabled>Verify</button>
+                                    </div>
+                                    <p id="international-code-hint" class="join-verification-hint">Click Send code first. You can enter the code once it has been sent.</p>
+                                </div>
+                                <p class="join-verification-status" data-email-verification-status role="status" tabindex="-1" hidden></p>
+                                <p class="join-verification-hint" data-email-existing-member-links hidden>
+                                    <a href="/login" th:href="${loginMenu != null ? loginMenu.routePath : '/login'}">Log in</a>
+                                    · <a href="/forgot-password">Forgot your password?</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="d-grid grid-item-2" style="gap: 1rem;">
+                            <div>
+                                <label for="international-first-name" class="mb-3">FIRST NAME <span class="co-danger">*</span></label>
+                                <input id="international-first-name" type="text" name="firstName"
+                                       autocomplete="given-name" placeholder="First name" required>
+                            </div>
+                            <div>
+                                <label for="international-last-name" class="mb-3">LAST NAME <span class="co-danger">*</span></label>
+                                <input id="international-last-name" type="text" name="lastName"
+                                       autocomplete="family-name" placeholder="Last name" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="international-institution" class="mb-3">INSTITUTION <span class="co-danger">*</span></label>
+                            <input id="international-institution" type="text" name="institution"
+                                   autocomplete="organization" placeholder="Institution" required>
+                        </div>
+
+                        <div class="d-grid grid-item-2" style="gap: 1rem;">
+                            <div>
+                                <label for="international-department" class="mb-3">DEPARTMENT</label>
+                                <input id="international-department" type="text" name="department" placeholder="Department">
+                            </div>
+                            <div>
+                                <label for="international-position" class="mb-3">POSITION</label>
+                                <input id="international-position" type="text" name="positionTitle"
+                                       autocomplete="organization-title" placeholder="Position">
+                            </div>
+                        </div>
+
+                        <div class="d-grid grid-item-2" style="gap: 1rem;">
+                            <div>
+                                <label for="international-password" class="mb-3">PASSWORD <span class="co-danger">*</span></label>
+                                <input id="international-password" type="password" name="password" minlength="8" maxlength="16"
+                                       autocomplete="new-password" placeholder="8-16 characters" required>
+                            </div>
+                            <div>
+                                <label for="international-password-confirm" class="mb-3">CONFIRM PASSWORD <span class="co-danger">*</span></label>
+                                <input id="international-password-confirm" type="password" name="passwordConfirm" minlength="8" maxlength="16"
+                                       autocomplete="new-password" placeholder="Confirm password" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div>
+                                <label for="international-mobile-country-code" class="mb-3">MOBILE NUMBER <span class="co-danger">*</span></label>
+                                <div class="d-md-flex" style="gap: 1rem;">
+                                    <input id="international-mobile-country-code" type="tel" name="mobileCountryCode" value="+82" readonly class="mb-2 mb-md-0" required style="flex: 0 0 10%;">
+                                    <input id="international-mobile-phone-number" type="tel" name="mobilePhoneNumber" maxlength="24" autocomplete="tel-national" pattern="[0-9\(\) \-]+" placeholder="Mobile number" required style="flex: 1;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="agree-section">
+                            <div class="agreeContent">
+                                <div class="mb-4">
+                                    <h6 class="cs-content fnb mb3">Purposes</h6>
+                                    <p class="cs-content mb-0">The APDRC8 website collects and uses personal information to manage user accounts, process abstract submissions and conference registration, and provide important conference-related notices and updates.</p>
+                                </div>
+                                <div class="mb-4">
+                                    <h6 class="cs-content fnb mb3">Items of Personal Information Collected</h6>
+                                    <p class="cs-content mb-0">APDRC8 may collect personal information required for account registration, abstract submission, and conference registration, including your name, country, ID (e-mail address), password, affiliation, department, position, and mobile phone number.</p>
+                                </div>
+                                <div class="mb-4">
+                                    <h6 class="cs-content fnb mb3">Retention and Use of Personal Information</h6>
+                                    <p class="cs-content mb-0">APDRC8 will retain and use your personal information only for as long as necessary to provide conference-related services and fulfill applicable administrative or legal obligations. Personal information will be deleted when the purpose of collection has been fulfilled, unless a longer retention period is required by applicable law.</p>
+                                </div>
+                            </div>
+                            <label for="international-privacy-consent">
+                                <input id="international-privacy-consent" type="checkbox" name="privacyConsent" value="true" class="mr-3" required>
+                                I agree to the collection and use of my personal information.
+                            </label>
+                        </div>
+
+                        <div class="text-left">
+                            <button class="btn mb2" type="submit" disabled>Sign Up</button>
+                            <span class="cs-content co-569">Already have an account? <a href="/login" th:href="${loginMenu != null ? loginMenu.routePath : '/login'}">Log in</a></span>
+                        </div>
+                    </div>
+                </section>
+            </form>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

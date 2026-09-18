@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!-- Generic public page shell. contentTemplate selects a live-data fragment; without it,
+     sanitized contentHtml from Menu Management is rendered as the page body. -->
+<head th:replace="~{public/fragments :: head}"></head>
+<body>
+<header th:replace="~{public/fragments :: header}"></header>
+
+<main>
+    <section class="page-menu d-none d-lg-block" th:if="${sectionMenu.children != null and !sectionMenu.children.isEmpty()}">
+        <div class="container">
+            <nav class="page-menu-nav" aria-label="Page navigation">
+                <a class="page-menu-home" href="/" aria-label="Home">
+                    <img src="/public/img/icon-home.svg" alt="">
+                </a>
+                <th:block th:each="menu : ${sectionMenu.children}">
+                    <a class="page-menu-link"
+                       th:if="${menu.navigationVisible != false and (memberPage != true or menu.menuKey == pageMenuCurrentKey)}"
+                       th:href="${(menu.pathType == 'external' or menu.menuType == 'link') ? menu.linkUrl : menu.routePath}"
+                       th:classappend="${menu.menuKey == pageMenuCurrentKey} ? ' is-current'"
+                       th:text="${menu.menuName}">Submenu</a>
+                </th:block>
+            </nav>
+        </div>
+    </section>
+
+    <section class="page-top">
+        <h1 id="page-title" th:text="${memberPage == true ? memberPageTitle : sectionMenu.menuName}">APDRC8</h1>
+        <p class="mb-5" th:text="${memberPage == true ? memberPageDescription : currentMenu.menuName}">Welcome Message</p>
+
+        <ul class="breadcrumb">
+            <li>
+                <a href="/">
+                    <img src="/public/img/icon-home.svg" alt="">
+                    <span>HOME</span>
+                </a>
+            </li>
+            <th:block th:each="crumb : ${breadcrumbs}">
+                <li class="breadcrumb-separator" aria-hidden="true">
+                    <img src="/public/img/icon-chevron.svg" alt="" class="breadcrumb-chevron">
+                </li>
+                <li>
+                    <a th:if="${crumb.menuKey != currentMenu.menuKey}"
+                       th:href="${crumb.routePath}"
+                       th:text="${crumb.menuName}">Section</a>
+                    <span th:if="${crumb.menuKey == currentMenu.menuKey}" th:text="${crumb.menuName}">Page</span>
+                </li>
+            </th:block>
+        </ul>
+    </section>
+
+    <section id="content" th:classappend="${noBottomPadding} ? ' no-bottom-padding'">
+        <th:block th:if="${contentTemplate != null}">
+            <th:block th:replace="~{${contentTemplate} :: content}"></th:block>
+        </th:block>
+
+        <div class="cms-content" th:if="${contentTemplate == null and !contentHtml.isEmpty()}"
+             th:utext="${contentHtml}"></div>
+
+        <div class="container" th:if="${contentTemplate == null and contentHtml.isEmpty()}">
+            <div class="empty-content">
+                <span aria-hidden="true">✦</span>
+                <h3>Content is being prepared.</h3>
+                <p>This page is ready for publishing. <br>Add content in Admin → Menu Management to display it here.</p>
+                <a href="/">Return to conference home</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<th:block th:with="showPopupQuickMenu=true">
+    <section th:replace="~{public/fragments :: quickmenu}"></section>
+</th:block>
+<footer th:replace="~{public/fragments :: footer}"></footer>
+<!-- Subpages load popup content only when the quick-menu button is clicked. -->
+<link rel="stylesheet" href="/public/css/popups.css">
+<script src="/public/js/popups.js" defer></script>
+</body>
+</html>
+

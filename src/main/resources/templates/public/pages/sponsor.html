@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="sponsorship-section" th:fragment="content">
+    <div class="container">
+        <div class="sponsor-groups">
+            <div class="sponsor-group mb9" th:each="type : ${sponsorTypes}">
+                <h4 class="cm-title fnsb mb-5" th:text="${type.codeName}">SPONSOR</h4>
+                <div class="sponsor-grid grid-item-3">
+                    <a th:each="sponsor : ${sponsors}"
+                       th:if="${sponsor.sponsorTypeCode == type.seq}"
+                       th:href="${sponsor.linkUrl}"
+                       th:attr="aria-label=${sponsor.sponsorName}"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <img th:src="${sponsor.logoUrl}" th:alt="${sponsor.sponsorName}">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

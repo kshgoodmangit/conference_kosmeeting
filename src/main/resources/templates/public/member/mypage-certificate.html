@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="member-page" th:fragment="content">
+        <div class="container">
+            <h2 class="bbtitle fnb mb-5">My Page</h2>
+
+            <nav class="member-tabs" aria-label="My Page">
+                <a href="/mypage" aria-current="page">My Page Home</a>
+                <a href="/mypage/abstract">Abstract Submission</a>
+                <a href="/mypage/registration">Registration</a>
+                <a class="is-active" href="/mypage/certificate">Certificate</a>
+            </nav>
+
+            <section class="member-section--spaced">
+                <div class="text-center mb5">
+                    <h5 class="fnsb cl-title mb-2">Certificate of Attendance</h5>
+                    <p class="mb-0 pp-content">Preview and download your official certificate of attendance.</p>
+                </div>
+
+                <div class="bk-soft-zone p-5 d-table mx-auto mb5 text-center">
+                    <img class="m-lg-5 mw-100" src="/public/img/certificate.png" alt="Certificate preview">
+                </div>
+
+                <div class="text-center">
+                    <a class="member-button member-button--outline fnsb w-auto px-4" href="/api/public/members/certificate"><img class="mr-3" src="/public/img/pdf-icon.png">DOWNLOAD CERTIFICATE <img class="ml-3" src="/public/img/pdf-down.png"></a>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

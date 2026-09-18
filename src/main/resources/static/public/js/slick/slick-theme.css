@@ -1,0 +1,274 @@
+@charset 'UTF-8';
+/* Slider */
+
+/* Arrows */
+.slick-prev,
+.slick-next
+{
+	z-index: 4;
+    font-size: 0;
+    line-height: 0;
+    position: absolute;
+    top: 50%;
+    display: block;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    -webkit-transform: translate(0, -50%);
+    -ms-transform: translate(0, -50%);
+    transform: translate(0, -50%);
+    cursor: pointer;
+    color: transparent;
+    border: none;
+    outline: none;
+    background: transparent;
+}
+
+.factory .slick-prev, .factory  .slick-next{top:1.2rem; width: 9px; height: 17px;}
+
+.slick-prev:hover,
+.slick-prev:focus,
+.slick-next:hover,
+.slick-next:focus
+{
+    color: transparent;
+    outline: none;
+    background: transparent;
+}
+.slick-prev:hover:before,
+.slick-prev:focus:before,
+.slick-next:hover:before,
+.slick-next:focus:before
+{
+    opacity: 1;
+}
+/*
+.slick-prev.slick-disabled:before,
+.slick-next.slick-disabled:before
+{
+    opacity: .25;
+}
+*/
+.slick-prev:before,
+.slick-next:before
+{
+    font-family: 'slick';
+    font-size: 34px;
+    line-height: 1;
+    opacity: .75;
+    color: #d9d9d9;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position : absolute;
+    top: 50%;
+    transform: translateY(-40%);
+}
+
+
+
+.fbanner .slick-prev
+{
+    left: 0px;
+	z-index: 100;
+}
+
+.factory .slick-prev {
+	right: 49px;
+    z-index: 100;
+}
+[dir='rtl'] .slick-prev
+{
+    right: -25px;
+    left: auto;
+}
+.slick-prev:before
+{
+    content: '';
+    background-image: url('/css/egovframework/img/userpage/main/arrow_left.png');
+    background-size: 100%;
+    background-repeat: no-repeat;
+    width: 24px;
+    height: 48px;
+	left: 6px;
+}
+.project_list .slick-prev {left:-25px;}
+.project_list .slick-prev:before {left: 0;}
+.footer-slide .slick-prev:before {
+	background-image: url(/css/egovframework/img/userpage/footer/footer_prev.png);
+	width: 6px;
+    height: 11px;
+    background-size: 100% 100%;
+    background-position: center;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    top: 50%;
+}
+.footer-slide .slick-next:before {
+	background-image: url(/css/egovframework/img/userpage/footer/footer_arrow.png);
+	width: 6px;
+    height: 11px;
+    background-size: 100% 100%;
+    background-position: center;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    top: 50%;
+}
+.factory .slick-prev:before {
+	content: '';
+    background-image: url(/images/egovframework/main/prev.png);
+    background-size: 9px 17px;
+    width: 9px;
+    height: 17px;
+    left: 0;
+    font-size: 17px;
+}
+[dir='rtl'] .slick-prev:before
+{
+    content: '��';
+    right: 0;
+}
+.slick-next
+{
+    right: 0px;
+}
+.main_project .slick-next
+{
+    right: -25px;
+}
+.factory .slick-next {right: 0;}
+[dir='rtl'] .slick-next
+{
+    right: auto;
+    left: -25px;
+}
+.slick-next:before
+{
+    content: '';
+    background-image: url('/css/egovframework/img/userpage/main/arrow_right.png');
+    background-size: 100%;
+    background-repeat: no-repeat;
+    width: 24px;
+    height: 48px;
+    right: 6px;
+}
+.factory .slick-next:after {
+	position: absolute;
+    content: '';
+    display: block;
+    width: 1px;
+    height: 18px;
+    background: #000000;
+    top: 0.2rem;
+    right: 28px;
+}
+.factory .slick-next:before {
+	content: '';
+    background-image: url(/images/egovframework/main/next.png);
+    background-size: 9px 17px;
+    width: 9px;
+    height: 17px;
+    right: 0;
+}
+[dir='rtl'] .slick-next:before
+{
+    content: '��';
+}
+
+/* Dots */
+.slick-dotted.slick-slider
+{
+    position: relative;
+	/*height: 32.3rem;*/
+}
+
+.slick-dots
+{
+    position: absolute;
+    top: 6px;
+    left: 15px;
+    display: block;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    text-align: center;
+}
+.project_list .slick-dots {
+	bottom: -0.9rem;
+	top: auto;
+	left: 50%;
+	transform: translateX(-50%);
+}
+.slick-dots li
+{
+    position: relative;
+
+    display: inline-block;
+
+    width: 9px;
+    height: 9px;
+    margin: 0 5px 0 0;
+    padding: 0;
+
+    cursor: pointer;
+}
+.slick-dots li button
+{
+    font-size: 0;
+    line-height: 0;
+    display: block;
+    width: 9px;
+    height: 9px;
+    cursor: pointer;
+    color: transparent;
+    border: 0;
+    outline: none;
+    background: transparent;
+}
+.slick-dots li button:hover,
+.slick-dots li button:focus
+{
+    outline: none;
+}
+.slick-dots li button:hover:before,
+.slick-dots li button:focus:before
+{
+    opacity: 1;
+}
+.slick-dots li button:before
+{
+    font-family: 'slick';
+    font-size: 6px;
+    line-height: 20px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 9px;
+    height: 9px;
+    content: '';
+    text-align: center;
+    color: black;
+	background: none;
+	border:1px solid #1f4c73;
+	border-radius: 50%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.project_list .slick-dots li button:before {
+	border: 1px solid #9c9c9c;
+	background: #9c9c9c;
+}
+.slick-dots li.slick-active button:before
+{
+    background: #1f4c73;
+}
+.project_list .slick-dots li.slick-active button:before {border: 1px solid #ffffff; background: #ffffff;}
+.project_list {top: -1.5rem;}
+
+.footer-slide .slick-prev {left:-15px;}
+.footer-slide .slick-next {right: -15px;}
+.footer-slide .slick-prev, .footer-slide .slick-next {
+	border: 1px solid #ddd;
+	height: 24px;
+	width: 24px;
+}

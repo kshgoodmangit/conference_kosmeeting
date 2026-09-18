@@ -1,0 +1,33 @@
+package com.bjworld21.congress.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ConferenceSettingsResponse {
+    private Long seq;
+    private String eventName;
+    private LocalDate eventStartDate;
+    private LocalDate eventEndDate;
+    private LocalDate earlyBirdStartDate;
+    private LocalDate earlyBirdEndDate;
+    private LocalDate regularStartDate;
+    private LocalDate regularEndDate;
+    private String registrationCurrency;
+    private LocalDate abstractStartDate;
+    private LocalDate abstractEndDate;
+    private LocalDate presentationMaterialStartDate;
+    private LocalDate presentationMaterialEndDate;
+    private String venueAddress;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String message;
+}

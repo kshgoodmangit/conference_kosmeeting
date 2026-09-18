@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/fragments :: head}"></head>
+<body>
+<header th:replace="~{public/fragments :: header}"></header>
+
+<main>
+    <section class="main-hero">
+        <div class="main-hero-background" aria-hidden="true">
+            <div class="hb-img"><img src="/public/img/main/main-top3.png" alt=""></div>
+            <div class="hb-img"><img src="/public/img/main/main-top1.png" alt=""></div>
+            <div class="hb-img"><img src="/public/img/main/main-top2.png" alt=""></div>
+        </div>
+        <div class="container main-hero-inner">
+            <div class="main-hero-copy">
+                <h1 class="mb9"><span>Connecting Minds,</span> Advancing Discovery</h1>
+
+                <div class="main-hero-navigation" aria-label="Hero image navigation">
+                    <button type="button" class="is-active" data-slide="0" aria-label="Show hero image 1" aria-current="true"></button>
+                    <button type="button" data-slide="1" aria-label="Show hero image 2" aria-current="false"></button>
+                    <button type="button" data-slide="2" aria-label="Show hero image 3" aria-current="false"></button>
+                    <span><strong>1</strong> / 3</span>
+                </div>
+            </div>
+            <div>
+                <div class="main-hero-panel mb2">
+                    <strong>Asia Pacific Drosophila Research Conference 8</strong>
+                    <dl>
+                        <div>
+                            <dt><img class="mr-2" src="/public/img/main/date-icon.png">Date</dt>
+                            <dd th:text="${eventDateText}">May 9, 2027 – May 12, 2027</dd>
+                        </div>
+                        <div>
+                            <dt><img class="mr-2" src="/public/img/main/venue-icon.png">Venue</dt>
+                            <dd th:text="${venueText}">KSTC, Seoul, Korea</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="main-deadline-grid">
+                    <article class="text-center">
+                        <h2 class="coff">Registration Opens</h2>
+                        <p class="coff"><img class="mr-2" src="/public/img/main/time-icon.png"><span th:text="${registrationOpenDateText}">September 1, 2027</span></p>
+                        <strong class="coff" th:if="${registrationDday != null}" th:text="${registrationDday}">D-50</strong>
+                        <a th:if="${registrationOpened}" href="/registration/online-registration">Register Now →</a>
+                    </article>
+                    <article class="text-center">
+                        <h2 class="coff">Abstract Submission</h2>
+                        <p class="coff"><img class="mr-2" src="/public/img/main/time-icon.png"><span th:text="${abstractSubmissionDateText}">January 15, 2027</span></p>
+                        <strong class="coff" th:if="${abstractSubmissionDday != null}" th:text="${abstractSubmissionDday}">D-50</strong>
+                        <a th:if="${abstractOpened}" href="/abstract/abstract-submission">Submit Abstract →</a>
+                        <a th:unless="${abstractOpened}" href="/abstract/submission-guideline">Guidelines →</a>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="main-speakers" aria-labelledby="main-speakers-title">
+        <div class="container">
+            <div class="main-section-title">
+                <h2 id="main-speakers-title" class="coff">Invited Speakers</h2>
+            </div>
+            <div class="main-speaker-grid">
+                <article class="main-speaker-card" th:each="speaker, speakerStat : ${speakersData.items}">
+                    <div class="main-speaker-photo">
+                        <img th:if="${speaker.profileImageUrl != null}"
+                             th:src="@{/public/speakers/{seq}/image(seq=${speaker.seq})}"
+                             th:alt="${speaker.displayName}">
+                    </div>
+                    <div class="main-speaker-info">
+                        <span th:text="${'Plenary ' + #numbers.formatInteger(speakerStat.count, 2) + '-1'}">Plenary 01-1</span>
+                        <strong th:text="${speaker.displayName}">Speaker 1</strong>
+                        <p th:text="${speaker.affiliation}">Institution 1</p>
+                        <em th:if="${speaker.countryNameEn != null and speaker.countryNameEn != ''}" th:text="${speaker.countryNameEn}">USA</em>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="main-program" aria-labelledby="main-program-title">
+        <div class="container">
+            <div class="mb5 d-md-flex align-items-center justify-content-between main-program-title">
+                <h4 id="main-program-title" class="fnb mb-5 mb-md-0">Scientific Program</h4>
+
+                <a href="/program/scientific-program">VIEW PROGRAM →</a>
+            </div>
+
+            <div th:if="${programData != null and programData.days != null and !programData.days.isEmpty()}">
+                <div class="scientific-tabs" role="tablist" aria-label="Scientific program days">
+                    <button type="button" class="scientific-tab"
+                            th:each="day, dayStat : ${programData.days}"
+                            th:if="${day.enabled != false}"
+                            th:classappend="${dayStat.first} ? ' active'"
+                            th:data-day="${'scientific-day' + day.seq}" role="tab"
+                            th:attr="aria-selected=${dayStat.first}">
+                        <span th:text="'DAY ' + ${day.dayNumber}">DAY 1</span>
+                        <strong th:text="${day.theme ?: day.dayTitle ?: #temporals.format(day.eventDate, 'MMM d')}">Theme</strong>
+                    </button>
+                </div>
+
+                <div class="scientific-day-panel"
+                     th:each="day, dayStat : ${programData.days}"
+                     th:if="${day.enabled != false}"
+                     th:classappend="${dayStat.first} ? ' active'"
+                     th:id="${'scientific-day' + day.seq}">
+                    <div class="scientific-day-title">
+                        <strong th:text="'DAY ' + ${day.dayNumber}">DAY 1</strong>
+                        <span th:text="${#strings.toUpperCase(programDateFormatter.format(day.eventDate))}">SUNDAY, 9 MAY 2027</span>
+                        <em th:if="${(day.theme ?: day.dayTitle) != null}"
+                            th:text="${'Theme ' + #strings.toUpperCase(day.theme ?: day.dayTitle)}">Theme</em>
+                    </div>
+                    <div class="scientific-table-wrap">
+                        <div class="scientific-children">
+                            <table class="scientific-table">
+                                <caption th:text="'Day ' + ${day.dayNumber} + ' program overview'">Day 1 program overview</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col"><span>Time</span></th>
+                                        <th scope="col"><span>Program / Session</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <th:block th:each="item : ${programData.items}"
+                                              th:if="${item.enabled != false and item.programDaySeq == day.seq and item.parentSeq == null}">
+                                        <tr th:class="${item.rowStyle == 'HIGHLIGHT' ? 'scientific-highlight' : (item.rowStyle == 'MUTED' ? 'scientific-break' : (item.itemType == 'SESSION' ? 'scientific-session' : ''))}">
+                                            <th scope="row" th:text="${#temporals.format(item.startTime, 'HH:mm')} + '-' + ${#temporals.format(item.endTime, 'HH:mm')}">10:00-10:30</th>
+                                            <td>
+                                                <strong th:text="${item.title}">Program title</strong>
+                                            </td>
+                                        </tr>
+                                    </th:block>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="scientific-footnote">* Program details, speakers, and room assignments are subject to change.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="main-bottom">
+        <div class="container main-bottom-grid">
+            <div class="main-direction">
+                <h2 class="coff mb2">Direction</h2>
+                <div class="main-map">
+                    <div class="main-map-card">
+                        <strong>Korea Science and Technology Center (KSTC)</strong>
+                        <p>22, Teheran-ro 7-gil, Gangnam-gu, Seoul 06130, Republic of Korea</p>
+                    </div>
+
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m5!3m3!1m2!1s0x357ca157ddbed32f%3A0x29432bdf4b90af3d!2s22%20Teheran-ro%207-gil%2C%20Gangnam%20District%2C%20Seoul!5e0!3m2!1sen!2skr!4v1788932006723!5m2!1sen!2skr" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                </div>
+            </div>
+
+            <div class="main-notice">
+                <div class="d-flex align-items-center justify-content-between mb2">
+                    <h2 class="coff">Notice</h2>
+                    <a class="coff pp-content fnsb" href="/information/notice">View Notices &rarr;</a>
+                </div>
+                <ul class="un-style">
+                    <li th:each="notice : ${notices}">
+                        <a th:href="@{/information/noticedetail/{seq}(seq=${notice.seq})}" th:text="${notice.title}">Notice title</a>
+                        <time th:datetime="${notice.publishedAt}" th:text="${#temporals.format(notice.publishedAt, 'yyyy. MM. dd')}">2026. 08. 05</time>
+                    </li>
+                    <li th:if="${#lists.isEmpty(notices)}"><span>No notices have been posted.</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="main-sponsors">
+        <div class="container">
+            <div class="sponsors-parent">
+                <span>SPONSOR</span>
+                <div class="main-sponsors-grid">
+                    <a th:each="sponsor : ${sponsors}" th:href="${sponsor.linkUrl}" th:attr="aria-label=${sponsor.sponsorName}" target="_blank" rel="noopener noreferrer">
+                        <img th:src="${sponsor.logoUrl}" th:alt="${sponsor.sponsorName}">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <th:block th:with="showPopupQuickMenu=true">
+        <section th:replace="~{public/fragments :: quickmenu}"></section>
+    </th:block>
+</main>
+
+<footer th:replace="~{public/fragments :: footer}"></footer>
+<section th:replace="~{public/popups :: display}"></section>
+</body>
+</html>

@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: KOSMEETING
+  datasource:
+    url: jdbc:mysql://localhost:3306/kosmeeting?useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: kosmeeting
+    password: ${DATABASE_PWD_KOSMEETING}
