@@ -9,6 +9,8 @@ import com.bjworld21.conference.entity.AbstractSimilarityResult;
 import com.bjworld21.conference.repository.AbstractEmbeddingRepository;
 import com.bjworld21.conference.repository.AbstractSubmissionRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
@@ -49,8 +51,9 @@ class AbstractSimilarityServiceTest {
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test
-    void generatesAnalysisDataForSimilarityCandidates() {
+    @ParameterizedTest
+    @ValueSource(longs = {1L, 7L})
+    void generatesAnalysisDataForCurrentConference(Long conferenceSeq) {
         LicenseProperties licenseProperties = new LicenseProperties();
         licenseProperties.setAbstractSimilarityEnabled(true);
         AbstractSimilarityProperties properties = new AbstractSimilarityProperties();
@@ -68,8 +71,8 @@ class AbstractSimilarityServiceTest {
                 .status("approved")
                 .build();
         List<AbstractSubmissionResponse> candidates = List.of(first, second);
-        when(submissionRepository.findSimilarityCandidates(1L)).thenReturn(candidates);
-        when(embeddingService.synchronizeWithSummary(eq(candidates), any())).thenReturn(
+        when(submissionRepository.findSimilarityCandidates(conferenceSeq)).thenReturn(candidates);
+        when(embeddingService.synchronizeWithSummary(eq(conferenceSeq), eq(candidates), any())).thenReturn(
                 new AbstractEmbeddingService.SynchronizationResult(
                         new EmbeddingHealthResponse("ok", "BAAI/bge-small-en-v1.5", 384),
                         2,
@@ -77,7 +80,7 @@ class AbstractSimilarityServiceTest {
                         10
                 )
         );
-        when(embeddingRepository.findAll()).thenReturn(List.of(
+        when(embeddingRepository.findByConferenceSeq(conferenceSeq)).thenReturn(List.of(
                 embedding(10L, "a".repeat(64)),
                 embedding(20L, "b".repeat(64))
         ));
@@ -91,7 +94,7 @@ class AbstractSimilarityServiceTest {
                 PersonalDataTestSupport.properties()
         );
 
-        var response = service.generateAnalysisData(1L);
+        var response = service.generateAnalysisData(conferenceSeq);
 
         assertThat(response.abstractCount()).isEqualTo(2);
         assertThat(response.updatedAbstractCount()).isEqualTo(2);
@@ -99,14 +102,18 @@ class AbstractSimilarityServiceTest {
         assertThat(response.similarityResultCount()).isEqualTo(2);
         assertThat(response.model()).isEqualTo("BAAI/bge-small-en-v1.5");
         assertThat(response.dimension()).isEqualTo(384);
-        verify(submissionRepository).findSimilarityCandidates(1L);
-        verify(embeddingService).synchronizeWithSummary(eq(candidates), any());
+        verify(submissionRepository).findSimilarityCandidates(conferenceSeq);
+        verify(embeddingService).synchronizeWithSummary(eq(conferenceSeq), eq(candidates), any());
+        verify(embeddingRepository).findByConferenceSeq(conferenceSeq);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<AbstractSimilarityResult>> resultCaptor = ArgumentCaptor.forClass(List.class);
-        verify(resultStorageService).replaceAll(eq(1L), resultCaptor.capture(), any());
+        verify(resultStorageService).replaceAll(eq(conferenceSeq), resultCaptor.capture(), any());
         assertThat(resultCaptor.getValue())
                 .extracting(AbstractSimilarityResult::getSourceAbstractSeq)
                 .containsExactly(10L, 20L);
+        assertThat(resultCaptor.getValue())
+                .extracting(AbstractSimilarityResult::getTargetAbstractSeq)
+                .containsExactly(20L, 10L);
         assertThat(resultCaptor.getValue())
                 .allSatisfy(result -> {
                     assertThat(result.getOverallSimilarity()).isEqualTo(100.0);
@@ -114,6 +121,38 @@ class AbstractSimilarityServiceTest {
                     assertThat(result.getSourceContentHash()).hasSize(64);
                     assertThat(result.getTargetContentHash()).hasSize(64);
                 });
+    }
+
+    @Test
+    void individualAnalysisLoadsOnlyCurrentConferenceEmbeddings() {
+        LicenseProperties licenseProperties = new LicenseProperties();
+        licenseProperties.setAbstractSimilarityEnabled(true);
+        AbstractSubmissionRepository submissionRepository = mock(AbstractSubmissionRepository.class);
+        AbstractEmbeddingRepository embeddingRepository = mock(AbstractEmbeddingRepository.class);
+        AbstractEmbeddingService embeddingService = mock(AbstractEmbeddingService.class);
+        AbstractSubmissionResponse source = AbstractSubmissionResponse.builder().seq(10L).build();
+        AbstractSubmissionResponse target = AbstractSubmissionResponse.builder().seq(20L).build();
+        when(submissionRepository.findBySeq(7L, 10L, PersonalDataTestSupport.DB_ENC_STRING))
+                .thenReturn(source);
+        when(submissionRepository.findSimilarityCandidates(7L)).thenReturn(List.of(source, target));
+        when(embeddingService.synchronize(eq(7L), any())).thenReturn(
+                new EmbeddingHealthResponse("ok", "BAAI/bge-small-en-v1.5", 384)
+        );
+        when(embeddingRepository.findByConferenceSeq(7L)).thenReturn(List.of(
+                embedding(10L, "a".repeat(64)), embedding(20L, "b".repeat(64))
+        ));
+        AbstractSimilarityService service = new AbstractSimilarityService(
+                licenseProperties, new AbstractSimilarityProperties(), submissionRepository,
+                embeddingRepository, embeddingService, mock(AbstractSimilarityResultStorageService.class),
+                PersonalDataTestSupport.properties()
+        );
+
+        var response = service.analyze(7L, 10L);
+
+        assertThat(response.getComparedCount()).isEqualTo(1);
+        assertThat(response.getMatches()).extracting(match -> match.getAbstractSeq()).containsExactly(20L);
+        verify(embeddingRepository).findByConferenceSeq(7L);
+        verify(embeddingService).synchronize(7L, List.of(source, source, target));
     }
 
     @Test

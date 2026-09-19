@@ -78,9 +78,9 @@ public class AbstractSimilarityService {
         List<AbstractSubmissionResponse> synchronizationTargets = new ArrayList<>(candidates.size() + 1);
         synchronizationTargets.add(target);
         synchronizationTargets.addAll(candidates);
-        EmbeddingHealthResponse server = embeddingService.synchronize(synchronizationTargets);
+        EmbeddingHealthResponse server = embeddingService.synchronize(conferenceSeq, synchronizationTargets);
 
-        Map<Long, Map<String, float[]>> vectorsByAbstract = loadEmbeddingData(server.model()).vectorsByAbstract();
+        Map<Long, Map<String, float[]>> vectorsByAbstract = loadEmbeddingData(conferenceSeq, server.model()).vectorsByAbstract();
         Map<String, float[]> targetVectors = vectorsByAbstract.get(target.getSeq());
         if (targetVectors == null || targetVectors.isEmpty()) {
             throw new EmbeddingServiceException("대상 초록의 임베딩을 생성하지 못했습니다.");
@@ -282,7 +282,7 @@ public class AbstractSimilarityService {
                 0, 0, abstractCount
         ));
         AbstractEmbeddingService.SynchronizationResult result =
-                embeddingService.synchronizeWithSummary(candidates, embeddingProgress -> {
+                embeddingService.synchronizeWithSummary(conferenceSeq, candidates, embeddingProgress -> {
                     int embeddingPercent = embeddingProgress.totalCount() == 0
                             ? 45
                             : 5 + (int) Math.round(
@@ -300,7 +300,7 @@ public class AbstractSimilarityService {
                     ));
                 });
         EmbeddingHealthResponse server = result.server();
-        EmbeddingData embeddingData = loadEmbeddingData(server.model());
+        EmbeddingData embeddingData = loadEmbeddingData(conferenceSeq, server.model());
         progressConsumer.accept(new AbstractSimilarityProgress(
                 "CALCULATING", 45, "초록 간 의미 유사도를 계산하고 있습니다.",
                 0, abstractCount, abstractCount
@@ -343,10 +343,10 @@ public class AbstractSimilarityService {
         );
     }
 
-    private EmbeddingData loadEmbeddingData(String modelName) {
+    private EmbeddingData loadEmbeddingData(Long conferenceSeq, String modelName) {
         Map<Long, Map<String, float[]>> vectorsByAbstract = new HashMap<>();
         Map<Long, Map<String, String>> sectionHashesByAbstract = new HashMap<>();
-        for (AbstractEmbedding embedding : embeddingRepository.findAll()) {
+        for (AbstractEmbedding embedding : embeddingRepository.findByConferenceSeq(conferenceSeq)) {
             if (!modelName.equals(embedding.getModelName())
                     || embedding.getDimension() == null
                     || embedding.getDimension() != properties.getDimension()

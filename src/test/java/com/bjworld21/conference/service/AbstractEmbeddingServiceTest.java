@@ -42,7 +42,7 @@ class AbstractEmbeddingServiceTest {
         when(embeddingClient.health()).thenReturn(
                 new EmbeddingHealthResponse("ok", "BAAI/bge-small-en-v1.5", 384)
         );
-        when(embeddingRepository.findAll()).thenReturn(List.of());
+        when(embeddingRepository.findByConferenceSeq(7L)).thenReturn(List.of());
         when(embeddingClient.embed(anyList())).thenAnswer(invocation -> {
             List<String> texts = invocation.getArgument(0);
             List<List<Double>> vectors = new ArrayList<>();
@@ -66,9 +66,10 @@ class AbstractEmbeddingServiceTest {
                 .build();
 
         AbstractEmbeddingService.SynchronizationResult result =
-                service.synchronizeWithSummary(List.of(submission));
+                service.synchronizeWithSummary(7L, List.of(submission));
 
         ArgumentCaptor<AbstractEmbedding> captor = ArgumentCaptor.forClass(AbstractEmbedding.class);
+        verify(embeddingRepository).findByConferenceSeq(7L);
         verify(embeddingRepository, times(5)).upsert(captor.capture());
         assertThat(captor.getAllValues())
                 .extracting(AbstractEmbedding::getSectionType)

@@ -37,22 +37,23 @@ public class AbstractEmbeddingService {
         this.embeddingRepository = embeddingRepository;
     }
 
-    public EmbeddingHealthResponse synchronize(List<AbstractSubmissionResponse> submissions) {
-        return synchronizeWithSummary(submissions).server();
+    public EmbeddingHealthResponse synchronize(Long conferenceSeq, List<AbstractSubmissionResponse> submissions) {
+        return synchronizeWithSummary(conferenceSeq, submissions).server();
     }
 
-    public SynchronizationResult synchronizeWithSummary(List<AbstractSubmissionResponse> submissions) {
-        return synchronizeWithSummary(submissions, progress -> {
+    public SynchronizationResult synchronizeWithSummary(Long conferenceSeq, List<AbstractSubmissionResponse> submissions) {
+        return synchronizeWithSummary(conferenceSeq, submissions, progress -> {
         });
     }
 
     public SynchronizationResult synchronizeWithSummary(
+            Long conferenceSeq,
             List<AbstractSubmissionResponse> submissions,
             Consumer<EmbeddingProgress> progressConsumer
     ) {
         EmbeddingHealthResponse server = embeddingClient.health();
         Map<EmbeddingKey, AbstractEmbedding> existing = new HashMap<>();
-        for (AbstractEmbedding embedding : embeddingRepository.findAll()) {
+        for (AbstractEmbedding embedding : embeddingRepository.findByConferenceSeq(conferenceSeq)) {
             existing.put(new EmbeddingKey(embedding.getAbstractSeq(), embedding.getSectionType()), embedding);
         }
 

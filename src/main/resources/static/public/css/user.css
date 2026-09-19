@@ -3405,6 +3405,7 @@ main {
 }
 
 .abstract-table-scroll {
+  position: relative;
   width: 100%;
   overflow-x: auto;
 }
@@ -3492,6 +3493,28 @@ main {
   border-radius: 5px;
   overflow: hidden;
 }
+
+.abstract-author-editor-actions {gap: 1rem; flex-wrap: wrap;}
+.abstract-author-editor-actions [data-cancel-author] {
+  min-width: auto;
+  color: var(--color-text);
+  background: var(--color-blue-soft);
+}
+.abstract-author-list-table {margin-top: 2rem;}
+.abstract-author-list-table table {min-width: 80rem; table-layout: auto;}
+.abstract-author-list-table td {overflow-wrap: anywhere;}
+.abstract-author-list-table tr.is-editing td {background: var(--color-blue-soft);}
+.abstract-author-list-actions {display: flex; justify-content: center; gap: .6rem; white-space: nowrap;}
+.abstract-author-list-actions button {
+  padding: .5rem .8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-white);
+  color: var(--apdrc-blue);
+  font: inherit;
+  cursor: pointer;
+}
+.abstract-author-list-actions button:disabled {opacity: .4; cursor: not-allowed;}
 
 .abstract-author-card + .abstract-author-card {
   margin-top: 1.2rem;

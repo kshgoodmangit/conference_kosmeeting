@@ -602,6 +602,12 @@
     if (publicAbstractForm instanceof HTMLFormElement) {
         const institutionList = publicAbstractForm.querySelector('[data-institution-list]');
         const authorList = publicAbstractForm.querySelector('[data-author-list]');
+        const authorEditor = publicAbstractForm.querySelector('[data-author-editor]');
+        const saveAuthorButton = publicAbstractForm.querySelector('[data-add-author]');
+        let authors = [];
+        let editingAuthor = null;
+        let authorBaseline = '';
+        publicAbstractForm.noValidate = true;
         const institutionTemplate = document.querySelector('#abstract-institution-template');
         const authorTemplate = document.querySelector('#abstract-author-template');
         const presentationType = publicAbstractForm.querySelector('[name="presentationTypeCode"]');
@@ -666,17 +672,25 @@
                 if (remove instanceof HTMLButtonElement) remove.disabled = rows.length === 1;
             });
 
-            authorList?.querySelectorAll('[name="authorInstitutionNo"]').forEach((select) => {
-                if (!(select instanceof HTMLSelectElement)) return;
+            const select = authorEditor?.querySelector('[name="authorInstitutionNo"]');
+            if (select instanceof HTMLSelectElement) {
                 const selected = select.value;
-                select.replaceChildren(...rows.map((row, index) => {
+                const previousPlaceholder = select.options[0]?.text;
+                const options = rows.flatMap((row, index) => {
                     const name = row.querySelector('[name="institutionName"]')?.value.trim();
                     const department = row.querySelector('[name="institutionDepartment"]')?.value.trim();
-                    return new Option([name || window.PublicSite.t('Institution {number}', {number: index + 1}), department].filter(Boolean).join(' · '), String(index + 1));
-                }));
-                select.value = Array.from(select.options).some((option) => option.value === selected) ? selected : '1';
+                    return name ? [new Option([name, department].filter(Boolean).join(' · '), String(index + 1))] : [];
+                });
+                select.replaceChildren(new Option(window.PublicSite.t(options.length ? 'Select an institution' : 'Enter an institution above first.'), ''), ...options);
+                select.value = options.some((option) => option.value === selected) ? selected : '';
+                select.disabled = options.length === 0;
+                if (previousPlaceholder !== select.options[0].text && window.jQuery?.fn.select2
+                    && window.jQuery(select).hasClass('select2-hidden-accessible')) {
+                    window.jQuery(select).select2('destroy');
+                }
                 enhanceSelect(select);
-            });
+            }
+            refreshAuthors();
         };
 
         // 저자의 국가 선택값에 맞춰 사무실/휴대전화 국가코드를 자동 설정
@@ -700,22 +714,45 @@
             }
         };
 
-        // 저자 순서·역할·삭제/이동 버튼 상태를 현재 목록 기준으로 갱신
+        // Registered authors stay compact; only the single editor contains inputs.
         const refreshAuthors = () => {
-            const cards = Array.from(authorList?.children || []);
-            cards.forEach((card, index) => {
-                const presenting = card.querySelector('[name="isPresentingAuthor"]');
-                const order = card.querySelector('[data-author-order]');
-                const role = card.querySelector('[data-author-role]');
-                if (order) order.textContent = window.PublicSite.t('Order {number}', {number: index + 1});
-                if (role) role.textContent = presenting instanceof HTMLInputElement && presenting.checked ? window.PublicSite.t('Presenting Author') : window.PublicSite.t('Author');
-                card.querySelectorAll('[data-remove-author]').forEach((button) => {
-                    if (button instanceof HTMLButtonElement) button.disabled = cards.length === 1;
+            if (!(authorList instanceof HTMLElement)) return;
+            authorList.replaceChildren();
+            if (!authors.length) {
+                const row = authorList.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.textContent = window.PublicSite.t('No authors added yet. Complete the form above and click Add Author.');
+                return;
+            }
+            authors.forEach((author, index) => {
+                const row = authorList.insertRow();
+                row.dataset.authorIndex = String(index);
+                row.classList.toggle('is-editing', author === editingAuthor);
+                const institution = institutionList.children[author.institutionNo - 1];
+                const institutionName = institution?.querySelector('[name="institutionName"]')?.value.trim();
+                const department = institution?.querySelector('[name="institutionDepartment"]')?.value.trim();
+                const roles = [author.isPresentingAuthor && window.PublicSite.t('Presenting Author'),
+                    author.isCorrespondingAuthor && window.PublicSite.t('Corresponding author')].filter(Boolean);
+                [String(index + 1), author.authorName || '-',
+                    institutionName ? [institutionName, department].filter(Boolean).join(' · ') : window.PublicSite.t('Select an institution'),
+                    roles.join(' / ') || window.PublicSite.t('Author')].forEach((text) => {
+                    row.insertCell().textContent = text;
                 });
-                const up = card.querySelector('[data-move-author="up"]');
-                const down = card.querySelector('[data-move-author="down"]');
-                if (up instanceof HTMLButtonElement) up.disabled = index === 0;
-                if (down instanceof HTMLButtonElement) down.disabled = index === cards.length - 1;
+                const actions = document.createElement('div');
+                actions.className = 'abstract-author-list-actions';
+                [['edit', 'Edit', false], ['up', 'Move author up', index === 0],
+                    ['down', 'Move author down', index === authors.length - 1], ['remove', 'Remove author', false]]
+                    .forEach(([action, label, disabled]) => {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.dataset.authorAction = action;
+                        button.textContent = action === 'up' ? '↑' : action === 'down' ? '↓' : window.PublicSite.t(label);
+                        button.setAttribute('aria-label', `${window.PublicSite.t(label)}: ${author.authorName || index + 1}`);
+                        button.disabled = disabled;
+                        actions.append(button);
+                    });
+                row.insertCell().append(actions);
             });
         };
 
@@ -730,20 +767,85 @@
             return row;
         };
 
-        // 저자 입력 템플릿을 복제하여 새 저자 카드 추가
-        const addAuthor = () => {
-            if (!(authorList instanceof HTMLElement) || !(authorTemplate instanceof HTMLTemplateElement)) return;
-            const card = authorTemplate.content.firstElementChild?.cloneNode(true);
-            if (!(card instanceof HTMLElement)) return;
-            authorList.append(card);
-            const countrySelect = card.querySelector('[name="authorCountry"]');
-            addCountryOptions(countrySelect);
-            bindAuthorCountryCodes(countrySelect);
-            const presenting = card.querySelector('[name="isPresentingAuthor"]');
-            if (presenting instanceof HTMLInputElement && authorList.children.length === 1) presenting.checked = true;
+        const readAuthorEditor = () => ({
+            authorName: value(authorEditor, 'authorName'),
+            institutionNo: Number(value(authorEditor, 'authorInstitutionNo')) || null,
+            isPresentingAuthor: checked(authorEditor, 'isPresentingAuthor'),
+            isCorrespondingAuthor: checked(authorEditor, 'isCorrespondingAuthor'),
+            email: value(authorEditor, 'authorEmail'),
+            country: value(authorEditor, 'authorCountry'),
+            officeCountryCode: value(authorEditor, 'officeCountryCode'),
+            officePhoneNumber: value(authorEditor, 'officePhoneNumber'),
+            mobileCountryCode: value(authorEditor, 'mobileCountryCode'),
+            mobilePhoneNumber: value(authorEditor, 'mobilePhoneNumber')
+        });
+        const authorEditorDirty = () => JSON.stringify(readAuthorEditor()) !== authorBaseline;
+        const focusAuthorEditor = () => {
+            authorEditor.scrollIntoView({behavior: 'smooth', block: 'center'});
+            authorEditor.querySelector('[name="authorName"]')?.focus({preventScroll: true});
+        };
+        const authorNotice = (message) => {
+            setStatus(window.PublicSite.t(message), true);
+            formStatus?.scrollIntoView({behavior: 'smooth', block: 'center'});
+        };
+        const resetAuthorEditor = (author = null) => {
+            if (!(authorEditor instanceof HTMLElement) || !(authorTemplate instanceof HTMLTemplateElement)) return;
+            authorEditor.querySelectorAll('select').forEach((select) => {
+                if (window.jQuery?.fn.select2 && window.jQuery(select).hasClass('select2-hidden-accessible')) window.jQuery(select).select2('destroy');
+            });
+            const card = authorTemplate.content.firstElementChild.cloneNode(true);
+            authorEditor.replaceChildren(card);
+            editingAuthor = author;
+            // Editor validation runs on Add/Save, so a blank next author never blocks abstract submission.
+            card.querySelectorAll('[required]').forEach((input) => {
+                input.required = false;
+                input.setAttribute('aria-required', 'true');
+            });
+            card.querySelectorAll('.abstract-field-row').forEach((row) => {
+                const input = row.querySelector('input, select');
+                const label = row.querySelector(':scope > label');
+                if (input && label) {
+                    input.id = `abstract-editor-${input.name}`;
+                    label.htmlFor = input.id;
+                }
+            });
+            addCountryOptions(card.querySelector('[name="authorCountry"]'));
+            bindAuthorCountryCodes(card.querySelector('[name="authorCountry"]'));
             refreshInstitutionNumbers();
+            if (author) {
+                const fieldNames = {email: 'authorEmail', country: 'authorCountry', institutionNo: 'authorInstitutionNo'};
+                Object.entries(author).forEach(([name, nextValue]) => {
+                    const input = card.querySelector(`[name="${fieldNames[name] || name}"]`);
+                    if (input?.type === 'checkbox') input.checked = Boolean(nextValue);
+                    else setValue(card, fieldNames[name] || name, nextValue);
+                });
+            } else {
+                card.querySelector('[name="isPresentingAuthor"]').checked = !authors.length;
+            }
+            card.querySelector('[data-author-order]').textContent = author ? String(authors.indexOf(author) + 1) : '+';
+            card.querySelector('[data-author-role]').textContent = window.PublicSite.t(author ? 'Edit Author' : 'Add Author');
+            saveAuthorButton.textContent = window.PublicSite.t(author ? 'Save Author' : 'Add Author');
+            authorBaseline = JSON.stringify(readAuthorEditor());
             refreshAuthors();
-            return card;
+        };
+        const saveAuthor = () => {
+            const author = readAuthorEditor();
+            if (!author.authorName) {
+                authorNotice('Enter the author name.');
+                authorEditor.querySelector('[name="authorName"]').focus();
+                return;
+            }
+            if (!author.institutionNo) {
+                authorNotice('Select an institution. Enter an institution above first if none are available.');
+                return;
+            }
+            const inputs = Array.from(authorEditor.querySelectorAll('input, select'));
+            if (inputs.some((input) => !input.reportValidity())) return;
+            if (editingAuthor) Object.assign(editingAuthor, author);
+            else authors.push(author);
+            resetAuthorEditor();
+            setStatus('');
+            focusAuthorEditor();
         };
 
         // AI 도구/사용범위 목록을 체크박스 형태로 화면에 생성
@@ -849,24 +951,8 @@
             });
             if (!institutionList.children.length) addInstitution();
 
-            authorList.replaceChildren();
-            (abstract.authors || []).forEach((author) => {
-                const card = addAuthor();
-                if (!card) return;
-                setValue(card, 'authorName', author.authorName);
-                setValue(card, 'authorInstitutionNo', String(author.institutionNo || 1));
-                setValue(card, 'authorEmail', author.email);
-                setValue(card, 'authorCountry', author.country);
-                setValue(card, 'officeCountryCode', author.officeCountryCode);
-                setValue(card, 'officePhoneNumber', author.officePhoneNumber);
-                setValue(card, 'mobileCountryCode', author.mobileCountryCode);
-                setValue(card, 'mobilePhoneNumber', author.mobilePhoneNumber);
-                const presenting = card.querySelector('[name="isPresentingAuthor"]');
-                const corresponding = card.querySelector('[name="isCorrespondingAuthor"]');
-                if (presenting instanceof HTMLInputElement) presenting.checked = Boolean(author.isPresentingAuthor);
-                if (corresponding instanceof HTMLInputElement) corresponding.checked = Boolean(author.isCorrespondingAuthor);
-            });
-            if (!authorList.children.length) addAuthor();
+            authors = (abstract.authors || []).map((author) => ({...author}));
+            resetAuthorEditor();
 
             const submissionNo = publicAbstractForm.querySelector('[data-submission-no]');
             const formTitle = publicAbstractForm.querySelector('[data-abstract-form-title]');
@@ -913,19 +999,7 @@
                 institutionName: value(row, 'institutionName'),
                 country: value(row, 'institutionCountry')
             })),
-            authors: Array.from(authorList.children).map((card, index) => ({
-                authorOrder: index + 1,
-                authorName: value(card, 'authorName'),
-                institutionNo: Number(value(card, 'authorInstitutionNo')),
-                isPresentingAuthor: checked(card, 'isPresentingAuthor'),
-                isCorrespondingAuthor: checked(card, 'isCorrespondingAuthor'),
-                email: value(card, 'authorEmail'),
-                country: value(card, 'authorCountry'),
-                officeCountryCode: value(card, 'officeCountryCode'),
-                officePhoneNumber: value(card, 'officePhoneNumber'),
-                mobileCountryCode: value(card, 'mobileCountryCode'),
-                mobilePhoneNumber: value(card, 'mobilePhoneNumber')
-            }))
+            authors: authors.map((author, index) => ({...author, authorOrder: index + 1}))
         });
 
         // 초록 폼의 선택값 변경 시 AI 관련 필드 및 저자 역할 표시를 즉시 갱신
@@ -938,26 +1012,61 @@
             if (event.target instanceof HTMLInputElement && ['institutionName', 'institutionDepartment'].includes(event.target.name)) refreshInstitutionNumbers();
         });
         publicAbstractForm.querySelector('[data-add-institution]')?.addEventListener('click', addInstitution);
-        publicAbstractForm.querySelector('[data-add-author]')?.addEventListener('click', addAuthor);
+        saveAuthorButton?.addEventListener('click', saveAuthor);
+        publicAbstractForm.querySelector('[data-cancel-author]')?.addEventListener('click', () => {
+            resetAuthorEditor();
+            setStatus('');
+        });
+        authorEditor?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+                event.preventDefault();
+                saveAuthor();
+            }
+        });
         institutionList?.addEventListener('click', (event) => {
             const button = event.target instanceof Element ? event.target.closest('[data-remove-institution]') : null;
             if (button && institutionList.children.length > 1) {
-                button.closest('tr')?.remove();
+                const row = button.closest('tr');
+                const removedNo = Array.from(institutionList.children).indexOf(row) + 1;
+                const remap = (number) => number === removedNo ? null : number > removedNo ? number - 1 : number;
+                const select = authorEditor.querySelector('[name="authorInstitutionNo"]');
+                const selectedNo = remap(Number(select.value));
+                const baseline = JSON.parse(authorBaseline);
+                baseline.institutionNo = remap(baseline.institutionNo);
+                authorBaseline = JSON.stringify(baseline);
+                authors.forEach((author) => author.institutionNo = remap(author.institutionNo));
+                row?.remove();
                 refreshInstitutionNumbers();
+                select.value = selectedNo ? String(selectedNo) : '';
+                enhanceSelect(select);
             }
         });
         authorList?.addEventListener('click', (event) => {
-            const button = event.target instanceof Element ? event.target.closest('button') : null;
-            const card = button?.closest('.abstract-author-card');
-            if (!button || !card) return;
-            if (button.matches('[data-remove-author]') && authorList.children.length > 1) card.remove();
-            if (button.matches('[data-move-author="up"]') && card.previousElementSibling) card.previousElementSibling.before(card);
-            if (button.matches('[data-move-author="down"]') && card.nextElementSibling) card.nextElementSibling.after(card);
+            const button = event.target instanceof Element ? event.target.closest('[data-author-action]') : null;
+            if (!button || button.disabled) return;
+            const index = Number(button.closest('[data-author-index]').dataset.authorIndex);
+            const author = authors[index];
+            const action = button.dataset.authorAction;
+            if (action === 'edit') {
+                if (authorEditorDirty()) {
+                    authorNotice('Add or save the author being edited, or cancel the changes first.');
+                    return;
+                }
+                resetAuthorEditor(author);
+                focusAuthorEditor();
+            } else if (action === 'remove') {
+                authors.splice(index, 1);
+                if (editingAuthor === author) resetAuthorEditor();
+            } else {
+                const target = action === 'up' ? index - 1 : index + 1;
+                if (target >= 0 && target < authors.length) [authors[index], authors[target]] = [authors[target], authors[index]];
+            }
+            if (editingAuthor) authorEditor.querySelector('[data-author-order]').textContent = String(authors.indexOf(editingAuthor) + 1);
             refreshAuthors();
         });
 
         addInstitution();
-        addAuthor();
+        resetAuthorEditor();
         updateAiFields();
 
         Promise.all([
@@ -995,8 +1104,22 @@
             const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
             const status = submitter?.dataset.status || 'submitted';
 
+            if (editingAuthor || authorEditorDirty()) {
+                authorNotice('Add or save the author being edited, or cancel the changes first.');
+                return;
+            }
+            if (!authors.length) {
+                authorNotice('Add at least one author.');
+                return;
+            }
+            const invalidAuthor = authors.find((author) => !author.authorName || !institutionList.children[author.institutionNo - 1]?.querySelector('[name="institutionName"]')?.value.trim());
+            if (invalidAuthor) {
+                resetAuthorEditor(invalidAuthor);
+                authorNotice('Check the name and affiliation of each registered author.');
+                return;
+            }
             if (!publicAbstractForm.reportValidity()) return;
-            if (!publicAbstractForm.querySelector('[name="isPresentingAuthor"]:checked')) {
+            if (!authors.some((author) => author.isPresentingAuthor)) {
                 window.alert(window.PublicSite.t('Select at least one presenting author.'));
                 return;
             }

@@ -79,8 +79,23 @@
                         <div class="abstract-subsection-heading">
                             <p class="cs-title mb-0"><strong><img class="mr-2" src="/public/img/abstract/author-icon.png" alt=""><th:block th:text="#{public.ui.2.2.author.list.3ec1cb}">2-2. Author List</th:block></strong> <th:block th:text="#{public.ui.select.at.least.one.presenting.author.810071}">- select at least one presenting author.</th:block></p>
                         </div>
-                        <div data-author-list></div>
-                        <div class="abstract-add-row"><button class="abstract-add-button" type="button" data-add-author><img src="/public/img/member/mypage-plus-circle.svg"> <th:block th:text="#{public.ui.add.co.author.bddd27}">Add Co-Author</th:block></button></div>
+                        <div data-author-editor></div>
+                        <div class="abstract-add-row abstract-author-editor-actions">
+                            <button class="abstract-add-button" type="button" data-cancel-author th:text="#{public.ui.author.cancel}">Cancel</button>
+                            <button class="abstract-add-button" type="button" data-add-author th:text="#{public.ui.author.add}">Add Author</button>
+                        </div>
+                        <div class="abstract-table-scroll abstract-author-list-table">
+                            <table class="w-100 type-04">
+                                <thead><tr>
+                                    <th scope="col" th:text="#{public.ui.no.b8b9f1}">No.</th>
+                                    <th scope="col" th:text="#{public.ui.name.709a23}">Name</th>
+                                    <th scope="col" th:text="#{public.ui.affiliation.df55b4}">Affiliation</th>
+                                    <th scope="col" th:text="#{public.ui.role.c3f104}">Role</th>
+                                    <th scope="col" th:text="#{public.ui.actions.c3cd63}">Actions</th>
+                                </tr></thead>
+                                <tbody data-author-list></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 
@@ -139,11 +154,6 @@
             <header class="abstract-author-header">
                 <span data-author-order></span>
                 <strong data-author-role><th:block th:text="#{public.ui.author.5fda23}">Author</th:block></strong>
-                <div class="abstract-summary-actions">
-                    <button type="button" data-move-author="up" aria-label="Move author up" th:aria-label="#{public.ui.move.author.up.10bf5f}">↑</button>
-                    <button type="button" data-move-author="down" aria-label="Move author down" th:aria-label="#{public.ui.move.author.down.658029}">↓</button>
-                    <button type="button" data-remove-author aria-label="Remove author" th:aria-label="#{public.ui.remove.author.f40e17}">×</button>
-                </div>
             </header>
             <div class="abstract-author-body">
                 <div class="abstract-field-row"><label><th:block th:text="#{public.ui.name.709a23}">Name</th:block> <span class="co-danger">*</span></label><input type="text" name="authorName" placeholder="Full name" th:placeholder="#{public.ui.full.name.eeb692}" required></div>

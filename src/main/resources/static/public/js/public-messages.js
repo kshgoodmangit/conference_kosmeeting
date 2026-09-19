@@ -1,5 +1,17 @@
 // Curated UI translations. Submitted content is never translated by this dictionary.
 window.publicMessagesKo = Object.freeze({
+  "Add Author": "저자 등록",
+  "Edit Author": "저자 수정",
+  "Save Author": "저자 저장",
+  "Select an institution": "소속 기관 선택",
+  "Enter an institution above first.": "상단에서 소속 기관을 먼저 입력해 주세요.",
+  "No authors added yet. Complete the form above and click Add Author.": "등록된 저자가 없습니다. 위 양식을 작성한 후 저자 등록을 눌러 주세요.",
+  "Enter the author name.": "저자 이름을 입력해 주세요.",
+  "Select an institution. Enter an institution above first if none are available.": "소속 기관을 선택해 주세요. 선택할 기관이 없으면 상단에서 먼저 입력해 주세요.",
+  "Add or save the author being edited, or cancel the changes first.": "입력 중인 저자를 등록 또는 저장하거나, 취소한 후 진행해 주세요.",
+  "Add at least one author.": "저자를 한 명 이상 등록해 주세요.",
+  "Check the name and affiliation of each registered author.": "등록된 저자의 이름과 소속 기관을 확인해 주세요.",
+
   "LOGIN": "로그인",
   "LOGOUT": "로그아웃",
   "SIGN UP": "회원가입",

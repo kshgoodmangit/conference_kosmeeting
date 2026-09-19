@@ -14,11 +14,13 @@ import java.util.List;
 public interface AbstractEmbeddingRepository {
 
     @Select("""
-            SELECT seq, abstractSeq, sectionType, modelName, modelRevision,
-                   dimension, embedding, contentHash, createdAt, updatedAt
-            FROM abstract_embeddings
+            SELECT e.seq, e.abstractSeq, e.sectionType, e.modelName, e.modelRevision,
+                   e.dimension, e.embedding, e.contentHash, e.createdAt, e.updatedAt
+            FROM abstract_embeddings e
+            JOIN abstract_submissions s ON s.seq = e.abstractSeq
+            WHERE s.conferenceSeq = #{conferenceSeq,javaType=java.lang.Long}
             """)
-    List<AbstractEmbedding> findAll();
+    List<AbstractEmbedding> findByConferenceSeq(@Param("conferenceSeq") Long conferenceSeq);
 
     @Insert("""
             INSERT INTO abstract_embeddings (
