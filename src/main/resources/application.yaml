@@ -24,7 +24,7 @@ server:
       timeout: 60m
 
 mybatis:
-  type-aliases-package: com.bjworld21.congress.entity
+  type-aliases-package: com.bjworld21.conference.entity
   mapper-locations: classpath:/mappers/*.xml
 
 app:

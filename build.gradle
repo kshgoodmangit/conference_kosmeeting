@@ -16,7 +16,7 @@ java {
 }
 
 springBoot {
-    mainClass = 'com.bjworld21.congress.Bjworld21CmsConferenceApplication'
+    mainClass = 'com.bjworld21.conference.Bjworld21CmsConferenceApplication'
 }
 
 repositories {
