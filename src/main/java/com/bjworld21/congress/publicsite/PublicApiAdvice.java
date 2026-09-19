@@ -54,6 +54,8 @@ public class PublicApiAdvice implements ResponseBodyAdvice<Object> {
                 return result;
             }
             String text = result.path("message").asText();
+            // Read responses may intentionally have no status message to display.
+            if (status >= 200 && status < 300 && text.isBlank()) return body;
             result.put("code", PublicApiMessages.code(text, status));
             result.put("message", PublicApiMessages.translate(text, language, status));
         } else return body;

@@ -104,6 +104,22 @@ public class AnalyticsService {
     public Map<String,Object> overview(long conference,LocalDate start,LocalDate end) {
         return report(conference,start,end,false);
     }
+    public AnalyticsRepository.DateRange defaultPeriod(long conference) {
+        return defaultPeriod(conference,LocalDate.now(ZONE));
+    }
+    AnalyticsRepository.DateRange defaultPeriod(long conference,LocalDate today) {
+        requireConference(conference);
+        requireReady(conference);
+        var recentStart=today.minusDays(29);
+        var available=repository.availablePeriod(conference,today);
+        if(available.isPresent() && available.get().endDate().isBefore(recentStart)) {
+            var period=available.get();
+            var earliest=period.endDate().minusDays(89);
+            return new AnalyticsRepository.DateRange(
+                    period.startDate().isBefore(earliest)?earliest:period.startDate(),period.endDate());
+        }
+        return new AnalyticsRepository.DateRange(recentStart,today);
+    }
     public Map<String,Object> dashboard(long conference,LocalDate start,LocalDate end) {
         var result=report(conference,start,end,true);
         var countries=mapCountries(conference);

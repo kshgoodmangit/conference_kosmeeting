@@ -43,6 +43,17 @@ public class AnalyticsRepository {
     public boolean conferenceExists(long id) {
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM conference_settings WHERE seq=?)", Boolean.class,id));
     }
+    public record DateRange(LocalDate startDate, LocalDate endDate) {}
+
+    public Optional<DateRange> availablePeriod(long conference, LocalDate today) {
+        return jdbc.query("""
+                SELECT MIN(statDate) AS startDate,MAX(statDate) AS endDate
+                FROM analytics_daily_summary
+                WHERE conferenceSeq=? AND statDate<=? AND pageViewCount>0
+                HAVING MIN(statDate) IS NOT NULL
+                """, (rs,row)->new DateRange(rs.getDate("startDate").toLocalDate(),
+                        rs.getDate("endDate").toLocalDate()),conference,today).stream().findFirst();
+    }
     @Transactional
     public Map<String,Long> deleteConferenceAnalytics(long conference) {
         if(conference<=0)throw new IllegalArgumentException("Invalid conference");

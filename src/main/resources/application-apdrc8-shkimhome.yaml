@@ -2,21 +2,16 @@ spring:
   application:
     name: APDRC8
   datasource:
-    url: jdbc:mysql://localhost:3306/congress_apdrc8?useUnicode=true&characterEncoding=utf8&useSSL=false
-  thymeleaf:
-    cache: false
-    prefix: classpath:/templates/
-
-server:
-  port: 10001
+    url: jdbc:mysql://114.203.210.122:3306/congress_apdrc8?useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: apdrc8
+    password: ${DATABASE_PWD}
 
 app:
-  app:
-    public-site:
-      conference-mode: single
-      default-conference-seq: 1
   upload:
-    base-directory: /home/cms_congress/upload
+    base-directory: D:/dev/upload/bjworld21_cms_congress
+  public-site:
+    conference-mode: single
+    default-conference-seq: 1
   license:
     # true: 학회 추가 허용 / false: 추가 버튼 숨김 및 생성 API 차단 (변경 후 서버 재시작)
     conference-creation-enabled: false

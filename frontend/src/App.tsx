@@ -316,6 +316,25 @@ export default function App() {
     );
     const activeMenusLoaded = adminUser?.role === 'reviewer' || adminMenusLoaded;
 
+    useEffect(() => {
+        if (!adminRoute) return;
+
+        const conferenceName = adminConferences
+            .find((conference) => conference.seq === selectedConferenceSeq)
+            ?.eventName?.trim();
+        const menuName = flattenNavRoutes(activeNavEntries)
+            .find((entry) => entry.menuKey === currentNav)
+            ?.menuName;
+
+        document.title = [
+            conferenceName || applicationName || '관리자',
+            adminUser ? menuName : (adminSessionChecked ? '관리자 로그인' : undefined),
+        ].filter(Boolean).join(' | ');
+    }, [
+        adminRoute, adminConferences, selectedConferenceSeq, activeNavEntries,
+        currentNav, applicationName, adminUser, adminSessionChecked,
+    ]);
+
     const notificationIdRef = useRef(0);
     const notify = useCallback((type: NotificationType, message: string) => {
         const id = ++notificationIdRef.current;
@@ -875,7 +894,7 @@ export default function App() {
                                 {adminConferences.length === 0 && <option value="">등록된 학회 없음</option>}
                                 {adminConferences.map((conference) => (
                                     <option key={conference.seq} value={conference.seq}>
-                                        #{conference.seq} {conference.eventName?.trim() || '이름 없는 학회'}
+                                        {conference.eventName?.trim() || '이름 없는 학회'}
                                     </option>
                                 ))}
                             </select>
@@ -962,7 +981,7 @@ export default function App() {
                     <AdminDashboardPage onNavigate={changeNav} />
                 )}
                 {currentNav === 'dashboard-operation-status' && <AdminOperationStatusPage />}
-                {currentNav === EVENT_DASHBOARD_MENU_KEY && eventDashboardEnabled && <AdminShowcaseDashboardPage />}
+                {currentNav === EVENT_DASHBOARD_MENU_KEY && eventDashboardEnabled && <AdminShowcaseDashboardPage conferenceSeq={selectedConferenceSeq} onNotify={notify} />}
                 {currentNav === 'dashboard-registration' && <AdminPreRegistrationDashboardPage onNavigate={changeNav} onNotify={notify} />}
                 {currentNav === 'dashboard-abstracts' && <AdminAbstractDashboardPage onNavigate={changeNav} onNotify={notify} />}
                 {currentNav === 'dashboard-user-analytics' && userAnalyticsDashboardEnabled && <AdminUserAnalyticsDashboardPage conferenceSeq={selectedConferenceSeq} onNotify={notify} />}

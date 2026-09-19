@@ -38,6 +38,7 @@ class PublicPageControllerTest {
     private BoardPostService boardPostService;
     private com.bjworld21.congress.repository.PopupRepository popupRepository;
     private PopupLayoutSettingsService popupLayouts;
+    private PublicPageController controller;
 
     @BeforeEach
     void setUp() {
@@ -47,6 +48,8 @@ class PublicPageControllerTest {
         SpeakerService speakerService = mock(SpeakerService.class);
         boardPostService = mock(BoardPostService.class);
         SponsorService sponsorService = mock(SponsorService.class);
+        when(speakerService.list(1L, 1, 100, "", null, true))
+                .thenReturn(new com.bjworld21.congress.dto.SpeakerPageResponse(List.of(), 1, 100, 0, 1, 0, 0));
         memberService = mock(MemberService.class);
         popupRepository = mock(com.bjworld21.congress.repository.PopupRepository.class);
         popupLayouts = mock(PopupLayoutSettingsService.class);
@@ -134,7 +137,7 @@ class PublicPageControllerTest {
         PublicSiteProperties siteProperties = new PublicSiteProperties();
         siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.SINGLE);
         siteProperties.setDefaultConferenceSeq(1L);
-        PublicPageController controller = new PublicPageController(
+        controller = new PublicPageController(
                 menuSettingsService,
                 conferenceSettingsService,
                 new CmsHtmlSanitizer(),
@@ -258,6 +261,29 @@ class PublicPageControllerTest {
                     .doesNotContain("/public/js/analytics.js", "ajax.googleapis.com");
             assertThat(html).contains(path.equals("/reset-password") ? "id=\"member-reset-form\"" : "id=\"member-recovery-form\"");
         }
+    }
+
+    @Test
+    void rendersHomeThroughThymeleafViewWithConferenceContext() throws Exception {
+        var resolver = new org.thymeleaf.templateresolver.ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        resolver.setCharacterEncoding("UTF-8");
+        var engine = new org.thymeleaf.spring6.SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("public-ui");
+        messages.setDefaultEncoding("UTF-8");
+        engine.setTemplateEngineMessageSource(messages);
+        var views = new org.thymeleaf.spring6.view.ThymeleafViewResolver();
+        views.setTemplateEngine(engine);
+        views.setCharacterEncoding("UTF-8");
+
+        MockMvcBuilders.standaloneSetup(controller).setViewResolvers(views).build()
+                .perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("siteContext"))
+                .andExpect(content().string(containsString("href=\"/scientific-program\"")));
     }
 
     @Test

@@ -72,35 +72,44 @@ public class DailyDashboardTestDataService {
     @Transactional
     public DailyCreationResult createMembersFromStartDate(Long conferenceSeq) {
         requireConference(conferenceSeq);
-        return createMembers(conferenceSeq, START_DATE, today());
+        var range = conferenceRange(conferenceSeq);
+        return createMembers(conferenceSeq, range.startDate(), range.endDate());
     }
 
     @Transactional
     public DailyCreationResult createPreRegistrationsFromStartDate(Long conferenceSeq) {
         requireConference(conferenceSeq);
-        return createPreRegistrations(conferenceSeq, START_DATE, today());
+        var range = conferenceRange(conferenceSeq);
+        return createPreRegistrations(conferenceSeq, range.startDate(), range.endDate());
     }
 
     @Transactional
     public DailyCreationResult createAbstractsFromStartDate(Long conferenceSeq) {
         requireConference(conferenceSeq);
-        return createAbstracts(conferenceSeq, START_DATE, today(), requireAssigningAdmin());
+        var range = conferenceRange(conferenceSeq);
+        return createAbstracts(conferenceSeq, range.startDate(), range.endDate(), requireAssigningAdmin());
     }
 
     @Transactional
     public DailyCreationResult createAbstractsFromStartDate(Long conferenceSeq, long createdByAdminSeq) {
         requireConference(conferenceSeq);
-        return createAbstracts(conferenceSeq, START_DATE, today(), createdByAdminSeq);
+        var range = conferenceRange(conferenceSeq);
+        return createAbstracts(conferenceSeq, range.startDate(), range.endDate(), createdByAdminSeq);
     }
 
-    /** 매일 스케줄러에서 호출합니다. 빠진 날짜가 있으면 8월 26일부터 자동 보충합니다. */
+    /** 행사 시작 60일 전부터 전날까지, 오늘 이전의 누락분만 자동 보충합니다. */
     @Transactional
     public DailySetCreationResult createScheduledSet(Long conferenceSeq) {
         requireConference(conferenceSeq);
-        LocalDate endDate = today();
-        DailyCreationResult members = createMembers(conferenceSeq, START_DATE, endDate);
-        DailyCreationResult preRegistrations = createPreRegistrations(conferenceSeq, START_DATE, endDate);
-        DailyCreationResult abstracts = createAbstracts(conferenceSeq, START_DATE, endDate, requireAssigningAdmin());
+        var range = conferenceRange(conferenceSeq);
+        LocalDate endDate = today().isBefore(range.endDate()) ? today() : range.endDate();
+        if (endDate.isBefore(range.startDate())) return new DailySetCreationResult(
+                result("members", range.startDate(), range.endDate(), 0, 0),
+                result("pre-registrations", range.startDate(), range.endDate(), 0, 0),
+                result("abstracts", range.startDate(), range.endDate(), 0, 0));
+        DailyCreationResult members = createMembers(conferenceSeq, range.startDate(), endDate);
+        DailyCreationResult preRegistrations = createPreRegistrations(conferenceSeq, range.startDate(), endDate);
+        DailyCreationResult abstracts = createAbstracts(conferenceSeq, range.startDate(), endDate, requireAssigningAdmin());
         return new DailySetCreationResult(members, preRegistrations, abstracts);
     }
 
@@ -325,7 +334,8 @@ public class DailyDashboardTestDataService {
         List<Long> presentationTypes = requireCommonCodes("ABSTRACT_PRESENTATION_TYPES", "초록 발표형식");
         List<Long> categories = requireCommonCodes("ABSTRACT_CATEGORY", "초록 분류");
         List<Long> reviewers = requireReviewers(conferenceSeq);
-        List<Long> evaluationItems = requireEvaluationItems(conferenceSeq);
+        boolean withReviews = reviewers.size() >= AbstractDecisionService.REQUIRED_REVIEWER_COUNT;
+        List<Long> evaluationItems = withReviews ? requireEvaluationItems(conferenceSeq) : List.of();
         long assignedByAdminSeq = createdByAdminSeq;
         Map<String, DailyAbstractSeed> abstractByTitle = new HashMap<>();
         jdbcTemplate.query("""
@@ -352,11 +362,12 @@ public class DailyDashboardTestDataService {
             desiredCount += count;
             String dateKey = date.format(DATE_KEY_FORMAT);
             for (int index = 1; index <= count; index++) {
-                int sampleIndex = dailyAbstractSampleIndex(date, index);
+                int sampleIndex = dailyAbstractSampleIndex(startDate, date, index);
                 TestDataService.AbstractSamplePlan plan = TestDataService.abstractSamplePlan(
                         sampleIndex,
                         presentationTypes
                 );
+                if (!withReviews) plan = unreviewedPlan(sampleIndex, plan.presentationTypeCode());
                 String title = "[DAILY_TESTDATA:%s:%03d] %s Study"
                         .formatted(dateKey, index, ABSTRACT_TOPICS[(index - 1) % ABSTRACT_TOPICS.length]);
                 DailyAbstractSeed abstractSeed = abstractByTitle.get(title);
@@ -477,8 +488,11 @@ public class DailyDashboardTestDataService {
                     abstractSeq, authorOrder, authorName, institutionNo,
                     isPresentingAuthor, isCorrespondingAuthor, email, country,
                     mobilePhoneNumber, createdAt, updatedAt
-                ) VALUES (?, 1, ?, 1, TRUE, TRUE, ?, ?, ?, ?, ?)
-                """, abstractSeq, member.fullName(), member.email(), member.country(), member.mobile(),
+                ) VALUES (?, 1, HEX(AES_ENCRYPT(?, SHA2(?, 512))), 1, TRUE, TRUE,
+                          HEX(AES_ENCRYPT(?, SHA2(?, 512))), ?, HEX(AES_ENCRYPT(?, SHA2(?, 512))), ?, ?)
+                """, abstractSeq, member.fullName(), personalDataProperties.requireDbEncString(),
+                member.email(), personalDataProperties.requireDbEncString(), member.country(),
+                member.mobile(), personalDataProperties.requireDbEncString(),
                 Timestamp.valueOf(createdAt), Timestamp.valueOf(createdAt));
         return new DailyAbstractSeed(
                 abstractSeq,
@@ -910,6 +924,15 @@ public class DailyDashboardTestDataService {
         return result;
     }
 
+    public record DateRange(LocalDate startDate, LocalDate endDate) {}
+
+    public DateRange conferenceRange(Long conferenceSeq) {
+        requireConference(conferenceSeq);
+        LocalDate eventStart = jdbcTemplate.queryForObject("SELECT eventStartDate FROM conference_settings WHERE seq = ?", LocalDate.class, conferenceSeq);
+        if (eventStart == null) throw new IllegalArgumentException("학회 행사 시작일을 먼저 설정해 주세요.");
+        return new DateRange(eventStart.minusDays(60), eventStart.minusDays(1));
+    }
+
     private void requireConference(Long conferenceSeq) {
         if (conferenceSeq == null || conferenceSeq <= 0) {
             throw new IllegalArgumentException("학회 정보가 필요합니다.");
@@ -1017,10 +1040,12 @@ public class DailyDashboardTestDataService {
                   AND account.status = 'active'
                 ORDER BY reviewer.seq
                 """, Long.class, conferenceSeq);
-        if (reviewers.isEmpty()) {
-            throw new IllegalStateException("활성 심사자가 없습니다. 먼저 심사자 테스트 계정을 생성하세요.");
-        }
         return reviewers;
+    }
+
+    static TestDataService.AbstractSamplePlan unreviewedPlan(int index, Long presentationTypeCode) {
+        return new TestDataService.AbstractSamplePlan(index % 5 == 0 ? "draft" : "submitted", false,
+                presentationTypeCode, null, null);
     }
 
     private List<Long> requireEvaluationItems(Long conferenceSeq) {
@@ -1060,7 +1085,11 @@ public class DailyDashboardTestDataService {
     }
 
     static int dailyAbstractSampleIndex(LocalDate date, int index) {
-        if (date == null || date.isBefore(START_DATE)) {
+        return dailyAbstractSampleIndex(START_DATE, date, index);
+    }
+
+    static int dailyAbstractSampleIndex(LocalDate startDate, LocalDate date, int index) {
+        if (date == null || date.isBefore(startDate)) {
             throw new IllegalArgumentException("일별 초록 날짜는 시작일 이후여야 합니다.");
         }
         int dailyCount = dailyAbstractDesiredCount(date);
@@ -1068,7 +1097,7 @@ public class DailyDashboardTestDataService {
             throw new IllegalArgumentException("일별 초록 순번이 해당 날짜의 생성 건수 범위를 벗어났습니다.");
         }
         int sampleIndex = index;
-        for (LocalDate cursor = START_DATE; cursor.isBefore(date); cursor = cursor.plusDays(1)) {
+        for (LocalDate cursor = startDate; cursor.isBefore(date); cursor = cursor.plusDays(1)) {
             sampleIndex = Math.addExact(sampleIndex, dailyAbstractDesiredCount(cursor));
         }
         return sampleIndex;

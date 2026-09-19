@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 class MenuSettingsServiceTest {
 
     @Test
-    void publicMenusUseStoredPageNamesForLegacyRoutesWithoutChangingAdminData() {
+    void publicAndAdminMenusUseStoredRoutePathsWithoutMenuPathFallback() {
         var repository = mock(MenuSettingsRepository.class);
         var service = new MenuSettingsService(repository, mock(MenuHtmlHistoryService.class));
         var welcome = menu(2L, "welcome-message", null, 1);
@@ -46,7 +46,7 @@ class MenuSettingsServiceTest {
 
         for (var tree : List.of(service.getActiveUserMenuTree(1L), service.getActiveUserMenuTree(1L, "en"))) {
             assertThat(tree).extracting(MenuSettingsResponse::getRoutePath).containsExactly(
-                    "/welcome-message", "/mypage-abstract", "/custom-page", "https://example.org/folder/page");
+                    "/arbitrary-old-folder/welcome-message", "/mypage/abstract", "/custom-page", "https://example.org/folder/page");
         }
         assertThat(service.getMenuTree(1L)).extracting(MenuSettingsResponse::getRoutePath).containsExactly(
                 "/arbitrary-old-folder/welcome-message", "/mypage/abstract", "/custom-page", "https://example.org/folder/page");
@@ -59,7 +59,7 @@ class MenuSettingsServiceTest {
         var service = new MenuSettingsService(repository, mock(MenuHtmlHistoryService.class));
         var first = menu(1L, "first", null, 1);
         first.setMenuPath("same-page");
-        first.setRoutePath("/old-folder/first");
+        first.setRoutePath("/same-page");
         var second = menu(2L, "second", null, 2);
         second.setRoutePath("/same-page");
         when(repository.findActiveByScope(eq(1L), eq("user"), isA(LocalDate.class))).thenReturn(List.of(first, second));

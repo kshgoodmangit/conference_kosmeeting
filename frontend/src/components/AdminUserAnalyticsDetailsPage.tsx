@@ -14,20 +14,23 @@ const heading = 'border-b border-slate-200 p-4 text-sm font-semibold dark:border
 const duration = (seconds: number) => `${Math.floor(seconds / 60)}분 ${Math.round(seconds % 60)}초`;
 
 export const AdminUserAnalyticsDetailsPage = (props: AnalyticsProps & {dashboardEnabled?: boolean}) => {
-    const [draft, setDraft] = useState({start:daysAgo(29), end:today()});
-    const [period, setPeriod] = useState('30');
-    const [range, setRange] = useState(draft);
-    const {data,error,refresh} = useAnalytics(props,range.start,range.end);
+    const [draftOverride, setDraft] = useState<{start:string;end:string} | null>(null);
+    const [period, setPeriod] = useState('auto');
+    const [range, setRange] = useState<{start:string;end:string} | null>(null);
+    const {data,error,refresh} = useAnalytics(props,range?.start,range?.end);
+    const draft = draftOverride ?? {start:data?.startDate ?? '',end:data?.endDate ?? ''};
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        if (period === 'auto') { refresh(); return; }
         const days = (Date.parse(draft.end) - Date.parse(draft.start)) / 86400000;
         if (!Number.isFinite(days) || days < 0 || days > 89 || draft.end > today()) {
             props.onNotify('error','조회 기간은 오늘까지 최대 90일로 선택해 주세요.'); return;
         }
+        setDraft({...draft});
         setRange({...draft});
         refresh();
     };
-    const reset = () => {const next={start:daysAgo(29),end:today()};setDraft(next);setRange(next);setPeriod('30');refresh();};
+    const reset = () => {setDraft(null);setRange(null);setPeriod('auto');refresh();};
     const maxHour = Math.max(1,...(data?.hourly.map(row=>row.pageViews) || []));
     const metrics = [
         {label:'순 방문자',value:data?.totals.visitors,previous:data?.previous.visitors,unit:'명',icon:Users},
@@ -52,10 +55,11 @@ export const AdminUserAnalyticsDetailsPage = (props: AnalyticsProps & {dashboard
             </div>
             <form onSubmit={submit} className="border-b border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/40 md:p-5">
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">기간 선택</span><select aria-label="기간 선택" value={period} className={input} onChange={event=>{setPeriod(event.target.value);if(event.target.value !== 'custom') setDraft({start:daysAgo(Number(event.target.value)-1),end:today()});}}><option value="custom">직접 설정</option>{[7,30,60,90].map(days=><option key={days} value={days}>최근 {days}일</option>)}</select></label>
-                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">시작일</span><input required type="date" aria-label="조회 시작일" className={input} value={draft.start} max={draft.end} onChange={e=>{setPeriod('custom');setDraft({...draft,start:e.target.value});}} /></label>
-                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">종료일</span><input required type="date" aria-label="조회 종료일" className={input} value={draft.end} min={draft.start} max={today()} onChange={e=>{setPeriod('custom');setDraft({...draft,end:e.target.value});}} /></label>
+                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">기간 선택</span><select aria-label="기간 선택" value={period} className={input} onChange={event=>{setPeriod(event.target.value);if(event.target.value !== 'custom') setDraft({start:daysAgo(Number(event.target.value)-1),end:today()});}}><option value="auto" disabled>기본 기간 (자동)</option><option value="custom">직접 설정</option>{[7,30,60,90].map(days=><option key={days} value={days}>최근 {days}일</option>)}</select></label>
+                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">시작일</span><input required={period !== 'auto'} type="date" aria-label="조회 시작일" className={input} value={draft.start} max={draft.end} onChange={e=>{setPeriod('custom');setDraft({...draft,start:e.target.value});}} /></label>
+                    <label><span className="mb-1 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">종료일</span><input required={period !== 'auto'} type="date" aria-label="조회 종료일" className={input} value={draft.end} min={draft.start} max={today()} onChange={e=>{setPeriod('custom');setDraft({...draft,end:e.target.value});}} /></label>
                 </div>
+                <p className={`mt-3 text-xs ${muted}`}>기본 기간은 최근 30일입니다. 해당 기간에 접속 기록이 없으면 마지막 접속일까지의 기록을 최대 90일간 표시합니다.</p>
                 <div className="mt-3 flex flex-col justify-end gap-2 sm:flex-row">
                     <button type="button" onClick={reset} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"><FilterX className="h-4 w-4" />초기화</button>
                     <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"><Search className="h-4 w-4" />조회</button>

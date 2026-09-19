@@ -41,7 +41,24 @@ class PublicPreRegistrationControllerTest {
         ));
         mockMvc = MockMvcBuilders.standaloneSetup(
                 new PublicPreRegistrationController(service, conferences)
-        ).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext()).build();
+        ).addFilters(new com.bjworld21.congress.publicsite.PublicSiteTestContext())
+                .setControllerAdvice(new com.bjworld21.congress.publicsite.PublicApiAdvice(
+                        new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()))
+                .build();
+    }
+
+    @Test
+    void initialFormDoesNotInventASuccessMessage() throws Exception {
+        when(service.form(1L, 7L)).thenReturn(new PublicPreRegistrationData.Form(
+                null, "EARLY_BIRD", "Early Bird", null, null, "KRW", List.of(), List.of(),
+                null, true, true, ""));
+
+        mockMvc.perform(get("/api/public/1/pre-registrations/form")
+                        .sessionAttr("publicMember.1", new PublicMemberSession(7L, 1L)))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value(""))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.registrationOpen").value(true));
     }
 
     @Test

@@ -40,10 +40,10 @@
                     <img src="/public/img/icon-chevron.svg" alt="" class="breadcrumb-chevron">
                 </li>
                 <li>
-                    <a th:if="${crumb.menuKey != currentMenu.menuKey}"
+                    <a th:if="${crumb.menuKey != currentMenu.menuKey and crumb.menuType != 'folder'}"
                        th:href="${siteContext != null ? siteContext.pageUrl(crumb.routePath) : (crumb.routePath)}"
                        th:text="${crumb.menuName}">Section</a>
-                    <span th:if="${crumb.menuKey == currentMenu.menuKey}" th:text="${crumb.menuName}">Page</span>
+                    <span th:if="${crumb.menuKey == currentMenu.menuKey or crumb.menuType == 'folder'}" th:text="${crumb.menuName}">Page</span>
                 </li>
             </th:block>
         </ul>

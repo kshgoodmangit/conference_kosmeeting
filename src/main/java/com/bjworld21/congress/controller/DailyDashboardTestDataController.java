@@ -23,6 +23,11 @@ public class DailyDashboardTestDataController {
         this.service = service;
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/range")
+    public DailyDashboardTestDataService.DateRange range(@RequestHeader("X-Conference-Seq") Long conferenceSeq) {
+        return service.conferenceRange(conferenceSeq);
+    }
+
     @PostMapping("/members")
     public ResponseEntity<?> createMembers(@RequestHeader("X-Conference-Seq") Long conferenceSeq) {
         return execute(() -> service.createMembersFromStartDate(conferenceSeq), "일별 회원 테스트 데이터 생성 중 오류가 발생했습니다.");

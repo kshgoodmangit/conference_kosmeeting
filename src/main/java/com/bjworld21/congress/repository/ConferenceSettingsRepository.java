@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper
 public interface ConferenceSettingsRepository {
 
-    @Select("SELECT * FROM conference_settings ORDER BY seq DESC LIMIT 1")
+    @Select("SELECT * FROM conference_settings ORDER BY (isLast = 'Y') DESC, eventStartDate DESC, seq DESC LIMIT 1")
     ConferenceSettings findLatest();
 
     @Select("SELECT * FROM conference_settings ORDER BY seq DESC")

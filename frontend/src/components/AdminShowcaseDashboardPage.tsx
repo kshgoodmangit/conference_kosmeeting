@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShowcaseAnimatedNumber } from './ShowcaseAnimatedNumber';
 import { ShowcaseGlobe } from './ShowcaseGlobe';
+import { DashboardLoadState } from './DashboardLoadState';
+import { milestoneLabel, useShowcaseDashboard, type ShowcaseDashboardData } from './showcaseDashboardData';
+import type { NotificationType } from './NotificationToast';
 import { ANALYTICS_COUNTRY_POINTS } from '../analyticsCountryPoints';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -37,9 +40,11 @@ type ShowcaseStat = {
     icon: LucideIcon;
     tone: ShowcaseTone;
 } & ({ value: number; decimals?: number; unit: string; amounts?: never }
-    | { amounts: Record<'KRW' | 'USD', number>; value?: never; decimals?: never; unit?: never });
+    | { amounts: Record<string, number>; value?: never; decimals?: never; unit?: never });
 
 interface AdminShowcaseDashboardPageProps {
+    conferenceSeq: number | null;
+    onNotify: (type: NotificationType, message: string) => void;
     palette?: ShowcasePaletteKey;
 }
 
@@ -58,112 +63,6 @@ const getInitialPaletteKey = (fallback: ShowcasePaletteKey): ShowcasePaletteKey 
     return fallback;
 };
 
-// 취소·환불을 제외한 유효 사전등록의 시안 집계입니다.
-const REGISTRATION_PAYMENT = {
-    paidCount: 1242,
-    unpaidCount: 42,
-    paidAmounts: { KRW: 186_300_000, USD: 38_400 }
-};
-
-const SHOWCASE_STATS: ShowcaseStat[] = [
-    { label: '사전등록', value: 1284, unit: '명', change: '직전 행사 대비 +146명', icon: Users, tone: 'cyan' },
-    { label: '초록 접수', value: 486, unit: '건', change: '직전 행사 대비 -18건', icon: FileText, tone: 'amber' },
-    { label: '전체 등록비', amounts: REGISTRATION_PAYMENT.paidAmounts, change: '누적 결제 완료 기준', icon: WalletCards, tone: 'violet' },
-    { label: '후원액', value: 2.4, decimals: 1, unit: '억원', change: '직전 행사 대비 +0.3억원', icon: HandHeart, tone: 'emerald' }
-];
-
-// 화면 검토용 32개국·1,284명 시안 데이터이며 실제 참가국 집계가 아닙니다.
-// 지구본은 전체 목록을 사용하고, 옆의 순위 목록만 상위 4개국으로 제한합니다.
-const PARTICIPATING_COUNTRIES = [
-    { name: '대한민국', code: 'KR', value: 648 },
-    { name: '일본', code: 'JP', value: 184 },
-    { name: '미국', code: 'US', value: 126 },
-    { name: '싱가포르', code: 'SG', value: 92 },
-    { name: '중국', code: 'CN', value: 35 },
-    { name: '호주', code: 'AU', value: 28 },
-    { name: '영국', code: 'GB', value: 24 },
-    { name: '독일', code: 'DE', value: 20 },
-    { name: '캐나다', code: 'CA', value: 16 },
-    { name: '프랑스', code: 'FR', value: 14 },
-    { name: '인도', code: 'IN', value: 12 },
-    { name: '대만', code: 'TW', value: 10 },
-    { name: '태국', code: 'TH', value: 9 },
-    { name: '말레이시아', code: 'MY', value: 8 },
-    { name: '베트남', code: 'VN', value: 7 },
-    { name: '인도네시아', code: 'ID', value: 6 },
-    { name: '필리핀', code: 'PH', value: 5 },
-    { name: '뉴질랜드', code: 'NZ', value: 5 },
-    { name: '네덜란드', code: 'NL', value: 4 },
-    { name: '스위스', code: 'CH', value: 4 },
-    { name: '이탈리아', code: 'IT', value: 3 },
-    { name: '스페인', code: 'ES', value: 3 },
-    { name: '스웨덴', code: 'SE', value: 3 },
-    { name: '덴마크', code: 'DK', value: 3 },
-    { name: '브라질', code: 'BR', value: 3 },
-    { name: '멕시코', code: 'MX', value: 2 },
-    { name: '남아프리카공화국', code: 'ZA', value: 2 },
-    { name: '아랍에미리트', code: 'AE', value: 2 },
-    { name: '사우디아라비아', code: 'SA', value: 2 },
-    { name: '튀르키예', code: 'TR', value: 2 },
-    { name: '이집트', code: 'EG', value: 1 },
-    { name: '아르헨티나', code: 'AR', value: 1 }
-].map(country => {
-    const [longitude, latitude] = ANALYTICS_COUNTRY_POINTS[country.code];
-    return { ...country, longitude, latitude };
-});
-const COUNTRY_RANKING = [...PARTICIPATING_COUNTRIES].sort((a, b) => b.value - a.value).slice(0, 4);
-const MAX_COUNTRY_PARTICIPANTS = Math.max(1, ...COUNTRY_RANKING.map((country) => country.value));
-
-const DAILY_INTAKE_TRENDS = [
-    { label: '09.02', abstractCount: 54, registrationCount: 112 },
-    { label: '09.03', abstractCount: 68, registrationCount: 126 },
-    { label: '09.04', abstractCount: 61, registrationCount: 118 },
-    { label: '09.05', abstractCount: 79, registrationCount: 142 },
-    { label: '09.06', abstractCount: 72, registrationCount: 135 },
-    { label: '09.07', abstractCount: 91, registrationCount: 158 },
-    { label: '오늘', abstractCount: 84, registrationCount: 176 }
-];
-
-const PAYMENT_TOTAL = REGISTRATION_PAYMENT.paidCount + REGISTRATION_PAYMENT.unpaidCount;
-const PAYMENT_RATE = PAYMENT_TOTAL > 0 ? REGISTRATION_PAYMENT.paidCount / PAYMENT_TOTAL * 100 : 0;
-
-const ABSTRACT_FIELDS = [
-    { label: '임상 연구', value: 34, color: 'bg-cyan-400' },
-    { label: '디지털 헬스케어', value: 27, color: 'bg-violet-400' },
-    { label: '기초 연구', value: 23, color: 'bg-amber-400' },
-    { label: '기타', value: 16, color: 'bg-emerald-400' }
-];
-
-const PARTNERS = ['MEDITECH', 'BIOCORE', 'NOVAGEN', 'HEALTH+', 'CELLWORKS'];
-
-const TODAY_OPERATIONS = [
-    { label: '신규 사전등록', value: '28명', note: '전일 대비 +6', color: 'text-cyan-300' },
-    { label: '오늘 등록비 입금액', amounts: { KRW: 3_150_000, USD: 2_400 }, note: '오늘 결제 완료 기준', color: 'text-emerald-300' },
-    { label: '신규 초록', value: '14건', note: '누적 486건', color: 'text-violet-300' },
-    { label: '신규 회원 수', value: '36명', note: '전일 대비 +8명', color: 'text-amber-300' }
-];
-
-const ACTION_ITEMS = [
-    { label: '사전등록 미입금', value: '42명', detail: '입금 안내 필요', dot: 'bg-amber-400' },
-    { label: '심사위원 미배정', value: '18건', detail: '심사 배정 필요', dot: 'bg-rose-400' },
-    { label: '심사기한 초과', value: '7건', detail: '위원 확인 필요', dot: 'bg-violet-400' },
-    { label: '세금계산서 미발행', value: '3개사', detail: '입금 완료 기준', dot: 'bg-cyan-400' }
-];
-
-const UPCOMING_DEADLINES = [
-    { label: '초록 접수 마감', date: '09.26', dday: 'D-18', color: 'text-rose-300 border-rose-300/20 bg-rose-300/10' },
-    { label: '얼리버드 등록 마감', date: '10.11', dday: 'D-33', color: 'text-amber-300 border-amber-300/20 bg-amber-300/10' },
-    { label: '사전등록 마감', date: '10.11', dday: 'D-33', color: 'text-emerald-300 border-emerald-300/20 bg-emerald-300/10' },
-    { label: '초록 심사 완료', date: '10.25', dday: 'D-47', color: 'text-violet-300 border-violet-300/20 bg-violet-300/10' },
-    { label: '행사 개최', date: '11.12', dday: 'D-65', color: 'text-cyan-300 border-cyan-300/20 bg-cyan-300/10' }
-];
-
-const HERO_MILESTONES = [
-    { label: '행사까지', date: '11.12', dday: 'D-65', color: 'text-cyan-300' },
-    { label: '초록 접수 마감', date: '09.26', dday: 'D-18', color: 'text-amber-300' },
-    { label: '사전등록 마감', date: '10.11', dday: 'D-33', color: 'text-violet-300' }
-];
-
 const timeFormatter = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
@@ -176,7 +75,67 @@ const timeFormatter = new Intl.DateTimeFormat('ko-KR', {
     hourCycle: 'h23'
 });
 
-export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseDashboardPageProps) => {
+export const AdminShowcaseDashboardPage = ({ conferenceSeq, onNotify, palette = 'ocean' }: AdminShowcaseDashboardPageProps) => {
+    const { data, failed, retry } = useShowcaseDashboard(conferenceSeq, onNotify);
+    if (!data) return <DashboardLoadState failed={failed} retry={retry} />;
+    return <ShowcaseDashboardContent key={conferenceSeq} data={data} palette={palette} />;
+};
+
+const ShowcaseDashboardContent = ({ data, palette }: { data: ShowcaseDashboardData; palette: ShowcasePaletteKey }) => {
+    const event = data.event;
+    const REGISTRATION_PAYMENT = { ...data.registration, paidAmounts: Object.fromEntries(data.amounts.map(row => [row.currency, row.paid])) };
+    const PAYMENT_TOTAL = data.registration.paidCount + data.registration.unpaidCount;
+    const PAYMENT_RATE = PAYMENT_TOTAL ? data.registration.paidCount / PAYMENT_TOTAL * 100 : 0;
+    const UNPAID_RATE = PAYMENT_TOTAL ? data.registration.unpaidCount / PAYMENT_TOTAL * 100 : 0;
+    const abstractCount = data.fields.reduce((sum, row) => sum + row.unassigned + row.reviewing + row.completed, 0);
+    const SHOWCASE_STATS: ShowcaseStat[] = [
+        { label: '사전등록', value: PAYMENT_TOTAL, unit: '명', change: '취소·환불 제외', icon: Users, tone: 'cyan' },
+        { label: '초록 접수', value: abstractCount, unit: '건', change: '임시저장 제외', icon: FileText, tone: 'amber' },
+        { label: '전체 등록비', amounts: REGISTRATION_PAYMENT.paidAmounts, change: '누적 결제 완료 기준', icon: WalletCards, tone: 'violet' },
+        { label: '후원액', value: data.sponsorship.depositedAmount, unit: '원', change: '입금 완료 기준', icon: HandHeart, tone: 'emerald' }
+    ];
+    const PARTICIPATING_COUNTRIES = useMemo(() => data.countries.flatMap(country => {
+        const point = ANALYTICS_COUNTRY_POINTS[country.code];
+        return point ? [{ ...country, longitude: point[0], latitude: point[1] }] : [];
+    }), [data.countries]);
+    const COUNTRY_RANKING = data.countries.slice(0, 4);
+    const MAX_COUNTRY_PARTICIPANTS = Math.max(1, ...COUNTRY_RANKING.map(country => country.value));
+    const fieldColors = ['bg-cyan-400', 'bg-violet-400', 'bg-amber-400', 'bg-emerald-400'];
+    const ABSTRACT_FIELDS = data.fields.map((field, index) => ({
+        label: field.name, key: field.categorySeq,
+        value: abstractCount ? (field.unassigned + field.reviewing + field.completed) / abstractCount * 100 : 0,
+        color: fieldColors[index % fieldColors.length]
+    }));
+    const PARTNERS = data.partners.slice(0, 5);
+    const TODAY_OPERATIONS = [
+        { label: '신규 사전등록', value: data.todayRegistrationCount + '명', note: '오늘 접수 기준', color: 'text-cyan-300', amounts: undefined },
+        { label: '오늘 등록비 입금액', amounts: Object.fromEntries(data.amounts.map(row => [row.currency, row.todayPaid])), note: '오늘 결제 완료 기준', color: 'text-emerald-300' },
+        { label: '신규 초록', value: data.todayAbstractCount + '건', note: '오늘 제출 완료 기준', color: 'text-violet-300', amounts: undefined },
+        { label: '신규 회원 수', value: data.todayMemberCount + '명', note: '누적 ' + data.memberCount + '명', color: 'text-amber-300', amounts: undefined }
+    ];
+    const ACTION_ITEMS = [
+        { label: '사전등록 미입금', value: data.registration.unpaidCount + '명', detail: '결제 실패 포함', dot: 'bg-amber-400' },
+        { label: '심사위원 미배정', value: data.fields.reduce((sum, row) => sum + row.unassigned, 0) + '건', detail: '심사 배정 필요', dot: 'bg-rose-400' },
+        { label: '심사기한 초과', value: data.fields.reduce((sum, row) => sum + row.overdue, 0) + '건', detail: '기한을 넘긴 초록', dot: 'bg-violet-400' },
+        { label: '세금계산서 미발행', value: data.sponsorship.taxInvoicePendingCount + '개사', detail: '후원금 입금 완료 기준', dot: 'bg-cyan-400' }
+    ];
+    const milestone = (label: string, date: string | null | undefined, color: string) => ({ label, date: date?.replaceAll('-', '.') || '-', dday: milestoneLabel(date, data.asOf), color });
+    const UPCOMING_DEADLINES = [
+        milestone('초록 접수 마감', event.abstractEndDate, 'text-rose-300 border-rose-300/20 bg-rose-300/10'),
+        milestone('얼리버드 등록 마감', event.earlyBirdEndDate, 'text-amber-300 border-amber-300/20 bg-amber-300/10'),
+        milestone('사전등록 마감', event.regularEndDate, 'text-emerald-300 border-emerald-300/20 bg-emerald-300/10'),
+        milestone('발표자료 마감', event.presentationMaterialEndDate, 'text-violet-300 border-violet-300/20 bg-violet-300/10'),
+        milestone('행사 개최', event.eventStartDate, 'text-cyan-300 border-cyan-300/20 bg-cyan-300/10')
+    ];
+    const HERO_MILESTONES = [
+        { ...milestone('행사까지', event.eventStartDate, 'text-cyan-300'), dday: event.eventEndDate && event.eventEndDate < data.asOf ? '종료' : event.eventStartDate && event.eventStartDate <= data.asOf ? '진행 중' : milestoneLabel(event.eventStartDate, data.asOf) },
+        milestone('초록 접수 마감', event.abstractEndDate, 'text-amber-300'),
+        milestone('사전등록 마감', event.regularEndDate, 'text-violet-300')
+    ];
+    const trendRows = data.trends.map(row => ({ label: row.date === data.asOf ? '오늘' : row.date.slice(5).replace('-', '.'), abstractCount: row.submitted, registrationCount: row.registered }));
+    const isPast = data.trendEndDate < data.asOf;
+    const lastDay = data.trends.at(-1);
+    const lastDayCount = (lastDay?.submitted ?? 0) + (lastDay?.registered ?? 0);
     const [currentTime, setCurrentTime] = useState(() => new Date());
     const [isPresentationMode, setIsPresentationMode] = useState(false);
     const [selectedPaletteKey, setSelectedPaletteKey] = useState<ShowcasePaletteKey>(() => getInitialPaletteKey(palette));
@@ -249,7 +208,7 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                                     {isPresentationMode ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                                 </button>
                                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-[0.16em] ${selectedPalette.liveBadgeClass}`}>
-                                    <Radio className="h-3 w-3 animate-pulse" /> LIVE CONGRESS OVERVIEW
+                                    <Radio className="h-3 w-3 animate-pulse" /> CONGRESS OVERVIEW
                                 </span>
                                 <label className="relative inline-flex h-7 items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/30 px-2 text-[10px] font-semibold text-slate-300 backdrop-blur-md transition hover:border-white/20">
                                     <Palette className={`h-3.5 w-3.5 ${selectedPalette.primaryTextClass}`} />
@@ -272,8 +231,8 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                             <div className="mt-4 flex items-center gap-3">
                                 <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-black text-slate-950 shadow-lg ${selectedPalette.logoGradientClass}`}>IC</span>
                                 <div>
-                                    <h1 className="text-2xl font-black tracking-tight md:text-3xl">ICMS 2026</h1>
-                                    <p className={`mt-1 text-xs font-medium tracking-wide md:text-sm ${selectedPalette.subtitleClass}`}>International Congress of Medical Science</p>
+                                    <h1 className="text-2xl font-black tracking-tight md:text-3xl">{event.eventName}</h1>
+                                    <p className={`mt-1 text-xs font-medium tracking-wide md:text-sm ${selectedPalette.subtitleClass}`}>선택 학회 행사 현황 · 집계 {data.generatedAt.replace('T', ' ').slice(0, 16)}</p>
                                 </div>
                             </div>
                         </div>
@@ -297,8 +256,8 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                                 ))}
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-[10px] font-medium text-slate-400 lg:justify-end">
-                                <span className="inline-flex items-center gap-1.5"><CalendarDays className={`h-3 w-3 ${selectedPalette.primaryTextClass}`} /> 2026. 11. 12 — 14</span>
-                                <span className="inline-flex items-center gap-1.5"><MapPin className={`h-3 w-3 ${selectedPalette.secondaryTextClass}`} /> Seoul Convention Center</span>
+                                <span className="inline-flex items-center gap-1.5"><CalendarDays className={`h-3 w-3 ${selectedPalette.primaryTextClass}`} /> {event.eventStartDate?.replaceAll('-', '.') || '-'} — {event.eventEndDate?.replaceAll('-', '.') || '-'}</span>
+                                <span className="inline-flex items-center gap-1.5"><MapPin className={`h-3 w-3 ${selectedPalette.secondaryTextClass}`} /> {event.venueAddress || '장소 미설정'}</span>
                             </div>
                         </div>
                     </div>
@@ -316,15 +275,16 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                             <div>
                                 <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${selectedPalette.primaryTextClass}`}>Global reach</p>
                                 <h2 className="mt-1 text-base font-bold">글로벌 참가 현황</h2>
-                                <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-400">시안 데이터 · 지구본 전체 {PARTICIPATING_COUNTRIES.length}개국 · 순위 상위 4개국</p>
+                                <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-400">유효 사전등록 기준 · {data.countries.filter(country => country.code !== 'ZZ').length}개국 · 순위 상위 4개국</p>
                             </div>
                             <span className={`rounded-xl bg-white/[0.055] p-2 ring-1 ring-inset ring-white/10 ${selectedPalette.primaryTextClass}`}><Globe2 className="h-4 w-4" /></span>
                         </div>
                         <div className={`${isPresentationMode ? 'mt-3 min-h-0 flex-1' : 'mt-4'} grid gap-5 md:grid-cols-[0.9fr_1.1fr] md:items-center`}>
                             <ShowcaseGlobe compact={isPresentationMode} palette={selectedPalette} countries={PARTICIPATING_COUNTRIES} />
                             <div className="space-y-3">
+                                {data.countries.length === 0 && <p className="text-xs text-slate-400 dark:text-slate-400">유효 사전등록 내역이 없습니다.</p>}
                                 {COUNTRY_RANKING.map((country, index) => (
-                                    <div key={country.code}>
+                                    <div key={country.code + country.name}>
                                         <div className="mb-1.5 flex items-center justify-between text-[11px]">
                                             <span className="font-semibold text-slate-200"><span className="mr-2 text-slate-500">{country.code}</span>{country.name}</span>
                                             <strong className="tabular-nums text-white"><ShowcaseAnimatedNumber value={country.value} delay={index * 100} />명</strong>
@@ -342,17 +302,17 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${selectedPalette.secondaryTextClass}`}>Daily intake</p>
-                                <h2 className="mt-1 text-base font-bold">최근 7일 접수 및 등록 현황</h2>
+                                <h2 className="mt-1 text-base font-bold">{isPast ? '행사 전 마지막 7일 접수 및 등록 현황' : '최근 7일 접수 및 등록 현황'}</h2>
                             </div>
                             <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-400">
                                 <span className="inline-flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${selectedPalette.primaryDotClass}`} /> 초록 접수</span>
                                 <span className="inline-flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${selectedPalette.secondaryDotClass}`} /> 사전등록</span>
                             </div>
                         </div>
-                        <ShowcaseBarChart compact={isPresentationMode} palette={selectedPalette} />
+                        <ShowcaseBarChart compact={isPresentationMode} palette={selectedPalette} rows={trendRows} />
                         <div className="mt-1 flex items-center justify-between border-t border-white/[0.07] pt-3 text-[11px] text-slate-400">
-                            <span>최근 7일 기준 일별 신규 건수</span>
-                            <span className="inline-flex items-center gap-1 font-bold text-emerald-300"><TrendingUp className="h-3 w-3" /> 오늘 총 260건</span>
+                            <span>{data.trendStartDate} ~ {data.trendEndDate}</span>
+                            <span className="inline-flex items-center gap-1 font-bold text-emerald-300"><TrendingUp className="h-3 w-3" /> {isPast ? data.trendEndDate.slice(5).replace('-', '.') : '오늘'} 총 {lastDayCount.toLocaleString('ko-KR')}건</span>
                         </div>
                     </article>
                 </section>
@@ -395,10 +355,10 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                         <div
                             className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/[0.07] dark:bg-white/[0.07]"
                             role="img"
-                            aria-label={`입금 완료 ${PAYMENT_RATE.toFixed(1)}%, 미입금 ${(100 - PAYMENT_RATE).toFixed(1)}%`}
+                            aria-label={`입금 완료 ${PAYMENT_RATE.toFixed(1)}%, 미입금 ${UNPAID_RATE.toFixed(1)}%`}
                         >
                             <span className={selectedPalette.primaryDotClass} style={{ width: `${PAYMENT_RATE}%` }} />
-                            <span className={selectedPalette.secondaryDotClass} style={{ width: `${100 - PAYMENT_RATE}%` }} />
+                            <span className={selectedPalette.secondaryDotClass} style={{ width: `${UNPAID_RATE}%` }} />
                         </div>
                         <p className="mt-2 text-[9px] text-slate-400 dark:text-slate-400">취소·환불 제외 · 유효 등록 {PAYMENT_TOTAL.toLocaleString('ko-KR')}명 기준</p>
                     </article>
@@ -408,10 +368,10 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                         <h2 className="mt-1 text-sm font-bold">초록 분야별 구성</h2>
                         <div className={`${isPresentationMode ? 'mt-3 space-y-2' : 'mt-4 space-y-2.5'}`}>
                             {ABSTRACT_FIELDS.map((field, index) => (
-                                <div key={field.label} className="grid grid-cols-[minmax(0,1fr)_3fr_32px] items-center gap-2 text-[10px]">
+                                <div key={field.key} className="grid grid-cols-[minmax(0,1fr)_3fr_32px] items-center gap-2 text-[10px]">
                                     <span className="truncate text-slate-300">{field.label}</span>
-                                    <span className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><ShowcaseHorizontalBar widthPercent={field.value * 2.5} delay={index * 100} className={field.color} /></span>
-                                    <strong className="text-right tabular-nums text-white"><ShowcaseAnimatedNumber value={field.value} delay={index * 100} />%</strong>
+                                    <span className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><ShowcaseHorizontalBar widthPercent={field.value} delay={index * 100} className={field.color} /></span>
+                                    <strong className="text-right tabular-nums text-white"><ShowcaseAnimatedNumber value={field.value} decimals={1} delay={index * 100} />%</strong>
                                 </div>
                             ))}
                         </div>
@@ -430,14 +390,15 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                             <div className={`${isPresentationMode ? 'mt-3' : 'mt-4'} grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3`}>
                                 {PARTNERS.map((partner, index) => (
                                     <span
-                                        key={partner}
+                                        key={partner + index}
                                         className="flex h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.055] px-3 text-[10px] font-black tracking-wider text-slate-200 shadow-inner motion-safe:animate-[pulse_4s_ease-in-out_infinite] motion-reduce:animate-none"
                                         style={{ animationDelay: `${index * 0.55}s` }}
                                     >
                                         {partner}
                                     </span>
                                 ))}
-                                <span className="flex h-10 items-center justify-center rounded-xl border border-dashed border-cyan-300/20 bg-cyan-300/[0.04] px-3 text-[10px] font-bold text-cyan-300">+13 PARTNERS</span>
+                                {data.partners.length > 5 && <span className="flex h-10 items-center justify-center rounded-xl border border-dashed border-cyan-300/20 bg-cyan-300/[0.04] px-3 text-[10px] font-bold text-cyan-300">+{data.partners.length - 5} PARTNERS</span>}
+                                {data.partners.length === 0 && <p className="col-span-full py-3 text-xs text-slate-400 dark:text-slate-400">등록된 후원사가 없습니다.</p>}
                             </div>
                         </div>
                     </article>
@@ -501,7 +462,7 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                         <div className="relative flex items-center justify-between">
                             <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300">Upcoming deadlines</p>
-                                <h2 className="mt-1 text-sm font-bold">다가오는 주요 마감</h2>
+                                <h2 className="mt-1 text-sm font-bold">주요 일정</h2>
                             </div>
                             <CalendarClock className="h-4 w-4 text-violet-300" />
                         </div>
@@ -511,7 +472,7 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
                                     {index < UPCOMING_DEADLINES.length - 1 && <span className="pointer-events-none absolute -right-2.5 top-1/2 hidden h-px w-3 bg-white/10 2xl:block" />}
                                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-black ${item.color}`}>{item.dday}</span>
                                     <p className="mt-2 truncate text-[10px] font-semibold text-slate-200">{item.label}</p>
-                                    <p className="mt-1 text-xs font-black tabular-nums text-white">2026.{item.date}</p>
+                                    <p className="mt-1 text-xs font-black tabular-nums text-white">{item.date}</p>
                                 </div>
                             ))}
                         </div>
@@ -525,20 +486,14 @@ export const AdminShowcaseDashboardPage = ({ palette = 'ocean' }: AdminShowcaseD
     );
 };
 
-const ShowcaseCurrencyAmounts = ({ amounts, className, prominent = false }: { amounts: Record<'KRW' | 'USD', number>; className: string; prominent?: boolean }) => (
+const ShowcaseCurrencyAmounts = ({ amounts, className, prominent = false }: { amounts: Record<string, number>; className: string; prominent?: boolean }) => (
     <div className="space-y-1">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-400">KRW</span>
-            <strong className={`whitespace-nowrap ${prominent ? 'text-lg leading-5' : 'text-xs'} font-black tabular-nums ${className}`}>
-                <ShowcaseAnimatedNumber value={amounts.KRW} /><span className="ml-0.5 text-[10px] font-semibold">원</span>
+        {Object.entries(amounts).map(([currency, amount]) => <div key={currency} className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-400">{currency}</span>
+            <strong className={className + ' whitespace-nowrap font-black tabular-nums ' + (prominent ? 'text-lg leading-5' : 'text-xs')}>
+                {currency === 'USD' ? '$' : ''}<ShowcaseAnimatedNumber value={amount} decimals={currency === 'KRW' ? 0 : 2} />{currency === 'KRW' && <span className="ml-0.5 text-[10px] font-semibold">원</span>}
             </strong>
-        </div>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-400">USD</span>
-            <strong className={`whitespace-nowrap ${prominent ? 'text-lg leading-5' : 'text-xs'} font-black tabular-nums ${className}`}>
-                $<ShowcaseAnimatedNumber value={amounts.USD} decimals={2} />
-            </strong>
-        </div>
+        </div>)}
     </div>
 );
 
@@ -614,10 +569,10 @@ const ShowcaseHorizontalBar = ({ widthPercent, delay, className }: { widthPercen
     );
 };
 
-const ShowcaseBarChart = ({ compact, palette }: { compact: boolean; palette: ShowcaseDashboardPalette }) => {
+const ShowcaseBarChart = ({ compact, palette, rows }: { compact: boolean; palette: ShowcaseDashboardPalette; rows: { label: string; abstractCount: number; registrationCount: number }[] }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const { primary, primaryLight, secondary } = palette.chart;
-    const maxValue = Math.max(...DAILY_INTAKE_TRENDS.flatMap((item) => [item.abstractCount, item.registrationCount]));
+    const maxValue = Math.max(1, ...rows.flatMap((item) => [item.abstractCount, item.registrationCount]));
 
     useEffect(() => {
         const chart = chartRef.current;
@@ -658,12 +613,12 @@ const ShowcaseBarChart = ({ compact, palette }: { compact: boolean; palette: Sho
             ref={chartRef}
             className={`${compact ? 'mt-3 h-40 min-h-0 flex-1' : 'mt-5 h-48'} relative flex w-full items-end gap-2 sm:gap-4`}
             role="img"
-            aria-label="최근 7일 일별 초록 접수와 사전등록 건수 막대 차트"
+            aria-label="표시 기간 일별 초록 접수와 사전등록 건수 막대 차트"
         >
             <div className="pointer-events-none absolute inset-x-0 bottom-6 top-5 flex flex-col justify-between">
                 {[0, 1, 2, 3].map((line) => <span key={line} className="block border-t border-dashed border-white/[0.07]" />)}
             </div>
-            {DAILY_INTAKE_TRENDS.map((item, index) => (
+            {rows.map((item, index) => (
                 <div key={item.label} className="group relative flex h-full min-w-0 flex-1 flex-col justify-end">
                     <div className="mb-1.5 flex justify-center gap-1 text-[9px] font-bold tabular-nums text-slate-400 transition group-hover:text-white sm:text-[10px]">
                         <ShowcaseAnimatedNumber value={item.abstractCount} delay={index * 80} />

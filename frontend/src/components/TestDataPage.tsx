@@ -119,7 +119,7 @@ const DAILY_TEST_DATA_ACTIONS: DailyTestDataAction[] = [
     {
         key: 'daily-members',
         title: '일별 회원 데이터',
-        description: '2026년 8월 26일부터 오늘까지 날짜별 회원 수가 채워지도록 생성합니다. 이미 생성된 데이터는 건너뜁니다.',
+        description: '선택한 행사 시작 60일 전부터 전날까지 날짜별 회원 수를 생성합니다. 이미 생성된 데이터는 건너뜁니다.',
         buttonLabel: '회원데이터생성',
         rangeLabel: '매일 10~15개',
         endpoint: '/api/admin/testdata/daily/members',
@@ -141,7 +141,7 @@ const DAILY_TEST_DATA_ACTIONS: DailyTestDataAction[] = [
     {
         key: 'daily-abstracts',
         title: '일별 초록 데이터',
-        description: '일별 회원 정보를 바탕으로 현재 접수번호 체계를 사용한 초록을 날짜별로 생성합니다.',
+        description: '일별 회원 정보로 초록을 생성합니다. 활성 심사자가 2명 미만이면 임시저장·접수완료 상태로 생성합니다.',
         buttonLabel: '초록데이터 생성',
         rangeLabel: '매일 6~9개',
         endpoint: '/api/admin/testdata/daily/abstracts',
@@ -234,7 +234,7 @@ export const TestDataPage = ({ onNotify, dashboardEnabled }: TestDataPageProps) 
     const handleDailyAction = async (action: DailyTestDataAction) => {
         const confirmed = await confirm({
             title: `${action.title} 생성`,
-            message: `2026년 8월 26일부터 오늘까지 ${action.rangeLabel}의 샘플 데이터를 생성하시겠습니까?\n이미 생성된 일별 샘플은 건너뜁니다.`,
+            message: `행사 시작 60일 전부터 전날까지 ${action.rangeLabel}의 샘플 데이터를 생성하시겠습니까?\n이미 생성된 일별 샘플은 건너뜁니다.`,
             confirmText: '일별 데이터 생성',
             tone: 'danger'
         });
@@ -285,7 +285,7 @@ export const TestDataPage = ({ onNotify, dashboardEnabled }: TestDataPageProps) 
                     <div>
                         <h2 className="font-bold text-slate-900 dark:text-white">대시보드 일별 추이 샘플</h2>
                         <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            회원 → 사전등록 → 초록 순서로 실행하세요. 매일 00시 01분에도 같은 순서로 누락분이 자동 생성됩니다.
+                            회원 → 사전등록 → 초록 순서로 실행하세요. 행사 시작 60일 전부터 전날까지 생성하며 자동 생성은 오늘 이전 누락분만 보충합니다.
                         </p>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-white px-3 py-1.5 text-xs font-bold text-blue-700 shadow-sm dark:bg-slate-900 dark:text-blue-300 sm:self-auto">

@@ -41,9 +41,10 @@ public class AnalyticsController {
                                      @RequestParam(required=false) LocalDate startDate,
                                      @RequestParam(required=false) LocalDate endDate,
                                      @RequestParam(defaultValue="false") boolean includeMapCountries) {
-        var end=endDate==null?LocalDate.now(AnalyticsService.ZONE):endDate;
-        var start=startDate==null?end.minusDays(29):startDate;
         try {
+            var defaults=startDate==null && endDate==null?service.defaultPeriod(conference):null;
+            var end=defaults!=null?defaults.endDate():endDate==null?LocalDate.now(AnalyticsService.ZONE):endDate;
+            var start=defaults!=null?defaults.startDate():startDate==null?end.minusDays(29):startDate;
             var result=new LinkedHashMap<>(service.overview(conference,start,end));
             if(includeMapCountries)result.put("mapCountries",service.mapCountries(conference));
             return ResponseEntity.ok().header("Cache-Control","no-store").body(result);

@@ -197,6 +197,7 @@ export const ConferencePage = ({onNotify, onSaved}: ConferencePageProps) => {
                 <ConferenceCopyModal
                     source={copyingSettings}
                     onClose={() => setCopyingSettings(null)}
+                    onSuccess={() => { setCopyingSettings(null); setReloadKey(value => value + 1); onSaved?.(); }}
                     onNotify={onNotify}
                 />
             )}

@@ -58,12 +58,11 @@ public class MenuSettingsService {
         for (MenuSettings menu : menus) {
             MenuSettingsResponse response = toResponse(menu);
             if (unwrapConfiguredRoot && "user".equals(menu.getMenuScope()) && !"link".equals(menu.getMenuType())) {
-                String route = publicMenuRoute(menu);
+                String route = menu.getRoutePath();
                 if (route != null && publicRoutes.putIfAbsent(route, menu.getSeq()) != null) {
                     throw new org.springframework.web.server.ResponseStatusException(
                             org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "Duplicate public menu route: " + route);
                 }
-                response.setRoutePath(route);
             }
             response.setChildren(new ArrayList<>());
             nodeMap.put(nodeKey(menu.getMenuScope(), menu.getMenuKey()), response);
@@ -104,18 +103,6 @@ public class MenuSettingsService {
                 .orElseGet(() -> roots.stream()
                         .filter(menu -> !"root".equals(menu.getMenuKey()))
                         .toList());
-    }
-
-    private String publicMenuRoute(MenuSettings menu) {
-        String route = normalizeOptional(menu.getRoutePath());
-        // Older rows stored the parent folder in routePath even though menuPath
-        // already identified the page. Use that stored page name for both public
-        // navigation and page lookup; never infer it from a hard-coded route map.
-        if (route != null && route.matches("/[a-z0-9-]+(?:/[a-z0-9-]+)+/?")
-                && normalizeOptional(menu.getMenuPath()) != null) {
-            return normalizeRoutePath("user", "full", normalizeOptional(menu.getMenuPath()), null, null);
-        }
-        return route;
     }
 
     @Transactional

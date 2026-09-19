@@ -124,6 +124,27 @@ class PublicTemplateRenderTest {
     }
 
     @Test
+    void breadcrumbFoldersAreLabelsWhilePageAncestorsRemainLinks() {
+        var parent = menu("sponsors", "SPONSORS", "/sponsors", List.of());
+        parent.setMenuType("folder");
+        var current = menu("sponsorship", "Sponsorship", "/sponsorship", List.of());
+        context.setVariable("currentMenu", current);
+        context.setVariable("breadcrumbs", List.of(parent, current));
+
+        String html = templateEngine.process("public/page", context);
+        String breadcrumb = html.substring(html.indexOf("<ul class=\"breadcrumb\">"));
+        breadcrumb = breadcrumb.substring(0, breadcrumb.indexOf("</ul>"));
+        assertThat(breadcrumb).contains("<span>SPONSORS</span>", "<span>Sponsorship</span>")
+                .doesNotContain("href=\"/apdrc8/en/sponsors\"");
+
+        parent.setMenuType("page");
+        html = templateEngine.process("public/page", context);
+        breadcrumb = html.substring(html.indexOf("<ul class=\"breadcrumb\">"));
+        breadcrumb = breadcrumb.substring(0, breadcrumb.indexOf("</ul>"));
+        assertThat(breadcrumb).contains("href=\"/apdrc8/en/sponsors\"");
+    }
+
+    @Test
     void includesCookieChoicesOnceAcrossPublicLayoutsBeforeAnalytics() {
         for (String template : List.of("public/home", "public/page", "public/not-found")) {
             String html = templateEngine.process(template, context);

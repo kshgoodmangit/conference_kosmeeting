@@ -411,8 +411,8 @@ public class TestDataService {
                     createdAbstract.seq(), 1, member.country(), member.institution(), member.department()
             });
             authorRows.add(new Object[]{
-                    createdAbstract.seq(), 1, member.fullName(), 1, true, true,
-                    member.email(), member.country(), member.mobile()
+                    createdAbstract.seq(), 1, member.fullName(), personalDataProperties.requireDbEncString(), 1, true, true,
+                    member.email(), personalDataProperties.requireDbEncString(), member.country(), member.mobile(), personalDataProperties.requireDbEncString()
             });
 
             AbstractSamplePlan plan = planBySubmissionNo.get(createdAbstract.submissionNo());
@@ -451,7 +451,8 @@ public class TestDataService {
                 INSERT INTO abstract_submission_authors (
                     abstractSeq, authorOrder, authorName, institutionNo,
                     isPresentingAuthor, isCorrespondingAuthor, email, country, mobilePhoneNumber
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, HEX(AES_ENCRYPT(?, SHA2(?, 512))), ?, ?, ?,
+                          HEX(AES_ENCRYPT(?, SHA2(?, 512))), ?, HEX(AES_ENCRYPT(?, SHA2(?, 512))))
                 """, authorRows);
         jdbcTemplate.batchUpdate("""
                 INSERT INTO abstract_review_assignments (

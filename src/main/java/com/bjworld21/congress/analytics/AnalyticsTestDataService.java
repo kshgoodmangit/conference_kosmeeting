@@ -15,6 +15,9 @@ public class AnalyticsTestDataService {
     private final AnalyticsService analytics;
     private final AnalyticsCollector collector;
     private final Clock clock;
+    private com.bjworld21.congress.service.DailyDashboardTestDataService conferenceDates;
+    @Autowired
+    public void setConferenceDates(com.bjworld21.congress.service.DailyDashboardTestDataService dates) { this.conferenceDates = dates; }
     private final ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"analytics-testdata");t.setDaemon(true);return t;});
     private final Map<Long,Map<String,Object>> jobs=new ConcurrentHashMap<>();
     private final Set<Long> running=ConcurrentHashMap.newKeySet();
@@ -34,8 +37,9 @@ public class AnalyticsTestDataService {
         if(running.contains(conference))return status(conference);
         analytics.requireConference(conference);
         var startedAt=LocalDateTime.now(clock.withZone(AnalyticsService.ZONE));
-        LocalDate end=startedAt.toLocalDate();
-        if (startedAt.toLocalTime().isBefore(LocalTime.of(1,0))) {
+        LocalDate end=conferenceDates == null ? startedAt.toLocalDate() : conferenceDates.conferenceRange(conference).endDate();
+        LocalDateTime cutoff = conferenceDates == null ? startedAt : end.atTime(23,59,59);
+        if (conferenceDates == null && startedAt.toLocalTime().isBefore(LocalTime.of(1,0))) {
             throw new IllegalArgumentException("오늘 데이터까지 안전하게 생성하려면 서울 시간 01:00 이후에 실행해 주세요.");
         }
         // Validate hashing configuration before any existing data can be deleted.
@@ -46,7 +50,7 @@ public class AnalyticsTestDataService {
         job.put("phase","RESETTING");job.put("conferenceSeq",conference);
         job.put("completedDays",0);job.put("totalDays",60);job.put("createdEvents",0L);
         jobs.put(conference,job);
-        try {executor.execute(()->generate(conference,startedAt,job));}
+        try {executor.execute(()->generate(conference,cutoff,job));}
         catch(RejectedExecutionException exception) {
             running.remove(conference);job.put("status","FAILED");
             throw new IllegalStateException("접속 데이터 생성 작업을 시작할 수 없습니다.",exception);

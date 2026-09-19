@@ -26,6 +26,9 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### JRebel local configuration ###
+rebel.xml
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
