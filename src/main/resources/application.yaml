@@ -22,9 +22,10 @@ server:
   servlet:
     session:
       timeout: 60m
+  port: ${SERVER_PORT:8080}
 
 mybatis:
-  type-aliases-package: com.bjworld21.congress.entity
+  type-aliases-package: com.bjworld21.conference.entity
   mapper-locations: classpath:/mappers/*.xml
 
 app:

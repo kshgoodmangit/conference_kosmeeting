@@ -119,7 +119,7 @@ app:
 `payment/newpg/NewPgProperties.java`를 생성한다.
 
 ```java
-package com.bjworld21.congress.payment.newpg;
+package com.bjworld21.conference.payment.newpg;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

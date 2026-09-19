@@ -7,10 +7,9 @@ spring:
     password: ${DATABASE_PWD}
 
 app:
-  app:
-    public-site:
-      conference-mode: single
-      default-conference-seq: 1
+  public-site:
+    conference-mode: single
+    default-conference-seq: 1
   license:
     # true: 학회 추가 허용 / false: 추가 버튼 숨김 및 생성 API 차단 (변경 후 서버 재시작)
     conference-creation-enabled: false

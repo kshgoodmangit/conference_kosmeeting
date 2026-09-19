@@ -11,10 +11,9 @@ server:
   port: 10001
 
 app:
-  app:
-    public-site:
-      conference-mode: single
-      default-conference-seq: 1
+  public-site:
+    conference-mode: single
+    default-conference-seq: 1
   upload:
     base-directory: /home/cms_congress/upload
   license:
