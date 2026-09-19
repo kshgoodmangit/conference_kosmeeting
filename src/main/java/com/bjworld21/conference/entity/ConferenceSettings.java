@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class ConferenceSettings {
     private Long seq;
     private String sitePath;
+    private Boolean published;
     private String defaultLanguage;
     private java.util.List<String> supportedLanguages;
     private String eventName;

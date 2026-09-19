@@ -52,7 +52,7 @@ public class ConferenceSettingsService {
                 );
 
         savedSettings = savePublicSite(savedSettings.getSeq(), request.getSitePath(),
-                request.getDefaultLanguage(), request.getSupportedLanguages());
+                request.getDefaultLanguage(), request.getSupportedLanguages(), request.getPublished());
         return savedSettings;
     }
 
@@ -66,6 +66,12 @@ public class ConferenceSettingsService {
 
     @org.springframework.transaction.annotation.Transactional
     public ConferenceSettingsResponse savePublicSite(Long seq, String sitePath, String defaultLanguage, List<String> languages) {
+        return savePublicSite(seq, sitePath, defaultLanguage, languages, null);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public ConferenceSettingsResponse savePublicSite(Long seq, String sitePath, String defaultLanguage,
+                                                    List<String> languages, Boolean published) {
         ConferenceSettings settings = conferenceSettingsRepository.findBySeq(seq);
         if (settings == null) throw new IllegalArgumentException("학회를 찾을 수 없습니다.");
         String path = sitePath == null ? "" : sitePath.trim().toLowerCase(java.util.Locale.ROOT);
@@ -85,6 +91,7 @@ public class ConferenceSettingsService {
                 throw new IllegalArgumentException("지원 언어 코드와 같은 메뉴 경로가 있습니다: /" + language);
         }
         settings.setSitePath(path);
+        settings.setPublished(published != null ? published : Boolean.TRUE.equals(settings.getPublished()));
         settings.setDefaultLanguage(fallback);
         conferenceSettingsRepository.updatePublicSite(settings);
         conferenceSettingsRepository.deleteLanguages(seq);
@@ -154,6 +161,7 @@ public class ConferenceSettingsService {
 
         ConferenceSettings settings = ConferenceSettings.builder()
                 .sitePath("conference-" + java.util.UUID.randomUUID())
+                .published(false)
                 .defaultLanguage("en")
                 .eventName(eventName.trim())
                 .eventStartDate(eventStartDate)
@@ -213,6 +221,7 @@ public class ConferenceSettingsService {
 
         ConferenceSettings settings = ConferenceSettings.builder()
                 .seq(seq)
+                .published(existingSettings.getPublished())
                 .eventName(eventName.trim())
                 .eventStartDate(eventStartDate)
                 .eventEndDate(eventEndDate)
@@ -276,6 +285,7 @@ public class ConferenceSettingsService {
         return ConferenceSettingsResponse.builder()
                 .seq(settings.getSeq())
                 .sitePath(settings.getSitePath())
+                .published(Boolean.TRUE.equals(settings.getPublished()))
                 .defaultLanguage(settings.getDefaultLanguage())
                 .supportedLanguages(conferenceSettingsRepository.findLanguages(settings.getSeq()))
                 .eventName(settings.getEventName())

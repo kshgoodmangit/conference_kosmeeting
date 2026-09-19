@@ -74,6 +74,26 @@ class ConferenceSettingsServiceTest {
         verify(repository).insertLanguage(1L, "zh-Hans", 1);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void savesAndReturnsExplicitPublicationState(boolean published) {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).published(!published).build());
+        var result = service.savePublicSite(1L, "apdrc8", "en", List.of("en"), published);
+        var captor = ArgumentCaptor.forClass(ConferenceSettings.class);
+        verify(repository).updatePublicSite(captor.capture());
+        assertThat(captor.getValue().getPublished()).isEqualTo(published);
+        assertThat(result.getPublished()).isEqualTo(published);
+    }
+
+    @Test
+    void omittingPublicationOnUpdatePreservesTheExistingState() {
+        when(repository.findBySeq(1L)).thenReturn(ConferenceSettings.builder().seq(1L).published(true).build());
+        var result = service.savePublicSite(1L, "apdrc8", "en", List.of("en"));
+        var captor = ArgumentCaptor.forClass(ConferenceSettings.class);
+        verify(repository).updatePublicSite(captor.capture());
+        assertThat(captor.getValue().getPublished()).isTrue();
+        assertThat(result.getPublished()).isTrue();
+    }
     @Mock
     private ConferenceSettingsRepository repository;
 
@@ -119,6 +139,7 @@ class ConferenceSettingsServiceTest {
         verify(repository).insert(captor.capture());
         verify(repository, never()).update(any());
         assertThat(captor.getValue().getSeq()).isNull();
+        assertThat(captor.getValue().getPublished()).isFalse();
         assertThat(captor.getValue().getEventName()).isEqualTo("ICMS 2027");
         assertThat(captor.getValue().getRegistrationCurrency()).isEqualTo("USD");
         assertThat(captor.getValue().getVenueAddress()).isEqualTo("Seoul");

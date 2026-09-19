@@ -31,7 +31,7 @@ class ConferenceCopyServiceTest {
         var conferences = mock(ConferenceSettingsService.class);
         var properties = new UploadProperties(); properties.setBaseDirectory(directory.toString());
         var service = new ConferenceCopyService(jdbc, conferences, new UploadStorage(properties));
-        var settings = ConferenceSettingsSaveAllRequest.builder().eventName("135")
+        var settings = ConferenceSettingsSaveAllRequest.builder().published(true).eventName("135")
                 .eventStartDate(LocalDate.of(2026,3,3)).eventEndDate(LocalDate.of(2026,3,6)).build();
         when(conferences.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("2026_136")
                 .eventStartDate(LocalDate.of(2027,5,9)).registrationCurrency("USD").build());
@@ -53,6 +53,7 @@ class ConferenceCopyServiceTest {
         });
         var result = service.copy(1, new ConferenceCopyService.Request(settings, Set.of("fees")));
         assertThat(result.conference().getSeq()).isEqualTo(2L);
+        verify(conferences).saveConfigured(isNull(), argThat(request -> Boolean.FALSE.equals(request.getPublished())));
         assertThat(result.copiedCounts()).containsEntry("registration_categories",1).containsEntry("registration_fee_rates",1);
         assertThat(sqls).allMatch(sql -> !sql.contains("`seq`") && sql.startsWith("INSERT INTO "));
         assertThat(inserts.get(0)).containsExactly(2L,"REGULAR");
@@ -121,7 +122,7 @@ class ConferenceCopyServiceTest {
         var conferences = mock(ConferenceSettingsService.class);
         var properties = new UploadProperties();
         properties.setBaseDirectory(directory.toString());
-        var settings = ConferenceSettingsSaveAllRequest.builder().eventName("135")
+        var settings = ConferenceSettingsSaveAllRequest.builder().published(true).eventName("135")
                 .eventStartDate(LocalDate.of(2026, 3, 3)).eventEndDate(LocalDate.of(2026, 3, 6)).build();
         when(conferences.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder()
                 .seq(1L).sitePath("2026_136").eventStartDate(LocalDate.of(2027, 5, 9)).build());

@@ -14,6 +14,7 @@ import java.util.List;
 @Builder
 public class ConferenceSettingsSaveAllRequest {
     private String sitePath;
+    private Boolean published;
     private String defaultLanguage;
     private java.util.List<String> supportedLanguages;
     private String eventName;

@@ -79,6 +79,7 @@ public class ConferenceSettingsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialEndDate,
             @RequestParam(required = false) String venueAddress,
             @RequestParam(required = false) String sitePath,
+            @RequestParam(required = false) Boolean published,
             @RequestParam(defaultValue = "en") String defaultLanguage,
             @RequestParam(required = false) List<String> supportedLanguages
     ) {
@@ -93,7 +94,7 @@ public class ConferenceSettingsController {
                             .regularStartDate(regularStartDate).regularEndDate(regularEndDate)
                             .registrationCurrency(registrationCurrency).abstractStartDate(abstractStartDate).abstractEndDate(abstractEndDate)
                             .presentationMaterialStartDate(presentationMaterialStartDate).presentationMaterialEndDate(presentationMaterialEndDate)
-                            .venueAddress(venueAddress).sitePath(sitePath).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
+                            .venueAddress(venueAddress).sitePath(sitePath).published(published).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -118,6 +119,7 @@ public class ConferenceSettingsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate presentationMaterialEndDate,
             @RequestParam(required = false) String venueAddress,
             @RequestParam(required = false) String sitePath,
+            @RequestParam(required = false) Boolean published,
             @RequestParam(defaultValue = "en") String defaultLanguage,
             @RequestParam(required = false) List<String> supportedLanguages
     ) {
@@ -129,7 +131,7 @@ public class ConferenceSettingsController {
                             .regularStartDate(regularStartDate).regularEndDate(regularEndDate)
                             .registrationCurrency(registrationCurrency).abstractStartDate(abstractStartDate).abstractEndDate(abstractEndDate)
                             .presentationMaterialStartDate(presentationMaterialStartDate).presentationMaterialEndDate(presentationMaterialEndDate)
-                            .venueAddress(venueAddress).sitePath(sitePath).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
+                            .venueAddress(venueAddress).sitePath(sitePath).published(published).defaultLanguage(defaultLanguage).supportedLanguages(supportedLanguages).build()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {

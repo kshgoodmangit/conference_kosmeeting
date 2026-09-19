@@ -39,6 +39,7 @@ class PublicPageControllerTest {
     private com.bjworld21.conference.repository.PopupRepository popupRepository;
     private PopupLayoutSettingsService popupLayouts;
     private PublicPageController controller;
+    private PublicSiteProperties siteProperties;
 
     @BeforeEach
     void setUp() {
@@ -120,7 +121,7 @@ class PublicPageControllerTest {
         when(menuSettingsService.getActiveUserMenuTree(1L, "en")).thenReturn(List.of(
                 sectionMenu, memberMenu, abstractSubmissionMenu, onlineRegistrationMenu
         ));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .eventStartDate(LocalDate.of(2026, 10, 1))
@@ -134,7 +135,7 @@ class PublicPageControllerTest {
                 .items(List.of())
                 .build());
 
-        PublicSiteProperties siteProperties = new PublicSiteProperties();
+        siteProperties = new PublicSiteProperties();
         siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.SINGLE);
         siteProperties.setDefaultConferenceSeq(1L);
         controller = new PublicPageController(
@@ -152,6 +153,31 @@ class PublicPageControllerTest {
                         new CmsHtmlSanitizer(), Clock.system(ZoneId.of("Asia/Seoul"))), new PublicSiteService(conferenceSettingsService, siteProperties)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    }
+
+    @Test
+    void multiRootRedirectsToLatestHomeAndPreservesQueryWithoutCaching() throws Exception {
+        siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.MULTI);
+        when(conferenceSettingsService.getSettingsList()).thenReturn(List.of(
+                ConferenceSettingsResponse.builder().published(true).seq(9L).sitePath("2026_136")
+                        .defaultLanguage("ko").supportedLanguages(List.of("ko", "en")).build()));
+
+        mockMvc.perform(get("/?source=bookmark"))
+                .andExpect(status().isFound())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/2026_136/ko/?source=bookmark"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", "private, no-store"));
+        org.mockito.Mockito.verifyNoInteractions(menuSettingsService, boardPostService);
+    }
+
+    @Test
+    void multiRootWithoutConferencesShowsTheEmptyDirectory() throws Exception {
+        siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.MULTI);
+        when(conferenceSettingsService.getSettingsList()).thenReturn(List.of());
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("public/conferences"))
+                .andExpect(model().attribute("conferences", List.of()));
     }
 
     @Test
@@ -334,7 +360,7 @@ class PublicPageControllerTest {
                 .member(MemberListResponse.builder().seq(11L).firstName("Jane").lastName("Doe").build())
                 .abstractSubmissions(List.of())
                 .build());
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(1))
@@ -348,7 +374,7 @@ class PublicPageControllerTest {
                 .andExpect(model().attribute("mypageRegistrationLabel", "Early-bird"))
                 .andExpect(model().attribute("mypageRegistrationDday", "D-5"));
 
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(20))
@@ -366,7 +392,7 @@ class PublicPageControllerTest {
     @Test
     void marksHomeRegistrationClosedAfterItsEndDate() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .regularStartDate(today.minusDays(30))
@@ -382,7 +408,7 @@ class PublicPageControllerTest {
     @Test
     void opensHomeCtasDuringConfiguredPeriodsAndUsesEarlyBirdStartDate() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .seq(1L)
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today)
@@ -406,7 +432,7 @@ class PublicPageControllerTest {
     void usesRegularStartDateAfterEarlyBirdRegistrationEnds() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         LocalDate regularStartDate = today.plusDays(2);
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .eventName("APDRC8")
                 .earlyBirdStartDate(today.minusDays(30))
                 .earlyBirdEndDate(today.minusDays(1))
@@ -465,7 +491,7 @@ class PublicPageControllerTest {
     @Test
     void blocksApplicationPagesOutsideTheirConfiguredPeriods() throws Exception {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
+        when(conferenceSettingsService.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8").defaultLanguage("en").supportedLanguages(List.of("en"))
                 .eventName("APDRC8")
                 .abstractEndDate(today.minusDays(1))
                 .earlyBirdEndDate(today.minusDays(1))
@@ -500,6 +526,23 @@ class PublicPageControllerTest {
         mockMvc.perform(get("/sitemap.xml"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("/scientific-program")));
+    }
+    @Test
+    void privateConferencesDoNotAppearInRootDirectoryOrSitemap() throws Exception {
+        siteProperties.setConferenceMode(PublicSiteProperties.ConferenceMode.MULTI);
+        var hidden = ConferenceSettingsResponse.builder().seq(99L).sitePath("private-conference")
+                .eventName("Private conference").published(false).build();
+        when(conferenceSettingsService.getSettingsList()).thenReturn(List.of(hidden));
+        mockMvc.perform(get("/")).andExpect(status().isOk())
+                .andExpect(model().attribute("conferences", List.of()));
+        mockMvc.perform(get("/sitemap.xml")).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("private-conference"))));
+
+        var visible = conferenceSettingsService.getSettings(1L);
+        when(conferenceSettingsService.getSettingsList()).thenReturn(List.of(hidden, visible));
+        mockMvc.perform(get("/sitemap.xml")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("/apdrc8/")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("private-conference"))));
     }
     private MockHttpSession memberSession(long conferenceSeq) {
         var session = new MockHttpSession();

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -23,6 +24,12 @@ public class PublicSiteService {
 
     public boolean isMulti() { return properties.isMulti(); }
 
+    public List<ConferenceSettingsResponse> getPublishedConferences() {
+        return conferences.getSettingsList().stream()
+                .filter(conference -> Boolean.TRUE.equals(conference.getPublished()))
+                .toList();
+    }
+
     public PublicSiteContext resolveApi(long conferenceSeq, String language) {
         if (conferenceSeq <= 0 || (!properties.isMulti() && !Long.valueOf(conferenceSeq).equals(properties.getDefaultConferenceSeq()))) throw notFound();
         return context(requireConference(conferences.getSettings(conferenceSeq)), language);
@@ -36,7 +43,13 @@ public class PublicSiteService {
         if (!segments.isEmpty() && RESERVED.contains(segments.get(0))) throw notFound();
         ConferenceSettingsResponse conference;
         if (properties.isMulti()) {
-            if (segments.isEmpty()) return new ResolvedPage(null, "/", null);
+            if (segments.isEmpty()) {
+                var latest = getPublishedConferences().stream()
+                        .max(Comparator.comparing(ConferenceSettingsResponse::getSeq));
+                if (latest.isEmpty()) return new ResolvedPage(null, "/", null);
+                PublicSiteContext site = context(latest.get(), null);
+                return new ResolvedPage(site, "/", site.pageUrl("/"));
+            }
             String sitePath = segments.remove(0);
             if (!sitePath.matches("[a-z0-9][a-z0-9_-]{0,99}")) throw notFound();
             conference = requireConference(conferences.getSettingsBySitePath(sitePath));
@@ -55,6 +68,7 @@ public class PublicSiteService {
     }
 
     private PublicSiteContext context(ConferenceSettingsResponse conference, String requestedLanguage) {
+        if (!Boolean.TRUE.equals(conference.getPublished())) throw notFound();
         List<String> languages = languages(conference);
         String language = requestedLanguage == null || requestedLanguage.isBlank() ? conference.getDefaultLanguage() : requestedLanguage;
         if (!languages.contains(language)) throw notFound();
@@ -74,7 +88,7 @@ public class PublicSiteService {
     }
 
     private ConferenceSettingsResponse requireConference(ConferenceSettingsResponse value) {
-        if (value == null || value.getSeq() == null) throw notFound();
+        if (value == null || value.getSeq() == null || !Boolean.TRUE.equals(value.getPublished())) throw notFound();
         return value;
     }
 

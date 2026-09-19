@@ -43,6 +43,7 @@ public class ConferenceCopyService {
         var source = conferences.getSettings(sourceSeq);
         if (source.getSeq() == null) throw new IllegalArgumentException("복사할 원본 학회가 없습니다.");
         var settings = request.settings();
+        settings.setPublished(false);
         if (source.getEventStartDate() == null || settings.getEventStartDate() == null || settings.getEventEndDate() == null)
             throw new IllegalArgumentException("원본과 새 행사의 개최일을 설정해 주세요.");
         if (settings.getRegistrationCurrency() == null) settings.setRegistrationCurrency(source.getRegistrationCurrency());

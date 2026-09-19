@@ -146,6 +146,11 @@ export const ConferencePage = ({onNotify, onSaved}: ConferencePageProps) => {
                                     >
                                         {settings.eventName || '-'}
                                     </button>
+                                    <span className={settings.published
+                                        ? 'mt-1 block w-fit rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                        : 'mt-1 block w-fit rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300'}>
+                                        {settings.published ? '공개' : '비공개'}
+                                    </span>
                                 </td>
                                 <td className="px-4 py-4 text-xs tabular-nums text-slate-600 dark:text-slate-300">{formatDateRange(settings.eventStartDate, settings.eventEndDate)}</td>
                                 <td className="px-4 py-4 text-xs tabular-nums text-slate-600 dark:text-slate-300">

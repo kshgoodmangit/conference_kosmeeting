@@ -37,7 +37,7 @@ public interface ConferenceSettingsRepository {
     @Insert("INSERT INTO conference_languages (conferenceSeq, languageCode, sortOrder) VALUES (#{conferenceSeq}, #{language}, #{sortOrder})")
     void insertLanguage(@Param("conferenceSeq") Long conferenceSeq, @Param("language") String language, @Param("sortOrder") int sortOrder);
 
-    @Update("UPDATE conference_settings SET sitePath = #{sitePath}, defaultLanguage = #{defaultLanguage}, updatedAt = NOW() WHERE seq = #{seq}")
+    @Update("UPDATE conference_settings SET sitePath = #{sitePath}, published = #{published}, defaultLanguage = #{defaultLanguage}, updatedAt = NOW() WHERE seq = #{seq}")
     void updatePublicSite(ConferenceSettings settings);
 
     @Select("SELECT popupLayoutNo FROM conference_settings WHERE seq = #{conferenceSeq}")
@@ -46,6 +46,7 @@ public interface ConferenceSettingsRepository {
     @Insert("""
             INSERT INTO conference_settings (
                 sitePath,
+                published,
                 defaultLanguage,
                 eventName,
                 eventStartDate,
@@ -64,6 +65,7 @@ public interface ConferenceSettingsRepository {
                 updatedAt
             ) VALUES (
                 #{sitePath},
+                #{published},
                 #{defaultLanguage},
                 #{eventName},
                 #{eventStartDate},

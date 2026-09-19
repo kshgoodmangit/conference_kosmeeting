@@ -115,9 +115,43 @@ class PublicSiteServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "ko,false,/2026_136/",
+            "en,false,/2026_136/",
+            "ko,true,/2026_136/ko/",
+            "en,true,/2026_136/en/"
+    })
+    void multiRootRedirectsToHighestSeqUsingItsDefaultLanguage(String language, boolean bilingual, String url) {
+        var settings = mock(ConferenceSettingsService.class);
+        var older = ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("older")
+                .eventStartDate(java.time.LocalDate.of(2028, 1, 1))
+                .defaultLanguage("en").supportedLanguages(List.of("en")).build();
+        var newest = ConferenceSettingsResponse.builder().published(true).seq(3L).sitePath("2026_136")
+                .eventStartDate(java.time.LocalDate.of(2026, 1, 1))
+                .defaultLanguage(language).supportedLanguages(bilingual ? List.of("ko", "en") : List.of(language)).build();
+        when(settings.getSettingsList()).thenReturn(List.of(older, newest));
+        when(settings.getSettingsBySitePath("older")).thenReturn(older);
+        var sites = new PublicSiteService(settings, new PublicSiteProperties());
+
+        var root = sites.resolvePage("/");
+
+        assertThat(root.redirectUrl()).isEqualTo(url);
+        assertThat(root.context().conferenceSeq()).isEqualTo(3L);
+        assertThat(root.context().language()).isEqualTo(language);
+        assertThat(root.pagePath()).isEqualTo("/");
+        var olderHome = sites.resolvePage("/older/");
+        assertThat(olderHome.context().conferenceSeq()).isEqualTo(1L);
+        assertThat(olderHome.redirectUrl()).isNull();
+    }
+
     @Test
-    void multiRootIsADirectoryAndNeverSelectsLatestConference() {
-        assertThat(sites("MULTI", "both").resolvePage("/").context()).isNull();
+    void multiRootKeepsTheEmptyDirectoryWhenNoConferencesExist() {
+        var settings = mock(ConferenceSettingsService.class);
+        when(settings.getSettingsList()).thenReturn(List.of());
+        var root = new PublicSiteService(settings, new PublicSiteProperties()).resolvePage("/");
+        assertThat(root.context()).isNull();
+        assertThat(root.redirectUrl()).isNull();
     }
 
     @Test
@@ -131,13 +165,51 @@ class PublicSiteServiceTest {
     @Test
     void incompleteLanguageConfigurationFailsInsteadOfServingWrongLanguage() {
         var settings = mock(ConferenceSettingsService.class);
-        when(settings.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().seq(1L).sitePath("apdrc8")
+        when(settings.getSettings(1L)).thenReturn(ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("apdrc8")
                 .defaultLanguage("ja").supportedLanguages(List.of("ko", "en")).build());
         var sites = new PublicSiteService(settings, new PublicSiteProperties());
         assertThatThrownBy(() -> sites.resolveApi(1L, null)).isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(503));
     }
 
+    @Test
+    void rootSkipsNewerUnpublishedConferencesAndKeepsTheLatestPublishedOne() {
+        var settings = mock(ConferenceSettingsService.class);
+        var visible = ConferenceSettingsResponse.builder().seq(2L).sitePath("visible")
+                .published(true).defaultLanguage("ko").supportedLanguages(List.of("ko")).build();
+        var hidden = ConferenceSettingsResponse.builder().seq(9L).sitePath("hidden")
+                .published(false).defaultLanguage("en").supportedLanguages(List.of("en")).build();
+        when(settings.getSettingsList()).thenReturn(List.of(hidden, visible));
+        var sites = new PublicSiteService(settings, new PublicSiteProperties());
+        assertThat(sites.resolvePage("/").redirectUrl()).isEqualTo("/visible/");
+        assertThat(sites.getPublishedConferences()).containsExactly(visible);
+
+        when(settings.getSettingsList()).thenReturn(List.of(hidden));
+        assertThat(sites.resolvePage("/").context()).isNull();
+        assertThat(sites.getPublishedConferences()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SINGLE", "MULTI"})
+    void unpublishedConferencesRejectDirectPagesAndPublicApis(String mode) {
+        for (Boolean published : new Boolean[]{false, null}) {
+            var settings = mock(ConferenceSettingsService.class);
+            var hidden = ConferenceSettingsResponse.builder().seq(1L).sitePath("hidden")
+                    .published(published).defaultLanguage("en").supportedLanguages(List.of("en")).build();
+            when(settings.getSettings(1L)).thenReturn(hidden);
+            when(settings.getSettingsBySitePath("hidden")).thenReturn(hidden);
+            var properties = new PublicSiteProperties();
+            properties.setConferenceMode(PublicSiteProperties.ConferenceMode.valueOf(mode));
+            properties.setDefaultConferenceSeq(1L);
+            var sites = new PublicSiteService(settings, properties);
+            assertThatThrownBy(() -> sites.resolvePage("MULTI".equals(mode) ? "/hidden/" : "/"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(404));
+            assertThatThrownBy(() -> sites.resolveApi(1L, "en"))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(404));
+        }
+    }
     private PublicSiteService sites(String mode, String languages) {
         return sites(mode, languages, "apdrc8");
     }
@@ -147,7 +219,7 @@ class PublicSiteServiceTest {
         properties.setConferenceMode(PublicSiteProperties.ConferenceMode.valueOf(mode));
         properties.setDefaultConferenceSeq(1L);
         var settings = mock(ConferenceSettingsService.class);
-        var conference = ConferenceSettingsResponse.builder().seq(1L).sitePath(sitePath)
+        var conference = ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath(sitePath)
                 .defaultLanguage("both".equals(languages) ? "en" : languages)
                 .supportedLanguages("both".equals(languages) ? List.of("ko", "en") : List.of(languages)).build();
         when(settings.getSettings(1L)).thenReturn(conference);

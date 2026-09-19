@@ -28,6 +28,14 @@ class ConferenceSettingsLicenseTest {
                 .andExpect(status().isForbidden());
         verifyNoInteractions(service);
     }
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void updatePassesExplicitPublicationStateToTheService(boolean published) throws Exception {
+        mvc.perform(put("/api/admin/conference-settings/1")
+                        .param("eventName", "Example").param("published", Boolean.toString(published)))
+                .andExpect(status().isOk());
+        verify(service).saveConfigured(eq(1L), argThat(request -> Boolean.valueOf(published).equals(request.getPublished())));
+    }
     private final LicenseProperties license = new LicenseProperties();
     private final ConferenceSettingsService service = mock(ConferenceSettingsService.class);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new ConferenceSettingsController(service, license)).build();

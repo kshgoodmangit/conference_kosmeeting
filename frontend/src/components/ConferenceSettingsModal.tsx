@@ -18,6 +18,7 @@ import { RegistrationOptionPanel } from './RegistrationOptionPanel';
 export interface ConferenceSettings {
     seq?: number | null;
     sitePath?: string | null;
+    published?: boolean;
     defaultLanguage?: string | null;
     supportedLanguages?: string[];
     eventName?: string | null;
@@ -96,6 +97,7 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
     const confirm = useConfirm();
     const onNotifyRef = useRef(onNotify);
     const [sitePath, setSitePath] = useState(settings?.sitePath ?? '');
+    const [published, setPublished] = useState(settings?.published === true);
     const [supportedLanguages, setSupportedLanguages] = useState(settings?.supportedLanguages?.length ? settings.supportedLanguages : ['ko', 'en']);
     const [defaultLanguage, setDefaultLanguage] = useState(settings?.defaultLanguage ?? 'en');
     const [newLanguage, setNewLanguage] = useState('');
@@ -231,7 +233,7 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
                     method: isUpdating ? 'PUT' : 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sitePath: sitePath.trim(), defaultLanguage, supportedLanguages,
+                        sitePath: sitePath.trim(), defaultLanguage, supportedLanguages, published,
                         eventName: eventName.trim(),
                         eventStartDate: eventStartDate || null,
                         eventEndDate: eventEndDate || null,
@@ -352,6 +354,15 @@ export const ConferenceSettingsModal = ({ settings, onClose, onSaved, onNotify }
                             <p className="text-xs text-slate-500 dark:text-slate-400">언어가 하나면 언어 경로를 생략하고, 두 개 이상이면 /ko/, /en/처럼 구분합니다. 추가 언어의 메뉴 본문은 별도로 작성해 주세요.</p>
                         </div>
                     </div>
+
+                    <label className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+                        <span>
+                            <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">홈페이지 공개</span>
+                            <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">공개하면 방문자가 학회 홈페이지를 이용할 수 있습니다. 비공개 상태에서는 관리자만 설정을 편집할 수 있습니다.</span>
+                        </span>
+                        <input type="checkbox" checked={published} onChange={event => setPublished(event.target.checked)} disabled={isSaving || optionsSaving}
+                            className="h-5 w-5 shrink-0 rounded border-slate-300 accent-blue-600 dark:border-slate-700 dark:accent-blue-500" />
+                    </label>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                         <DateRangeGroup title="행사 기간" description="학회 개최 기간" startValue={eventStartDate} endValue={eventEndDate} onStartChange={setEventStartDate} onEndChange={setEventEndDate} />

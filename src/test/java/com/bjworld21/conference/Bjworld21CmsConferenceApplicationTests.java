@@ -87,6 +87,26 @@ class Bjworld21CmsConferenceApplicationTests {
     @Autowired
     private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
+    @ParameterizedTest
+    @CsvSource({"SINGLE,/", "MULTI,/hidden/"})
+    void publicationControlsRealPageAndApiAccessOnEveryRequest(String mode, String pagePath) throws Exception {
+        publicSiteProperties.setConferenceMode(com.bjworld21.conference.publicsite.PublicSiteProperties.ConferenceMode.valueOf(mode));
+        publicSiteProperties.setDefaultConferenceSeq(1L);
+        var conference = com.bjworld21.conference.dto.ConferenceSettingsResponse.builder()
+                .seq(1L).sitePath("hidden").published(false).eventName("Unpublished")
+                .defaultLanguage("en").supportedLanguages(List.of("en")).build();
+        when(conferences.getSettings(1L)).thenReturn(conference);
+        when(conferences.getSettingsBySitePath("hidden")).thenReturn(conference);
+
+        mockMvc.perform(get(pagePath)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/public/1/conference-settings")).andExpect(status().isNotFound());
+        conference.setPublished(true);
+        mockMvc.perform(get("/api/public/1/conference-settings"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.published").value(true));
+        conference.setPublished(false);
+        mockMvc.perform(get("/api/public/1/conference-settings")).andExpect(status().isNotFound());
+    }
     @Test
     void contextLoads() {
     }
@@ -103,7 +123,7 @@ class Bjworld21CmsConferenceApplicationTests {
     void rendersLocalizedCmsThroughRealRoutingAndSecurity(String mode, String languages, String path, String sitePath) throws Exception {
         publicSiteProperties.setConferenceMode(com.bjworld21.conference.publicsite.PublicSiteProperties.ConferenceMode.valueOf(mode));
         publicSiteProperties.setDefaultConferenceSeq(1L);
-        var conference = com.bjworld21.conference.dto.ConferenceSettingsResponse.builder()
+        var conference = com.bjworld21.conference.dto.ConferenceSettingsResponse.builder().published(true)
                 .seq(1L).sitePath(sitePath).eventName("Scoped conference").defaultLanguage("ko")
                 .supportedLanguages("both".equals(languages) ? List.of("ko", "en") : List.of("ko")).build();
         when(conferences.getSettings(1L)).thenReturn(conference);
@@ -138,7 +158,7 @@ class Bjworld21CmsConferenceApplicationTests {
     void underscoreConferenceHomeRedirectsToDefaultLanguageThroughRealRouting() throws Exception {
         publicSiteProperties.setConferenceMode(com.bjworld21.conference.publicsite.PublicSiteProperties.ConferenceMode.MULTI);
         when(conferences.getSettingsBySitePath("2026_136")).thenReturn(
-                com.bjworld21.conference.dto.ConferenceSettingsResponse.builder().seq(1L).sitePath("2026_136")
+                com.bjworld21.conference.dto.ConferenceSettingsResponse.builder().published(true).seq(1L).sitePath("2026_136")
                         .defaultLanguage("en").supportedLanguages(List.of("ko", "en")).build());
         mockMvc.perform(get("/2026_136/"))
                 .andExpect(status().isFound())

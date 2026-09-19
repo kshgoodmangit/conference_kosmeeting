@@ -100,7 +100,7 @@ public class PublicPageController {
                 ? value : sites.resolvePage(request.getRequestURI().substring(request.getContextPath().length()));
         response.setHeader(HttpHeaders.CACHE_CONTROL, "private, no-store");
         if (resolved.context() == null) {
-            model.addAttribute("conferences", conferenceSettingsService.getSettingsList());
+            model.addAttribute("conferences", sites.getPublishedConferences());
             return "public/conferences";
         }
         request.setAttribute(PublicSiteContext.ATTRIBUTE, resolved.context());
@@ -454,7 +454,7 @@ public class PublicPageController {
         String origin = siteOrigin(request);
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
                 .append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
-        var conferences = sites.isMulti() ? conferenceSettingsService.getSettingsList()
+        var conferences = sites.isMulti() ? sites.getPublishedConferences()
                 : List.of(conferenceSettingsService.getSettings(sites.resolvePage("/").context().conferenceSeq()));
         for (var conference : conferences) {
             for (String language : conference.getSupportedLanguages()) {
