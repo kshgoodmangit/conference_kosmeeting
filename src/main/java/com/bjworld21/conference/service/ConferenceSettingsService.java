@@ -70,7 +70,7 @@ public class ConferenceSettingsService {
         if (settings == null) throw new IllegalArgumentException("학회를 찾을 수 없습니다.");
         String path = sitePath == null ? "" : sitePath.trim().toLowerCase(java.util.Locale.ROOT);
         if (!path.matches("[a-z0-9]+(?:[-_][a-z0-9]+)*") || path.length() > 100
-                || java.util.Set.of("admin", "api", "public", "assets", "vendor", "commoncode", "error", "actuator", "webjars", "login", "ko", "en").contains(path)) {
+                || java.util.Set.of("admin", "api", "public", "assets", "images", "vendor", "commoncode", "error", "actuator", "webjars", "login", "ko", "en").contains(path)) {
             throw new IllegalArgumentException("학회 경로는 시스템 예약어를 제외한 영문 소문자, 숫자, 하이픈(-), 밑줄(_)로 입력해 주세요.");
         }
         ConferenceSettings duplicate = conferenceSettingsRepository.findBySitePath(path);

@@ -89,8 +89,8 @@ public class PublicPageController {
         this.sites = sites;
     }
 
-    @GetMapping(value = {"/", "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}",
-            "/{section:^(?!api$|admin$|assets$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}/{*path}"},
+    @GetMapping(value = {"/", "/{section:^(?!api$|admin$|assets$|images$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}",
+            "/{section:^(?!api$|admin$|assets$|images$|public$|vendor$|commoncode$|error$|actuator$)[^.]+}/{*path}"},
             produces = MediaType.TEXT_HTML_VALUE)
     public String route(HttpServletRequest request, HttpServletResponse response, Model model,
                         @RequestParam(defaultValue = "1") int page,

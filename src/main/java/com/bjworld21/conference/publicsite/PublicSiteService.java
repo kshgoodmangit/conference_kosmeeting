@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Service
 public class PublicSiteService {
-    private static final Set<String> RESERVED = Set.of("api", "admin", "assets", "public", "vendor", "commoncode", "error", "actuator");
+    private static final Set<String> RESERVED = Set.of("api", "admin", "assets", "images", "public", "vendor", "commoncode", "error", "actuator");
     private final ConferenceSettingsService conferences;
     private final PublicSiteProperties properties;
 
